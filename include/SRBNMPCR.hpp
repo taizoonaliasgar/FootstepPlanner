@@ -149,7 +149,7 @@ private:
     // "Static" locomotion variables
     int phaseIdx = 2;
     int startTrot = 0;
-    Eigen::Matrix<double, 3, 1> desVel = {0.7,0,0};
+    Eigen::Matrix<double, 3, 1> desVel = {0,0,0};
     Eigen::Matrix<double, 3, 1> desOmega = {0,0,0};
     Eigen::Matrix<double, 3, 1> desVelWrld = {0,0,0};
     double yawLock = 0;
