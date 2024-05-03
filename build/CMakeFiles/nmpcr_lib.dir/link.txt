@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnmpcr_lib.a CMakeFiles/nmpcr_lib.dir/src/SRBNMPCR.cpp.o
+/usr/bin/ranlib libnmpcr_lib.a
