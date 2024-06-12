@@ -312,10 +312,6 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     q0.block(3,0,3,1) = jointVelTotal.block(0,0,3,1);
     q0.block(6,0,3,1) = eul;
     q0.block(9,0,3,1) = jointVelTotal.block(3,0,3,1);
-    //q0(16,0) = controlTick;
-    if(controlTick<1){
-        q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
-    }
     
     casadi::DM X_prev = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
     X_prev = mpc_obj->getprevioussol(q0,controlTick); 
@@ -330,17 +326,14 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     }
     
     std::map<std::string, casadi::DM> arg, res;
-    //std::cout << "p" << std::endl;
+    
     casadi::DM p = mpc_obj->motionPlannerN(q0,controlTick);// casadi::DM::zeros(NFS*(HORIZ+1),1);
-    //std::cout << "lbx" << std::endl;
+    
     arg["lbx"] = mpc_obj->lowerboundx(p);//-casadi::DM::inf();
-    //std::cout << "ubx" << std::endl;
     arg["ubx"] =  mpc_obj->upperboundx(p);//casadi::DM::inf();
-    //std::cout << "lbg" << std::endl;
     arg["lbg"] =  mpc_obj->lowerboundg();//0;
-    //std::cout << "ubg" << std::endl;
     arg["ubg"] =  mpc_obj->upperboundg();//casadi::DM::inf();
-    //std::cout << "Xprev" << std::endl;
+    
     arg["x0"] = X_prev;
     arg["p"] = p;
 
@@ -352,8 +345,6 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     writeMatrixToFile(arg["x0"], basePath + "args_x0.txt");
     writeMatrixToFile(arg["p"], basePath + "args_p.txt");
 
-    //casadi::DM ubxdata = mpc_obj->upperboundx(p); 
-    //std::cout << "ubx" << std::endl;
     
     //robot loadingq
 
@@ -371,12 +362,10 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
         
         res = solver(arg);
         mpc_obj->setprevioussol(res.at("x"));
-        //std::cout << "setXprev" << std::endl;
+        
         forceFFvec = mpc_obj->getOptforce();
-        //std::cout << "force" << std::endl;
         p_foot = mpc_obj->getFootPos();
-        //std::cout << "foot" << std::endl;
-        //mpc_obj->mpcdataLog(p,controlTick);
+        
         
         setExtforcewithvis(srbx2,0, list, "extForceArrow0", 0, bodypos_e, bodyrot_e, p_foot.block(0,0,3,1), forceFFvec.block(0,0,3,1));
         setExtforcewithvis(srbx2,0, list, "extForceArrow1", 0, bodypos_e, bodyrot_e, p_foot.block(3,0,3,1), forceFFvec.block(3,0,3,1));
@@ -605,9 +594,9 @@ int main(int argc, char **argv) {
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 300*ctrlHz;   // Sim end time
-    double fps = 2;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/videos/";
-    std::string filename = "upright_walk_f7";
+    double fps = 5;            
+    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/videos/";
+    std::string filename = "upright_walk_19";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
     
@@ -622,7 +611,7 @@ int main(int argc, char **argv) {
     std::cout << "MPC_obj" << std::endl;  
     mpc_obj->generator();
 
-    std::string file_name = "upright_nlp_32";
+    std::string file_name = "upright_nlp_24";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -630,7 +619,8 @@ int main(int argc, char **argv) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name);
+    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 100},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     /// run the app using while loop
     signal(SIGINT, signalhandler);
@@ -641,11 +631,11 @@ int main(int argc, char **argv) {
     contact_sequence_dm(0,casadi::Slice(25,40)) = casadi::DM::zeros(1,15);
     contact_sequence_dm(3,casadi::Slice(28,40)) = casadi::DM::zeros(1,12);
 
-    while (!vis->getRoot()->endRenderingQueued() && simcounter <  3e7){
+    while (!vis->getRoot()->endRenderingQueued() && simcounter <  3000){
 
         planner(srbx2, 1, 0,mpc_obj,solver,contact_sequence_dm);// loco_pln0, 
         world.integrate();
-        if (simcounter%2 == 0){
+        if (simcounter%15 == 0){
             vis->renderOneFrame();
         }
 

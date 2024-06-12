@@ -317,33 +317,21 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
         q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
     }else{
         //Eigen::Matrix<double, 4, 1> prevp = mpc_obj->getpreviousfoot();
-        q0.block(12,0,4,1) = mpc_obj->getpreviousfoot();//prevp;
+        q0.block(12,0,4,1) = mpc_obj->getpreviousfoot();
     }
     
     casadi::DM X_prev = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*HORIZ,1); 
     X_prev = mpc_obj->getprevioussol(q0,controlTick); 
     
-    //if(controlTick<1){
-    //    q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
-    //}else{
-    //    q0(12) = double(X_prev(12));
-    //    q0(13) = double(X_prev(13));
-    //    q0(14) = double(X_prev(14));
-    //    q0(15) = double(X_prev(15));
-    //}
-    
     std::map<std::string, casadi::DM> arg, res;
-    //std::cout << "p" << std::endl;
-    casadi::DM p = mpc_obj->motionPlannerN(q0,controlTick);// casadi::DM::zeros(NFSR*(HORIZ+1),1);
-    //std::cout << "lbx" << std::endl;
-    arg["lbx"] = mpc_obj->lowerboundx(p);//-casadi::DM::inf();
-    //std::cout << "ubx" << std::endl;
-    arg["ubx"] =  mpc_obj->upperboundx(p);//casadi::DM::inf();
-    //std::cout << "lbg" << std::endl;
-    arg["lbg"] =  mpc_obj->lowerboundg();//0;
-    //std::cout << "ubg" << std::endl;
-    arg["ubg"] =  mpc_obj->upperboundg();//casadi::DM::inf();
-    //std::cout << "Xprev" << std::endl;
+    
+    casadi::DM p = mpc_obj->motionPlannerN(q0,controlTick);
+    
+    arg["lbx"] = mpc_obj->lowerboundx(p); 
+    arg["ubx"] =  mpc_obj->upperboundx(p); 
+    arg["lbg"] =  mpc_obj->lowerboundg(); 
+    arg["ubg"] =  mpc_obj->upperboundg();
+    
     arg["x0"] = X_prev;
     arg["p"] = p;
 
@@ -356,7 +344,6 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     writeMatrixToFile(arg["p"], basePath + "args_p.txt");
 
     casadi::DM ubxdata = mpc_obj->upperboundx(p); 
-    //std::cout << "ubx" << std::endl;
     
     //robot loadingq
 
@@ -374,12 +361,8 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
         
         res = solver(arg);
         mpc_obj->setprevioussol(res.at("x"));
-        std::cout << "setXprev" << std::endl;
         forceFFvec = mpc_obj->getOptforce();
-        std::cout << "force" << std::endl;
         p_foot = mpc_obj->getFootPos(p);
-        std::cout << "foot" << std::endl;
-        //mpc_obj->mpcdataLog(p,controlTick);
         
         setExtforcewithvis(srbx2,0, list, "extForceArrow0", 0, bodypos_e, bodyrot_e, p_foot.block(0,0,3,1), forceFFvec.block(0,0,3,1));
         setExtforcewithvis(srbx2,0, list, "extForceArrow1", 0, bodypos_e, bodyrot_e, p_foot.block(3,0,3,1), forceFFvec.block(3,0,3,1));
@@ -441,7 +424,6 @@ int main(int argc, char **argv) {
         // terrainProperties.fractalOctaves = 0.0;
         // terrainProperties.fractalLacunarity = 0.0;
         // terrainProperties.fractalGain = 0.0;
-
         // raisim::HeightMap *ground = world.addHeightMap(0.0, 0.0, terrainProperties);
 
         // world.setDefaultMaterial(0.8, 0.0, 0.0); //surface friction could be 0.8 or 1.0
@@ -611,7 +593,7 @@ int main(int argc, char **argv) {
     double simlength = 300*ctrlHz;   // Sim end time
     double fps = 30;            
     std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/foot_videos/";
-    std::string filename = "upright_walk_r2";
+    std::string filename = "upright_walk_4r";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
     
@@ -622,12 +604,10 @@ int main(int argc, char **argv) {
     //for Unity
     //raisim::RaisimServer server(&world);
     //server.launchServer();
-    SRBNMPCR* mpc_obj = new SRBNMPCR(argc,argv,1,0);
-    std::cout << "MPC_obj" << std::endl;
-    //casadi::DM p = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*HORIZ+1,1);    
+    SRBNMPCR* mpc_obj = new SRBNMPCR(argc,argv,1,0);   
     mpc_obj->generator();
 
-    std::string file_name = "upright_nlp_2r";
+    std::string file_name = "upright_nlp_5r";
 
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
@@ -636,7 +616,8 @@ int main(int argc, char **argv) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name);
+    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 200},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     /// run the app using while loop
     signal(SIGINT, signalhandler);
