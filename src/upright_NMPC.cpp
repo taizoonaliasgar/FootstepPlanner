@@ -3,7 +3,7 @@
 // MIT License
 //
 // Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
-//
+// Author: Taizoon 
 
 #include "raisim/OgreVis.hpp"
 #include "raisimBasicImguiPanel.hpp"
