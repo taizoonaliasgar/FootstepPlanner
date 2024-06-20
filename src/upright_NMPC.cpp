@@ -614,7 +614,7 @@ int main(int argc, char **argv) {
     double simlength = 300*ctrlHz;   // Sim end time
     double fps = 5;            
     std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/videos/";
-    std::string filename = "upright_walk_29";
+    std::string filename = "upright_walk_44";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
     
@@ -629,7 +629,7 @@ int main(int argc, char **argv) {
     std::cout << "MPC_obj" << std::endl;  
     mpc_obj->generator();
 
-    std::string file_name = "upright_nlp_55";
+    std::string file_name = "upright_nlp_70";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -649,7 +649,7 @@ int main(int argc, char **argv) {
     contact_sequence_dm(0,casadi::Slice(25,40)) = casadi::DM::zeros(1,15);
     contact_sequence_dm(3,casadi::Slice(28,40)) = casadi::DM::zeros(1,12);
 
-    while (!vis->getRoot()->endRenderingQueued() && simcounter < 10000){
+    while (!vis->getRoot()->endRenderingQueued() && simcounter < 20000){
 
         planner(srbx2, 1, 0,mpc_obj,solver,contact_sequence_dm);// loco_pln0, 
         world.integrate();

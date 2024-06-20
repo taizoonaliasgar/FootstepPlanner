@@ -84,7 +84,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_nlp_55";
+    std::string file_name = "upright_nlp_70";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -200,14 +200,18 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     R_force.setZero();
     R_force.diagonal() << 0.01,0.01,0.01;//mpc_params.rx, mpc_params.ry, mpc_params.rz;
     for(int i=0;i<4;i++){
-        R.block(3*i,3*i,3,3) = R_force;
+        if(i<2){
+            R.block(3*i,3*i,3,3) = 0.1*R_force;
+        }else{
+            R.block(3*i,3*i,3,3) = R_force;
+        }
         //R.block(12+i,12+i,1,1) << 0.01;
     }
     
-    R = 1e0*R;
+    //R = 1e2*R;
     Rv.setZero();
     Rv.diagonal() << 0.01,0.01,0.01,0.01;//1e2,1e2,1e2,1e2;//0.01,0.01,0.01,0.01;
-    Rv = 1e0*Rv;//1e5
+    //Rv = 1e5*Rv;//1e5
 
     casadi::DM Qc = casadi::DM::zeros(Q.rows(),Q.cols());
     std::copy(Q.data(), Q.data() + Q.size(), Qc.ptr());
@@ -265,7 +269,6 @@ casadi::SX SRBNMPC:: UpdateConstraintsN(casadi::SX x, casadi::SX p){
         
         g_constraints(casadi::Slice((HORIZ+1)*NFS+i*NFI,(HORIZ+1)*NFS+i*NFI+NFI)) = inequalitycons(con);
         
-
     }
 
     return g_constraints;
@@ -402,10 +405,10 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p){
             }
         }
         //lbx(casadi::Slice(NFS*(HORIZ+1)+NFI*k+12,NFS*(HORIZ+1)+NFI*k+16)) = (casadi::DM::ones(4,1)-contact_index)*Raibheur;//casadi::DM::zeros(4,1);//-casadi::DM::ones(4,1)*Raibheur*10;
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = 0.8*(1-contact_index(0))*Raibheur;//0.2
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = 0.8*(1-contact_index(1))*Raibheur;
-        lbx(NFS*(HORIZ+1)+NFI*k+14) = 0.8*(1-contact_index(2))*Raibheur;
-        lbx(NFS*(HORIZ+1)+NFI*k+15) = 0.8*(1-contact_index(3))*Raibheur;
+        lbx(NFS*(HORIZ+1)+NFI*k+12) = 0*(1-contact_index(0))*Raibheur;//0.2
+        lbx(NFS*(HORIZ+1)+NFI*k+13) = 0*(1-contact_index(1))*Raibheur;
+        lbx(NFS*(HORIZ+1)+NFI*k+14) = 0*(1-contact_index(2))*Raibheur;
+        lbx(NFS*(HORIZ+1)+NFI*k+15) = 0*(1-contact_index(3))*Raibheur;
     }
     
     return lbx;
