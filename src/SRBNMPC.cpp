@@ -84,7 +84,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_nlp_70";
+    std::string file_name = "upright_hl_20";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -128,7 +128,7 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
     //Raibheur = 0.5*Tstance*abs(q0(3));
 
     if(controlTick%20 == 0){
-        Raibheur = 0.5*Tstance*(q0(3));//localvelocity;
+        Raibheur = 0.5*Tstance*(abs(q0(3)));//localvelocity;
         x_dom_init = q0_dm(0)+3*Raibheur;//Tstance*localvelocity;
     }
 
@@ -136,7 +136,8 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
     
     for(size_t i= 0; i< HORIZ; i++){
         
-        conp1 = remainder(controlTick+i,40);
+        //conp1 = remainder(controlTick+i,40);
+        conp1 = (controlTick+i)%40;
         x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
@@ -153,10 +154,10 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         x_des((i+1)*NFS+14) = contact_sequence_dm(2,conp1)*x_des(14)+(1-contact_sequence_dm(2,conp1))*x_dom_init;//x_des(14)+Raibheur
         x_des((i+1)*NFS+15) = contact_sequence_dm(3,conp1)*x_des(15)+(1-contact_sequence_dm(3,conp1))*x_dom_init;//x_des(15)+Raibheur
 
-        x_des((HORIZ+1)*NFS+i*NFI+12) = 2*(1-contact_sequence_dm(0,conp1))*Raibheur;//0.4
-        x_des((HORIZ+1)*NFS+i*NFI+13) = 2*(1-contact_sequence_dm(1,conp1))*Raibheur;//0.4
-        x_des((HORIZ+1)*NFS+i*NFI+14) = 2*(1-contact_sequence_dm(2,conp1))*Raibheur;//0.4
-        x_des((HORIZ+1)*NFS+i*NFI+15) = 2*(1-contact_sequence_dm(3,conp1))*Raibheur;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+12) = 4*(1-contact_sequence_dm(0,conp1))*Raibheur;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+13) = 4*(1-contact_sequence_dm(1,conp1))*Raibheur;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+14) = 4*(1-contact_sequence_dm(2,conp1))*Raibheur;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+15) = 4*(1-contact_sequence_dm(3,conp1))*Raibheur;//0.4
         //x_des(casadi::Slice((HORIZ+1)*NFS+i*NFI+12,(HORIZ+1)*NFS+i*NFI+16)) = 2*(casadi::DM::ones(4,1)-contact_sequence_dm(casadi::Slice(0,4),conp1))*Raibheur;
 
         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i) = contact_sequence_dm(0,conp1);
@@ -166,7 +167,8 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
     }
 
     
-    conp1=remainder(controlTick+HORIZ,40);
+    //conp1=remainder(controlTick+HORIZ,40);
+    conp1 = (controlTick+HORIZ)%40;
     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*HORIZ) = contact_sequence_dm(0,conp1);
     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*HORIZ+1) = contact_sequence_dm(1,conp1);
     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*HORIZ+2) = contact_sequence_dm(2,conp1);
@@ -232,8 +234,13 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
         f_des = x_des(casadi::Slice(NFS*(HORIZ+1) + i*NFI,NFS*(HORIZ+1) + i*NFI+12));
 
         f= f+ mtimes(mtimes(transpose(st-x_des(casadi::Slice(i*NFS,i*NFS+NFS))),casadi::SX(Qc)),st-x_des(casadi::Slice(i*NFS,i*NFS+NFS)))
-                + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(Rc)),con(casadi::Slice(0,12))-f_des) 
                     +mtimes(mtimes(transpose(con(casadi::Slice(12,16))-p_Raibheur),casadi::SX(Rvc)),con(casadi::Slice(12,16))-p_Raibheur);
+
+        if(i<8){//8
+            f= f + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(Rc)),con(casadi::Slice(0,12))-f_des);
+        }else{
+            f= f + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(300*Rc)),con(casadi::Slice(0,12))-f_des);
+        }
     }
     
 
@@ -619,18 +626,50 @@ void SRBNMPC::writeMatrixToFileDM(const casadi::DM& matrix, const std::string& f
     }
 }
 
-Eigen::Matrix<double,24,1> SRBNMPC::getNMPCsol(){
+Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol(int controlMPC){
     
-    Eigen::Matrix<double,24,1> nmpc_sol;
-    std::vector<double> v = previous_sol.get_elements();
+    //std::cout << "controlMPC:" << controlMPC << std::endl;
+    locomotionTick = controlMPC%20;
+    //std::cout << "locomotionTick:" << locomotionTick << std::endl;
 
-    std::vector<double> optstate(v.begin() + NFS, v.begin() + 2*NFS);
-    std::vector<double> optforce(v.begin() + NFS*(HORIZ+1), v.begin() + NFS*(HORIZ+1) + NFI);
+    Eigen::Matrix<double,32,1> nmpc_sol;
+    std::vector<double> v = previous_sol.get_elements();
+    
+    
+    std::vector<double> optstate(v.begin() + NFS, v.begin() + 2*NFS-4);
+    std::vector<double> optforce(v.begin() + NFS*(HORIZ+1), v.begin() + NFS*(HORIZ+1) + NFI -4);
+    
+    std::vector<double> optfoothold;
+    std::vector<double> optsteplength;
+
+    if(locomotionTick < 20 - HORIZ){
+        optfoothold = std::vector<double>(v.begin() + (HORIZ)*NFS + 12, v.begin() + (HORIZ+1)*NFS);
+        optsteplength = std::vector<double>(v.begin() + (HORIZ+1)*NFS + (HORIZ-1)*NFI + 12, v.begin() + (HORIZ+1)*NFS + HORIZ*NFI);
+        
+        //std::cout << "steplengthMPC:" << "\t" << previous_sol(NFS*(HORIZ+1)+ NFI*(HORIZ-1)+12) << "\t" << previous_sol(NFS*(HORIZ+1)+NFI*(HORIZ-1)+13) << "\t" 
+        //        << previous_sol(NFS*(HORIZ+1)+NFI*(HORIZ-1)+14) << "\t" << previous_sol(NFS*(HORIZ+1)+NFI*(HORIZ-1)+15) << std::endl; 
+    }else{
+        optfoothold = std::vector<double>(v.begin() + (20-locomotionTick)*NFS + 12, v.begin() + (20-locomotionTick+1)*NFS);
+        optsteplength = std::vector<double>(v.begin() + (HORIZ+1)*NFS + (20-locomotionTick-1)*NFI + 12, v.begin() + (HORIZ+1)*NFS + (20-locomotionTick)*NFI);
+        //std::cout << "steplengthMPC:" << "\t" << previous_sol(NFS*(HORIZ+1)+ NFI*(20-locomotionTick-1)+12) << "\t" << previous_sol(NFS*(HORIZ+1)+NFI*(20-locomotionTick-1)+13) << "\t" 
+        //        << previous_sol(NFS*(HORIZ+1)+NFI*(20-locomotionTick-1)+14) << "\t" << previous_sol(NFS*(HORIZ+1)+NFI*(20-locomotionTick-1)+15) << std::endl; 
+    }
+    
     
     nmpc_sol.block(0,0,12,1) = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
-    nmpc_sol.block(0,12,12,1) = Eigen::Map<Eigen::Matrix<double,12,1>>(optforce.data());
-    
-    
+    nmpc_sol.block(12,0,4,1) = Eigen::Map<Eigen::Matrix<double,4,1>>(optfoothold.data());
+    nmpc_sol.block(16,0,12,1) = Eigen::Map<Eigen::Matrix<double,12,1>>(optforce.data());
+    //nmpc_sol.block(28,0,4,1) = Eigen::Map<Eigen::Matrix<double,4,1>>(optsteplength.data());
+    Eigen::Matrix<double,4,1> step = Eigen::Map<Eigen::Matrix<double,4,1>>(optsteplength.data());
+
+    int16_t steptick = remainder(controlMPC,40);
+    nmpc_sol(28) = step(0);//*(1.0-double(contact_sequence_dm(0,steptick))); 
+    nmpc_sol(29) = step(1);//*(1.0-double(contact_sequence_dm(1,steptick)));
+    nmpc_sol(30) = step(2);//*(1.0-double(contact_sequence_dm(2,steptick)));
+    nmpc_sol(31) = step(3);//*(1.0-double(contact_sequence_dm(3,steptick)));
+    //std::cout << "optsteplength:" << "\t" << nmpc_sol(28) << "\t" << nmpc_sol(29) 
+    //                                        << "\t" << nmpc_sol(30) << "\t" << nmpc_sol(31) <<std::endl;
+
     return nmpc_sol;
 
 }
@@ -678,27 +717,26 @@ void SRBNMPC::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,
     //             X_prev(NFS*(HORIZ+1) + 10) << "\t" << X_prev(NFS*(HORIZ+1) + 11) << "\t" << std::endl;
 
     
-    /*file[6] << for(size_t i = 0; i < count; i++)
-    {
-        /* code */
-    //}*/
-    for(size_t i = 0; i < HORIZ; i++){
-        for (size_t j = 0; j < 4; j++)
-        {
-            file[5] << previous_sol(NFS*(HORIZ+1)+NFI*i+12+j) << "\t";    /* code */
-        }
+    //if(tick%10==0){
+    
+        for(size_t i = 0; i < HORIZ; i++){
+            for (size_t j = 0; j < 4; j++)
+            {
+                file[5] << previous_sol(NFS*(HORIZ+1)+NFI*i+12+j) << "\t";    /* code */
+            }
         
-        file[5] << std::endl;
-    }
+            file[5] << std::endl;
+        }
 
-    for(size_t i = 0; i < HORIZ; i++){
-        for (size_t j = 0; j < 4; j++)
-        {
-            file[6] << previous_sol(NFS*(i+1)+12+j) << "\t";    /* code */
-        }
+        for(size_t i = 0; i < HORIZ; i++){
+            for (size_t j = 0; j < 4; j++)
+            {
+                file[6] << previous_sol(NFS*(i+1)+12+j) << "\t";    /* code */
+            }
         
-        file[6] << std::endl;
-    }
+            file[6] << std::endl;
+        }
+    //}
     
                          
 }
@@ -759,3 +797,74 @@ void SRBNMPC::getForce(){
     //return OPTforce;
 
 }
+
+casadi::DM SRBNMPC::getprevioussol_ll(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, size_t controlTick){
+        
+    casadi::DM x0 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
+    casadi::DM q0_dm = casadi::DM::zeros(16,1);
+    for (int i=0; i<12; i++){
+        q0_dm(i) = q0(i);
+    }
+
+    x0(casadi::Slice(0,12)) = q0_dm(casadi::Slice(0,12));
+    if(controlTick<1){
+        x0(12) = 0.2;//0.02
+        x0(13) = 0.2;
+        x0(14) = -0.1;
+        x0(15) = -0.1;
+        casadi::DM sum_conseq;// = casadi::DM::sum1(contact_sequence_dm); 
+        
+        for(int i = 0; i<HORIZ; i++){
+            x0(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0(casadi::Slice(0,NFS));
+            sum_conseq = contact_sequence_dm(2,i)+contact_sequence_dm(3,i)+contact_sequence_dm(0,i)+contact_sequence_dm(1,i);
+            
+            for (size_t leg = 0; leg < 4; leg++)
+            {
+                if(leg>1){
+                    x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1) = contact_sequence_dm(leg,i)*MASS*gravityN(2)/sum_conseq;
+                }else{
+                    x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1) = contact_sequence_dm(leg,i)*MASS*gravityN(2)/sum_conseq;//*mu*10;
+                    x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-2) = 2*pow(-1,leg)*x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1);
+                    
+                } 
+            }
+            
+        }
+    }else{
+        //x0(casadi::Slice(12,16)) = previous_sol(casadi::Slice(28,32));
+        x0(12) = foothold(0,0);//0.02
+        x0(13) = foothold(0,1);
+        x0(14) = foothold(0,2);
+        x0(15) = foothold(0,3);
+
+        x0(casadi::Slice(NFS,NFS*(HORIZ))) = previous_sol(casadi::Slice(NFS*2,NFS*(HORIZ+1)));
+        x0(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1))) = previous_sol(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1)));
+
+        x0(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+NFI*(HORIZ-1))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI,NFS*(HORIZ+1)+NFI*(HORIZ)));
+        x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
+
+    }
+    
+    return x0;
+}
+
+void SRBNMPC::setprevioussol(casadi::DM sol0){
+    
+    //std::cout << "Yes5.15"<< std::endl;
+    for (size_t i = 0; i < sol0.size1(); i++)
+    {
+        previous_sol(i) = sol0(i);
+    }
+    
+}
+
+void SRBNMPC::setpreviousp(casadi::DM p){ 
+        //previousp = p;
+        //std::cout << "p size: " << p.size1() << " " << p.size2() << std::endl;
+        for (size_t i = 0; i < p.size1(); i++)
+        {
+            previousp(i) = p(i);
+          //  std::cout <<i <<std::endl;
+        } 
+};
+
