@@ -84,7 +84,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_hl_28";
+    std::string file_name = "upright_hl_32";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -153,7 +153,7 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         }
         if((controlTick+i)%20 == 0){
             //Raibheur = 0.5*Tstance*(abs(q0(3)));//localvelocity;
-            x0 = x_des((i+1)*NFS);//Tstance*localvelocity;
+            x0 = x_des(i*NFS);//Tstance*localvelocity;
         }
 
         //x_des((i+1)*NFS+12) = x_des(12)+Raibheur;
@@ -216,7 +216,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     
     Q.setZero();
-    Q.block(0,0,3,3).diagonal() <<  1e4,1e4,8e5;//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
+    Q.block(0,0,3,3).diagonal() <<  1e4,1e4,8e5;//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
     Q.block(3,3,3,3).diagonal() <<  1e4,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
     Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
@@ -264,7 +264,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
         if(i<HORIZ){//8
             f= f + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(Rc)),con(casadi::Slice(0,12))-f_des);
         }else{
-            f= f + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(100*Rc)),con(casadi::Slice(0,12))-f_des);
+            f= f + mtimes(mtimes(transpose(con(casadi::Slice(0,12))-f_des),casadi::SX(300*Rc)),con(casadi::Slice(0,12))-f_des);
         }
     }
 
@@ -419,14 +419,21 @@ casadi::SX SRBNMPC::inequalitycons(casadi::SX con){
 
 }
 
+
 casadi::DM SRBNMPC::lowerboundx(casadi::DM p){
     
     casadi::DM lbx = -casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM contact_index = casadi::DM::zeros(4,1); 
+    casadi::DM contact_index_next = casadi::DM::zeros(4,1); 
+
+    casadi::DM flag = 0;
 
     for(int k=0 ; k<HORIZ ; k++){
 
         contact_index = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1)));
+        contact_index_next = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+2)));
+
+        flag = casadi::DM::norm_1(contact_index_next)-casadi::DM::norm_1(contact_index);
         for(int leg=0 ; leg<4 ; leg++){
             if(leg<1){
                 lbx(NFS*(HORIZ+1)+NFI*k+1) = 0;
@@ -444,10 +451,36 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p){
         lbx(NFS*(HORIZ+1)+NFI*k+13) = 0*(1-contact_index(1))*Raibheur;
         lbx(NFS*(HORIZ+1)+NFI*k+14) = 0*(1-contact_index(2))*Raibheur;
         lbx(NFS*(HORIZ+1)+NFI*k+15) = 0*(1-contact_index(3))*Raibheur;
+
+        // for (int leg = 0;leg<4;leg++){
+                
+        //         if(){
+        //             lbx(NFS*(HORIZ+1)+NFI*k+12+leg) = 0*(1-contact_index(3))*Raibheur;
+        //         }else{
+        //             lbx(NFS*(HORIZ+1)+NFI*k+12+leg) = 0*(1-contact_index(leg))*Raibheur;
+        //         }
+        // }
+
+
     }
     
     return lbx;
 
+}
+
+void SRBNMPC::setsteplb(int controlMPC){
+
+    int domphase = controlMPC%20;
+    //for(int leg=0;leg<4;leg++){
+    //    optstephll(leg) = previous_sol(NFS*(HORIZ+1)+NFI*(domphase)+12+leg);
+    //}
+    if(domphase < 20 - HORIZ){
+        //optsteplength = std::vector<double>(v.begin() + (HORIZ+1)*NFS + (HORIZ-1)*NFI + 12, v.begin() + (HORIZ+1)*NFS + HORIZ*NFI);
+        optstephll = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1)+12,NFS*(HORIZ+1)+HORIZ*NFI));     
+    }else{
+        //optsteplength = std::vector<double>(v.begin() + (HORIZ+1)*NFS + (20-locomotionTick-1)*NFI + 12, v.begin() + (HORIZ+1)*NFS + (20-locomotionTick)*NFI);
+        optstephll = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(20-domphase-1)+12,NFS*(HORIZ+1)+NFI*(20-domphase)));
+    }
 }
 
 casadi::DM SRBNMPC::upperboundx(casadi::DM p){
