@@ -84,7 +84,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_hl_32";
+    std::string file_name = "upright_hl_42";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -217,7 +217,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     Q.setZero();
     Q.block(0,0,3,3).diagonal() <<  1e4,1e4,8e5;//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
-    Q.block(3,3,3,3).diagonal() <<  1e4,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
+    Q.block(3,3,3,3).diagonal() <<  4e4,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
     Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
     Q.block(9,9,3,3).diagonal() <<  1,1,1;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
@@ -225,10 +225,10 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     //repdiag(Q,Q_rep,HORIZ+1);
     
     R_force.setZero();
-    R_force.diagonal() << 0.01,0.01,0.01;//mpc_params.rx, mpc_params.ry, mpc_params.rz;
+    R_force.diagonal() << 0.01,0.01,0.01;//0.01//mpc_params.rx, mpc_params.ry, mpc_params.rz;
     for(int i=0;i<4;i++){
         if(i<2){
-            R.block(3*i,3*i,3,3) = 0.1*R_force;
+            R.block(3*i,3*i,3,3) = R_force;
         }else{
             R.block(3*i,3*i,3,3) = R_force;
         }
@@ -420,20 +420,34 @@ casadi::SX SRBNMPC::inequalitycons(casadi::SX con){
 }
 
 
-casadi::DM SRBNMPC::lowerboundx(casadi::DM p){
+casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
     
     casadi::DM lbx = -casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM contact_index = casadi::DM::zeros(4,1); 
     casadi::DM contact_index_next = casadi::DM::zeros(4,1); 
 
-    casadi::DM flag = 0;
+    //casadi::DM flag = 0;
+    casadi::DM x0 = x_dom_init;
 
     for(int k=0 ; k<HORIZ ; k++){
 
         contact_index = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1)));
         contact_index_next = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+2)));
 
-        flag = casadi::DM::norm_1(contact_index_next)-casadi::DM::norm_1(contact_index);
+        // if((controlMPC+k)%20 == 0){
+        //     //Raibheur = 0.5*Tstance*(abs(q0(3)));//localvelocity;
+        //     x0 = p(k*NFS);//Tstance*localvelocity;
+        // }
+
+        // if(static_cast<double>(contact_index(0)) < 1.0){
+        //     lbx(NFS*(k+1)+12) = x0+5*Raibheur;//0.2
+        // }
+
+        // if(static_cast<double>(contact_index(1))<1.0){
+        //     lbx(NFS*(k+1)+13) = x0+5*Raibheur;//0.2
+        // }
+
+        //flag = casadi::DM::norm_1(contact_index_next)-casadi::DM::norm_1(contact_index);
         for(int leg=0 ; leg<4 ; leg++){
             if(leg<1){
                 lbx(NFS*(HORIZ+1)+NFI*k+1) = 0;
@@ -447,8 +461,8 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p){
             }
         }
         //lbx(casadi::Slice(NFS*(HORIZ+1)+NFI*k+12,NFS*(HORIZ+1)+NFI*k+16)) = (casadi::DM::ones(4,1)-contact_index)*Raibheur;//casadi::DM::zeros(4,1);//-casadi::DM::ones(4,1)*Raibheur*10;
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = 0*(1-contact_index(0))*Raibheur;//0.2
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = 0*(1-contact_index(1))*Raibheur;
+        lbx(NFS*(HORIZ+1)+NFI*k+12) = 4*(1-contact_index(0))*Raibheur;//0.2
+        lbx(NFS*(HORIZ+1)+NFI*k+13) = 4*(1-contact_index(1))*Raibheur;
         lbx(NFS*(HORIZ+1)+NFI*k+14) = 0*(1-contact_index(2))*Raibheur;
         lbx(NFS*(HORIZ+1)+NFI*k+15) = 0*(1-contact_index(3))*Raibheur;
 
@@ -800,7 +814,15 @@ void SRBNMPC::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,
             file[6] << std::endl;
         }
     //}
-    
+
+    //if(tick%10==0){
+
+        file[7] << previous_sol(NFS*(HORIZ+1)) << "\t" << previous_sol(NFS*(HORIZ+1)+1) << "\t" 
+                << previous_sol(NFS*(HORIZ+1)+2) << "\t" << previous_sol(NFS*(HORIZ+1)+3) << "\t" 
+                << previous_sol(NFS*(HORIZ+1)+4) << "\t" << previous_sol(NFS*(HORIZ+1)+5) << "\t" 
+                << previous_sol(NFS*(HORIZ+1)+6) << "\t" << previous_sol(NFS*(HORIZ+1)+7) << "\t" 
+                << previous_sol(NFS*(HORIZ+1)+8) << "\t" << previous_sol(NFS*(HORIZ+1)+9) << "\t" 
+                << previous_sol(NFS*(HORIZ+1)+10) << "\t" << previous_sol(NFS*(HORIZ+1)+11) << std::endl;
                          
 }
 
