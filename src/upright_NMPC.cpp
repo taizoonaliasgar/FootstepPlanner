@@ -395,7 +395,7 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
         // if(controlTick>5000 && controlTick<5500){
         //     setExtforcewithvis(srbx2,0, list, "disturbForceArrow0", 0, bodypos_e, bodyrot_e, q0.block(0,0,3,1)+distpos, distforce);
         // }
-        mpc_obj->mpcdataLog(q0,forceFFvec,controlTick);
+        mpc_obj->mpcdataLog(q0,forceFFvec,controlTick,p_foot);
     }
     std:: cout<< "controlTick: " << controlTick << std::endl;
     controlTick++;
@@ -634,7 +634,7 @@ int main(int argc, char **argv) {
     std::cout << "MPC_obj" << std::endl;  
     mpc_obj->generator();
 
-    std::string file_name = "upright_h5_2";
+    std::string file_name = "upright_h5_4";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix

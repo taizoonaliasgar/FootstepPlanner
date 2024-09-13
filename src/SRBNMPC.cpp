@@ -84,7 +84,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_h5_2";
+    std::string file_name = "upright_h5_4";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -136,7 +136,7 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
     if((controlTick)%20 == 0){
         x_dom_init = q0_dm(0);
         Raibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
-        absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
+        //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
     }
     casadi::DM x0 = x_dom_init;
 
@@ -349,10 +349,14 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
     casadi::SX wJw = mtimes(what,Jw);
     rhs(casadi::Slice(9,12)) = mtimes(casadi::SX(Jinvcasadi),tau-wJw) * MPC_dt;
     
-    rhs(12) = con(12)*conp1(0);//contact(0);
-    rhs(13) = con(13)*conp1(1);//contact(1);
-    rhs(14) = con(14)*conp1(2);//contact(2);
-    rhs(15) = con(15)*conp1(3);//contact(3);
+    rhs(12) = (con(12))*conp1(0);
+    rhs(13) = (con(13))*conp1(1);
+    rhs(14) = (con(14))*conp1(2);
+    rhs(15) = (con(15))*conp1(3);
+    // rhs(12) = (con(12)+casadi::SX(Raibstep))*conp1(0);//contact(0);
+    // rhs(13) = (con(13)+casadi::SX(Raibstep))*conp1(1);//contact(1);
+    // rhs(14) = (con(14)+casadi::SX(Raibstep))*conp1(2);//contact(2);
+    // rhs(15) = (con(15)+casadi::SX(Raibstep))*conp1(3);//contact(3);
 
     return rhs;
 }
@@ -431,10 +435,10 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
         lbx(NFS*(HORIZ+1)+NFI*(k)+8) = 0;
         lbx(NFS*(HORIZ+1)+NFI*(k)+11) = 0;
         
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*absRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*absRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*absRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*absRaibstep);
+        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(Raibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(Raibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(Raibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(Raibstep));
 
     }
     
@@ -470,10 +474,10 @@ casadi::DM SRBNMPC::upperboundx(casadi::DM p){
         ubx(NFS*(HORIZ+1)+NFI*(k)+8) = contact_index(2)*fzmaxr;
         ubx(NFS*(HORIZ+1)+NFI*(k)+11) = contact_index(3)*fzmaxr;
 
-        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*absRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*absRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*absRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*absRaibstep);
+        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(Raibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(Raibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(Raibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(Raibstep));
         
     }
     
@@ -702,7 +706,7 @@ Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol(int controlMPC){
 
 }
 
-void SRBNMPC::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, size_t tick){//casadi::DM X_prev,(Eigen::Matrix<double,12,1> &q0, size_t tick){
+void SRBNMPC::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, size_t tick, Eigen::Matrix<double, 12, 1> p_foot){//casadi::DM X_prev,(Eigen::Matrix<double,12,1> &q0, size_t tick){
       
     file[0] << tick << "\t" << q0(0) << "\t" << q0(1) << "\t" 
                 << q0(2) << "\t" << q0(3) << "\t" 
@@ -734,6 +738,12 @@ void SRBNMPC::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,
                 << previousp(NFS*(HORIZ+1)+12) << "\t" << previousp(NFS*(HORIZ+1)+13) << "\t" 
                 << previousp(NFS*(HORIZ+1)+14) << "\t" << previousp(NFS*(HORIZ+1)+15) << "\t" << Raibstep << std::endl;
      
+    file[3] << p_foot(0) << "\t" << p_foot(1) << "\t" 
+                << p_foot(2) << "\t" << p_foot(3) << "\t" 
+                << p_foot(4) << "\t" << p_foot(5) << "\t" 
+                << p_foot(6) << "\t" << p_foot(7) << "\t" 
+                << p_foot(8) << "\t" << p_foot(9) << "\t" 
+                << p_foot(10) << "\t" << p_foot(11) << std::endl;
     // file[3] << previousp(NFS*(HORIZ+1)+NFI*(HORIZ)) << "\t" << previousp(NFS*(HORIZ+1)+NFI*(HORIZ)+1) << "\t" 
     //             << previousp(NFS*(HORIZ+1)+NFI*(HORIZ)+2) << "\t" << previousp(NFS*(HORIZ+1)+NFI*(HORIZ)+3) << std::endl;
     
