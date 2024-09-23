@@ -90,7 +90,7 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
             phaseVar = getPhase(1.0*locoTick, 0.0, 199);
             flphase = 0;
             rlphase = 0;
-            //conEst->forceDomChange();
+            conEst->forceDomChange();
             z = Eigen::MatrixXd::Zero(12,1);
             
         }else{
@@ -99,15 +99,15 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
             rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
             flphase = (flphase<0)?0:(flphase>1)?1:flphase;
             rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
-            if(locoTick==50||locoTick==80){
-                conEst->forceDomChange();
-            }            
+            // if(locoTick==50||locoTick==80){
+            //     conEst->forceDomChange();
+            // }            
         }
 
         
         PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
         VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's
-        VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+        //VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
         
         z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         
 

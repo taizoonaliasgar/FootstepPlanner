@@ -88,7 +88,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_h5_27";
+    std::string file_name = "upright_h5_29";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -481,10 +481,15 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
         lbx(NFS*(HORIZ+1)+NFI*(k)+8) = 0;
         lbx(NFS*(HORIZ+1)+NFI*(k)+11) = 0;
         
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+
+        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
 
     }
     
@@ -533,10 +538,15 @@ casadi::DM SRBNMPC::upperboundx(casadi::DM p){
         ubx(NFS*(HORIZ+1)+NFI*(k)+8) = contact_index(2)*fzmaxr;
         ubx(NFS*(HORIZ+1)+NFI*(k)+11) = contact_index(3)*fzmaxr;
 
-        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
+        // ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
+        // ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
+        // ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
+        // ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
+
+        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
         
     }
     
@@ -787,9 +797,9 @@ Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol2(int controlMPC){
     //std::cout << "optsteplength:" << "\t" << nmpc_sol(28) << "\t" << nmpc_sol(29) 
     //                                        << "\t" << nmpc_sol(30) << "\t" << nmpc_sol(31) <<std::endl;
 
-    //nmpc_sol(3) = localvelocity;
-    //nmpc_sol(4) = 0;
-    //nmpc_sol(5) = 0;
+    nmpc_sol(3) = localvelocity;
+    nmpc_sol(4) = 0;
+    nmpc_sol(5) = 0;
     return nmpc_sol;
 
 }

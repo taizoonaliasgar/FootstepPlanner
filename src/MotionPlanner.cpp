@@ -319,9 +319,9 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
 
         static int startTrot = 0;
 
-        // if(ctrlTick<1 || con->changeDomain==1){
+        if(ctrlTick<1 || con->changeDomain==1){
 
-        //     traj.toeInit = kin->toePos;
+            traj.toeInit = kin->toePos;
 
         //     // updateVel(desVel, desOmega, params);
         	
@@ -337,17 +337,17 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         //     // //std::vector<double> KP = {0.4,0.0,0.0};
         //     // setStep_Raibert(state,domLenSec,desVel,KP);
 
-        //     setStep_NMPC(NLstep,opt_HLstate(3),state,params,phase);
-        //     con_obj->forceDom0();
-            
-        // }
-        if(ctrlTick<1 || phase==0){
-            traj.toeInit = kin->toePos;
-        }
-        if(con->changeDomain==1){
             setStep_NMPC(NLstep,opt_HLstate(3),state,params,phase);
-            con_obj->forceDom0(); 
+            con_obj->forceDom0();
+            
         }
+        // if(ctrlTick<1 || phase==0){
+        //     traj.toeInit = kin->toePos;
+        // }
+        // if(con->changeDomain==1){
+        //     setStep_NMPC(NLstep,opt_HLstate(3),state,params,phase);
+        //     con_obj->forceDom0(); 
+        // }
 
         //if(ctrlTick%10==0){
         //    setStep_NMPC(NLstep,opt_HLstate(3),state,params);
@@ -392,7 +392,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         
         
         traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + desVelWorld*dt;
-        //traj.comDes(1) = 0;//params->standHeight;
+        traj.comDes(1) = 0;//params->standHeight;
         traj.comDes(2) = params->standHeight;
         traj.comDes.block(3,0,3,1) << desVelWorld;
 
@@ -487,20 +487,20 @@ void MotionPlanner::updatesteplen(ContactEst *con_obj){
 void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,4,1> NLstep, double vdes, const StateInfo *state, MP * params, double phase){
     
     
-    // double stepLenTemp = 0;//Eigen::MatrixXd::Zero(3,1);
-    // stepLenTemp = sqrt(params->standHeight/9.81)*(state->dq(0)-vdes);//,0,3,1); 
+    double stepLenTemp = 0;//Eigen::MatrixXd::Zero(3,1);
+    stepLenTemp = sqrt(params->standHeight/9.81)*(state->dq(0)-vdes);//,0,3,1); 
      
-    //traj.FRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
-    //traj.RLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);   
-    //traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
-    //traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
-    if(phase<0.3){
-        traj.FRstepLen =  NLstep(0);  
-        traj.FLstepLen =  NLstep(1); 
-    }else{
-        traj.RLstepLen =  NLstep(3); 
-        traj.RRstepLen =  NLstep(2);  
-    }                                
+    traj.FRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
+    traj.RLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);   
+    traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
+    traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
+    // if(phase<0.3){
+    //     traj.FRstepLen =  NLstep(0);  
+    //     traj.FLstepLen =  NLstep(1); 
+    // }else{
+    //     traj.RLstepLen =  NLstep(3); 
+    //     traj.RRstepLen =  NLstep(2);  
+    // }                                
                                     
 }
 
