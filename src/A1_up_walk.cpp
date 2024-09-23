@@ -191,7 +191,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             //std::cout << "controlMPC:" << controlMPC << std::endl;
             casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
             if(controlMPC<1){
-                q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
+                q0.block(12,0,4,1) << 0.1,0.1,-0.1,-0.1;
             }else{
                 q0(12) = double(X_prev(12));
                 q0(13) = double(X_prev(13));
@@ -212,11 +212,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             res = solver(arg);
             loco_plan->setprevioussol(res.at("x"));
             
-            opt_HLMPC_state = loco_plan->getNMPCsol(controlMPC);
+            opt_HLMPC_state = loco_plan->getNMPCsol2(controlMPC);
             
             loco_obj->setoptNLstate(opt_HLMPC_state);
             loco_obj->setcontactconfig(controlMPC);
-            loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC);
+            //loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC);
 
             //float pose_temp[3] = {opt_HLMPC_state(0),opt_HLMPC_state(1),opt_HLMPC_state(2)};
             //float vel_temp[3] = {opt_HLMPC_state(3),opt_HLMPC_state(4),opt_HLMPC_state(15)};
@@ -360,8 +360,8 @@ int main(int argc, char *argv[]) {
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    loco_plan->generator();
-    std::string file_name = "upright_h5_1";
+    //loco_plan->generator();
+    std::string file_name = "upright_h5_27";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix

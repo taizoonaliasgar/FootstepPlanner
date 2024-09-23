@@ -339,7 +339,7 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
         if(controlTick%10==0){
 
             int controlMPC = std::floor(controlTick/10);
-            
+            //std::cout << "Yes1" <<std::endl;
             X_prev = mpc_obj->getprevioussol(q0,controlMPC); 
     
             if(controlTick<1){
@@ -351,11 +351,12 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
                 q0(14) = double(X_prev(14));
                 q0(15) = double(X_prev(15));
             }
-    
+            
             std::map<std::string, casadi::DM> arg, res;
             
             casadi::DM p = mpc_obj->motionPlannerN(q0,controlMPC);// casadi::DM::zeros(NFS*(HORIZ+1),1);
             mpc_obj->setpreviousp(p);
+            
     
             arg["lbx"] = mpc_obj->lowerboundx(p,controlMPC);//-casadi::DM::inf();
             arg["ubx"] =  mpc_obj->upperboundx(p);//casadi::DM::inf();
@@ -616,7 +617,7 @@ int main(int argc, char **argv) {
     //-----Video stuff-------//
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 30*ctrlHz;   // Sim end time
+    double simlength = 15*ctrlHz;   // Sim end time
     double fps = 5;            
     std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/videos/";
     std::string filename = "upright_SRB";
@@ -632,9 +633,9 @@ int main(int argc, char **argv) {
     //server.launchServer();
     SRBNMPC* mpc_obj = new SRBNMPC(argc,argv,1,0);
     std::cout << "MPC_obj" << std::endl;  
-    mpc_obj->generator();
+    //mpc_obj->generator();
 
-    std::string file_name = "upright_h5_4";
+    std::string file_name = "upright_h5_26";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -642,7 +643,7 @@ int main(int argc, char **argv) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 100},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 100},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     /// run the app using while loop

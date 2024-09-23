@@ -319,35 +319,42 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
 
         static int startTrot = 0;
 
-        if(ctrlTick<1 || con->changeDomain==1){
+        // if(ctrlTick<1 || con->changeDomain==1){
 
-            traj.toeInit = kin->toePos;
+        //     traj.toeInit = kin->toePos;
 
-            // updateVel(desVel, desOmega, params);
+        //     // updateVel(desVel, desOmega, params);
         	
-            // //Eigen::Vector3d desVelBody = {state->R(0,0)*opt_HLstate(15,0)+state->R(1,0)*opt_HLstate(16,0)+state->R(2,0)*opt_HLstate(17,0),
-            // //                                 state->R(0,1)*opt_HLstate(15,0)+state->R(1,1)*opt_HLstate(16,0)+state->R(2,1)*opt_HLstate(17,0),
-            // //                                    state->R(0,2)*opt_HLstate(15,0)+state->R(1,2)*opt_HLstate(16,0)+state->R(2,2)*opt_HLstate(17,0)}; 
-            // Eigen::Vector3d desVelBody = {state->R(0,0)*desVel(0)+state->R(1,0)*desVel(1)+state->R(2,0)*desVel(2),
-            //                                  state->R(0,1)*desVel(0)+state->R(1,1)*desVel(1)+state->R(2,1)*desVel(2),
-            //                                     state->R(0,2)*desVel(0)+state->R(1,2)*desVel(1)+state->R(2,2)*desVel(2)}; 
+        //     // //Eigen::Vector3d desVelBody = {state->R(0,0)*opt_HLstate(15,0)+state->R(1,0)*opt_HLstate(16,0)+state->R(2,0)*opt_HLstate(17,0),
+        //     // //                                 state->R(0,1)*opt_HLstate(15,0)+state->R(1,1)*opt_HLstate(16,0)+state->R(2,1)*opt_HLstate(17,0),
+        //     // //                                    state->R(0,2)*opt_HLstate(15,0)+state->R(1,2)*opt_HLstate(16,0)+state->R(2,2)*opt_HLstate(17,0)}; 
+        //     // Eigen::Vector3d desVelBody = {state->R(0,0)*desVel(0)+state->R(1,0)*desVel(1)+state->R(2,0)*desVel(2),
+        //     //                                  state->R(0,1)*desVel(0)+state->R(1,1)*desVel(1)+state->R(2,1)*desVel(2),
+        //     //                                     state->R(0,2)*desVel(0)+state->R(1,2)*desVel(1)+state->R(2,2)*desVel(2)}; 
             
             
-            // std::vector<double> KP = {0.1596,0,0};//{0.1596,0,0};
-            // //std::vector<double> KP = {0.4,0.0,0.0};
-            // setStep_Raibert(state,domLenSec,desVel,KP);
+        //     // std::vector<double> KP = {0.1596,0,0};//{0.1596,0,0};
+        //     // //std::vector<double> KP = {0.4,0.0,0.0};
+        //     // setStep_Raibert(state,domLenSec,desVel,KP);
 
-            //setStep_NMPC(NLstep,opt_HLstate(3),state,params);
-            con_obj->forceDom0();
+        //     setStep_NMPC(NLstep,opt_HLstate(3),state,params,phase);
+        //     con_obj->forceDom0();
             
+        // }
+        if(ctrlTick<1 || phase==0){
+            traj.toeInit = kin->toePos;
+        }
+        if(con->changeDomain==1){
+            setStep_NMPC(NLstep,opt_HLstate(3),state,params,phase);
+            con_obj->forceDom0(); 
         }
 
-        if(ctrlTick%10==0){
-            setStep_NMPC(NLstep,opt_HLstate(3),state,params);
-        }
+        //if(ctrlTick%10==0){
+        //    setStep_NMPC(NLstep,opt_HLstate(3),state,params);
+        //}
     }
     
-    if (standTrigger && params->neverStopTrot!=1){
+    if(standTrigger && params->neverStopTrot!=1){
         con_obj->setDesDomain({1,1,1,1});
     }
 
@@ -392,9 +399,9 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         //traj.comDes(6) = pose(0);
         //traj.comDes(7) = pose(1);
         //traj.comDes(8) = yawOffset;
-        traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
+        traj.comDes.block(6,0,3,1) = 0*opt_HLstate.block(6,0,3,1);
         
-        traj.comDes.block(9,0,3,1) = desOmegaWorld;      
+        traj.comDes.block(9,0,3,1) = 0*desOmegaWorld;      
 
     }
 }
@@ -477,7 +484,7 @@ void MotionPlanner::updatesteplen(ContactEst *con_obj){
 
 }
 
-void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,4,1> NLstep, double vdes, const StateInfo *state, MP * params){
+void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,4,1> NLstep, double vdes, const StateInfo *state, MP * params, double phase){
     
     
     // double stepLenTemp = 0;//Eigen::MatrixXd::Zero(3,1);
@@ -487,11 +494,13 @@ void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,4,1> NLstep, double vdes, 
     //traj.RLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);   
     //traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
     //traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
-    
-    traj.FRstepLen =  NLstep(0); 
-    traj.RLstepLen =  NLstep(3); 
-    traj.FLstepLen = NLstep(1); 
-    traj.RRstepLen = NLstep(2);                                  
+    if(phase<0.3){
+        traj.FRstepLen =  NLstep(0);  
+        traj.FLstepLen =  NLstep(1); 
+    }else{
+        traj.RLstepLen =  NLstep(3); 
+        traj.RRstepLen =  NLstep(2);  
+    }                                
                                     
 }
 
