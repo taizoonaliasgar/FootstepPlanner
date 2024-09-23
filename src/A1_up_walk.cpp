@@ -360,8 +360,8 @@ int main(int argc, char *argv[]) {
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    //loco_plan->generator();
-    std::string file_name = "upright_h5_29";
+    loco_plan->generator();
+    std::string file_name = "upright_h5_30";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
