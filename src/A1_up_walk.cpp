@@ -57,7 +57,7 @@ void setupCallback() {
     vis->getCameraMan()->setTopSpeed(5);
 }
 
-void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick) {
+void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick, raisim::Contact contactInstance) {
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// INITIALIZE
     /////////////////////////////////////////////////////////////////////
@@ -85,7 +85,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     const int* foot_state;
     Eigen::Matrix<double, 3, 4> foot_position;
     Eigen::Matrix<double, 3, 4> hip_position;
-    Eigen::Matrix<double, 32, 1> opt_HLMPC_state;
+    Eigen::Matrix<double, 33, 1> opt_HLMPC_state;
     
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// UPDATE STATE
@@ -95,6 +95,8 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     
     raisim::MatDyn D = A1.back()->getMassMatrix();
     raisim::VecDyn H = A1.back()->getNonlinearities({0,0,-9.81});
+    
+    //raisim::Vec<3>& impulse = contactInstance.getImpulse();
 
     Eigen::Matrix<double,18,18> Dr;
     Eigen::Matrix<double,18,1> Hr;
@@ -216,7 +218,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             
             loco_obj->setoptNLstate(opt_HLMPC_state);
             loco_obj->setcontactconfig(controlMPC);
-            //loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC);
+            loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
 
             //float pose_temp[3] = {opt_HLMPC_state(0),opt_HLMPC_state(1),opt_HLMPC_state(2)};
             //float vel_temp[3] = {opt_HLMPC_state(3),opt_HLMPC_state(4),opt_HLMPC_state(15)};
@@ -331,8 +333,27 @@ int main(int argc, char *argv[]) {
 
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.45, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
     //                                    -0.4944, 0.8218, -1.6435, 0.4944, 0.8218, -1.6435, 0.0, 2.6951, -1.5379, 0.0, 2.6951, -1.5379});
+    
+    //Full Order Simulation
+    //Rear offset -0.1
     A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-                                        -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+                                       -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+    //Rear offset -0.01
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.247, -1.2899, 0.0, 2.247, -1.2899});
+    //Rear offset -0.04
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3305, -1.2703, 0.0, 2.3305, -1.2703});
+    //Rear offset -0.08
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4195, -1.2068, 0.0, 2.4195, -1.2068});
+
+    //Rear offset -0.06
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3784, -1.244, 0.0, 2.3784, -1.244});
+    //Rear offset -0.05
+    // A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                     -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3553, -1.2585, 0.0, 2.3553, -1.2585});
     
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setName("A1_Robot");
@@ -350,7 +371,7 @@ int main(int argc, char *argv[]) {
     A1.back()->getCollisionBody("FR_foot/0").setMaterial("wood");
     A1.back()->getCollisionBody("FL_foot/0").setMaterial("wood");
 
-    world.setMaterialPairProp("wood", "rubber", 1.8, 0, 0);
+    world.setMaterialPairProp("wood", "rubber", 1.0, 0, 0);
 
     //auto& MMP = world.getMaterialPairProp(A1.back()->getCollisionBody("FR_foot/0").getMaterial(),
     //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
@@ -360,8 +381,8 @@ int main(int argc, char *argv[]) {
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    loco_plan->generator();
-    std::string file_name = "upright_h5_30";
+    //loco_plan->generator();
+    std::string file_name = "upright_h5_56";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -394,7 +415,7 @@ int main(int argc, char *argv[]) {
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/videos/";
+    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Sep27/videos/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "upright_A1";
     // std::string filename = "inplace_sim";
@@ -451,6 +472,8 @@ int main(int argc, char *argv[]) {
     long simcounter = 0;
     static bool added = false;
 
+    raisim::Contact contactInstance;
+
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
@@ -467,7 +490,7 @@ int main(int argc, char *argv[]) {
         // weightVis2->offset = {pos[0]-0.245/2,pos[1]-.078/2,pos[2]-0.015};
         // // std::cout<<pos[0]<<"\t"<<pos[1]<<"\t"<<pos[2]<<std::endl;
 
-        controller(A1,loco_obj,loco_plan,solver,simcounter);
+        controller(A1,loco_obj,loco_plan,solver,simcounter,contactInstance);
         world.integrate();        
         
         if (simcounter%15 == 0)

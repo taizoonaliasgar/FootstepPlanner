@@ -37,10 +37,10 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
     two_contact = 10;
 
     
-    contact_horizon.block(1,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
-    contact_horizon.block(2,8,1,12) = Eigen::MatrixXd::Zero(1,12);
-    contact_horizon.block(0,25,1,15) = Eigen::MatrixXd::Zero(1,15);//15
-    contact_horizon.block(3,28,1,12) = Eigen::MatrixXd::Zero(1,12);
+    contact_horizon.block(1,25,1,15) = Eigen::MatrixXd::Zero(1,15);//15
+    contact_horizon.block(2,28,1,12) = Eigen::MatrixXd::Zero(1,12);
+    contact_horizon.block(0,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
+    contact_horizon.block(3,8,1,12) = Eigen::MatrixXd::Zero(1,12);
 
    /*  contact_horizon.block(1,20-two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact);
     contact_horizon.block(2,20-two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact);
@@ -56,7 +56,7 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
     contact_horizon.block(0,30,1,10) = Eigen::MatrixXd::Zero(1,10);
     contact_horizon.block(3,30,1,10) = Eigen::MatrixXd::Zero(1,10); */
 
-    NLstep = Eigen::MatrixXd::Zero(4,1);
+    //NLstep = Eigen::MatrixXd::Zero(4,1);
     
 }
 
@@ -130,12 +130,12 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
     gaitTemp = gait;
 }
 
-void LocoWrapperwalk::setoptNLstate(Eigen::Matrix<double, 32, 1> HLopt){
+void LocoWrapperwalk::setoptNLstate(Eigen::Matrix<double, 33, 1> HLopt){
     
     opt_HLstate.block(0,0,12,1) = HLopt.block(0,0,12,1);
     //opt_HLstate(2) = 0.35;
     opt_HLstate.block(12,0,12,1) = HLopt.block(16,0,12,1);
-    NLstep = HLopt.block(28,0,4,1);
+    NLstep = HLopt.block(28,0,5,1);
 }
 
 

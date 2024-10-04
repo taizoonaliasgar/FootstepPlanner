@@ -27,7 +27,7 @@ MotionPlanner::MotionPlanner(){
     yawOffset = 0;
 }
 
-void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, ContactEst *con_obj, size_t gait, double phase, size_t ctrlTick, MP * params, Eigen::Matrix<double, 24, 1>& opt_HLstate, Eigen::Matrix<double, 4, 1>& NLstep){
+void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, ContactEst *con_obj, size_t gait, double phase, size_t ctrlTick, MP * params, Eigen::Matrix<double, 24, 1>& opt_HLstate, Eigen::Matrix<double, 5, 1>& NLstep){
     const ContactInfo* con = con_obj->getConInfoPointer();   
 
     static Eigen::Matrix<double, 3, 1> desVel = {0,0,0};
@@ -392,16 +392,18 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         
         
         traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + desVelWorld*dt;
-        traj.comDes(1) = 0;//params->standHeight;
+        //traj.comDes(1) = 0;//params->standHeight;
         traj.comDes(2) = params->standHeight;
         traj.comDes.block(3,0,3,1) << desVelWorld;
+        //traj.comDes(4) = 0;
+        //traj.comDes(5) = 0;
 
         //traj.comDes(6) = pose(0);
         //traj.comDes(7) = pose(1);
         //traj.comDes(8) = yawOffset;
-        traj.comDes.block(6,0,3,1) = 0*opt_HLstate.block(6,0,3,1);
+        traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
         
-        traj.comDes.block(9,0,3,1) = 0*desOmegaWorld;      
+        traj.comDes.block(9,0,3,1) = desOmegaWorld;      
 
     }
 }
@@ -484,12 +486,12 @@ void MotionPlanner::updatesteplen(ContactEst *con_obj){
 
 }
 
-void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,4,1> NLstep, double vdes, const StateInfo *state, MP * params, double phase){
+void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,5,1> NLstep, double vdes, const StateInfo *state, MP * params, double phase){
     
     
     // double stepLenTemp = 0;//Eigen::MatrixXd::Zero(3,1);
     // stepLenTemp = sqrt(params->standHeight/9.81)*(state->dq(0)-vdes);//,0,3,1); 
-     
+
     // traj.FRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
     // traj.RLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);   
     // traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 

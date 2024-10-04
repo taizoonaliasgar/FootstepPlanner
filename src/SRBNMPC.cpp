@@ -88,7 +88,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_h5_29";
+    std::string file_name = "upright_h5_56";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -150,6 +150,17 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         }
 
     }
+
+    if(localvelocity>0.5){
+        front_off = 0.1+(localvelocity-0.5)/7;
+        rear_off = -0.1+(localvelocity-0.5)/4;
+        pitch_ref = 0;//3.14/6*(localvelocity-0.5);
+    }else{
+        front_off = 0.1;
+        rear_off = -0.1;
+        pitch_ref = 0; 
+    }
+    
      
     if((controlTick)%20 == 0){
         x_dom_init = q0_dm(0);
@@ -157,7 +168,12 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
     }
 
-    vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));
+    if(controlTick%20<9){
+        vRaibstep = Raibstep;
+
+    }else{
+        vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));
+    }
     casadi::DM x0 = x_dom_init;
 
     for(size_t i= 0; i< HORIZ; i++){
@@ -169,6 +185,7 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         x_des((i+1)*NFS+2) = stand_height;                                 
         x_des((i+1)*NFS+3) = localvelocity, 
         x_des((i+1)*NFS+4) = desVel(1);
+        x_des((i+1)*NFS+7) = 0;
 
         //if(controlTick+i>0){
             conp1_next = (controlTick+i+1)%40;
@@ -178,16 +195,16 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         }
 
         x_des((i+1)*NFS+12) = contact_sequence_dm(0,conp1_next)*contact_sequence_dm(0,conp1)*x_des(i*NFS+12)+
-                                (1-contact_sequence_dm(0,conp1)*contact_sequence_dm(0,conp1_next))*(x0+0.1+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm(0,conp1)*contact_sequence_dm(0,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
                                    
         x_des((i+1)*NFS+13) = contact_sequence_dm(1,conp1_next)*contact_sequence_dm(1,conp1)*x_des(i*NFS+13)+
-                                (1-contact_sequence_dm(1,conp1)*contact_sequence_dm(1,conp1_next))*(x0+0.1+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm(1,conp1)*contact_sequence_dm(1,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
         
         x_des((i+1)*NFS+14) = contact_sequence_dm(2,conp1_next)*contact_sequence_dm(2,conp1)*x_des(i*NFS+14)+
-                                (1-contact_sequence_dm(2,conp1)*contact_sequence_dm(2,conp1_next))*(x0-0.1+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm(2,conp1)*contact_sequence_dm(2,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
         
         x_des((i+1)*NFS+15) = contact_sequence_dm(3,conp1_next)*contact_sequence_dm(3,conp1)*x_des(i*NFS+15)+
-                                (1-contact_sequence_dm(3,conp1)*contact_sequence_dm(3,conp1_next))*(x0-0.1+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm(3,conp1)*contact_sequence_dm(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
 
 
         x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm(0,conp1))*vRaibstep;//0.4
@@ -226,10 +243,10 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     Q.setZero();
     Q.block(0,0,3,3).diagonal() <<  1e4,5e4,8e5;//5e4//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
-    Q.block(3,3,3,3).diagonal() <<  4e5,1e4,1e4;//5e4//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
-    Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
+    Q.block(3,3,3,3).diagonal() <<  1e5,1e4,1e4;//4e5//5e4//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
+    Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//3e4//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
-    Q.block(9,9,3,3).diagonal() <<  1,1,1;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
+    Q.block(9,9,3,3).diagonal() <<  1e2,1e2,1e2;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
     Q.block(12,12,4,4).diagonal() <<  1000,1000,1000,1000;//1e-2//1e3//1e5,1e5,1e5,1e5;
     //repdiag(Q,Q_rep,HORIZ+1);
     
@@ -420,9 +437,24 @@ casadi::SX SRBNMPC::GetTorque(casadi::SX st,casadi::SX con){
     casadi::SX Mr2 = skewsym(r2);
     casadi::SX Mr3 = skewsym(r3);  
     casadi::SX Mr4 = skewsym(r4);
-    
-    return mtimes(Mr1,con(casadi::Slice(0,3)))+mtimes(Mr2,con(casadi::Slice(3,6)))+mtimes(Mr3,con(casadi::Slice(6,9)))+mtimes(Mr4,con(casadi::Slice(9,12)));
 
+    casadi::SX tauw = mtimes(Mr1,con(casadi::Slice(0,3)))+mtimes(Mr2,con(casadi::Slice(3,6)))+mtimes(Mr3,con(casadi::Slice(6,9)))+mtimes(Mr4,con(casadi::Slice(9,12)));
+
+
+    casadi::SX Rphi = casadi::SX::zeros(3,3);
+    casadi::SX Rtheta = casadi::SX::zeros(3,3);
+    casadi::SX Rpsi = casadi::SX::zeros(3,3);
+
+    Rphi(0,0) = 1; Rphi(1,1) = cos(st(6)); Rphi(1,2) = -sin(st(6));Rphi(2,1) = sin(st(6));Rphi(2,2) = cos(st(6));
+    Rtheta(0,0) = cos(st(7)); Rtheta(0,2) = sin(st(7)); Rtheta(1,1) = 1; Rtheta(2,0) = -sin(st(7)); Rtheta(2,2) = cos(st(7));
+    Rpsi(0,0) = cos(st(8)); Rpsi(0,1) = -sin(st(8)); Rpsi(1,0) = sin(st(8)); Rpsi(1,1) = cos(st(8)); Rpsi(2,2) = 1;
+    
+    casadi::SX Ri = mtimes(Rpsi,Rtheta);
+    casadi::SX R = mtimes(Ri,Rphi);
+    
+    casadi::SX taub = mtimes(R,tauw);
+    
+    return taub;
 }
 
 casadi::SX SRBNMPC::inequalitycons(casadi::SX con){
@@ -481,15 +513,15 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
         lbx(NFS*(HORIZ+1)+NFI*(k)+8) = 0;
         lbx(NFS*(HORIZ+1)+NFI*(k)+11) = 0;
         
-        // lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
-        // lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
-        // lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
-        // lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
+        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
 
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
-        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
+        // lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+        // lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+        // lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+        // lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
 
     }
     
@@ -538,15 +570,15 @@ casadi::DM SRBNMPC::upperboundx(casadi::DM p){
         ubx(NFS*(HORIZ+1)+NFI*(k)+8) = contact_index(2)*fzmaxr;
         ubx(NFS*(HORIZ+1)+NFI*(k)+11) = contact_index(3)*fzmaxr;
 
-        // ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
-        // ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
-        // ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
-        // ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
+        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
 
-        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
-        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
+        // ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+        // ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+        // ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+        // ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
         
     }
     
@@ -775,9 +807,9 @@ Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol(int controlMPC){
 
 }
 
-Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol2(int controlMPC){
+Eigen::Matrix<double,33,1> SRBNMPC::getNMPCsol2(int controlMPC){
     
-    Eigen::Matrix<double,32,1> nmpc_sol;
+    Eigen::Matrix<double,33,1> nmpc_sol;
     std::vector<double> v = previous_sol.get_elements();
     
     std::vector<double> optstate(v.begin() + NFS, v.begin() + 2*NFS);
@@ -797,9 +829,10 @@ Eigen::Matrix<double,32,1> SRBNMPC::getNMPCsol2(int controlMPC){
     //std::cout << "optsteplength:" << "\t" << nmpc_sol(28) << "\t" << nmpc_sol(29) 
     //                                        << "\t" << nmpc_sol(30) << "\t" << nmpc_sol(31) <<std::endl;
 
-    nmpc_sol(3) = localvelocity;
-    nmpc_sol(4) = 0;
-    nmpc_sol(5) = 0;
+    // nmpc_sol(3) = localvelocity;
+    // nmpc_sol(4) = 0;
+    // nmpc_sol(5) = 0;
+    nmpc_sol(32) = static_cast<double>(vRaibstep(0));
     return nmpc_sol;
 
 }

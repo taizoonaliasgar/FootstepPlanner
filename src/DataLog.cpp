@@ -22,7 +22,7 @@ DataLog::~DataLog(){
 
 void DataLog::writeData(const StateInfo *state, const VCInfo *vc, const ContactInfo *con, 
                         const TrajInfo *traj, const LLInfo *LL, const KinematicsInfo *kin, const size_t ctrlTick, 
-                        const int force[4], Eigen::Matrix<double, 24, 1>& opt_HLstate, size_t locoTick, double locoPhase, double flightPhaseRL, double flightPhaseLR, double DDiff, double HDiff, Eigen::Matrix<double, 4, 1> NLstep){
+                        const int force[4], Eigen::Matrix<double, 24, 1>& opt_HLstate, size_t locoTick, double locoPhase, double flightPhaseRL, double flightPhaseLR, double DDiff, double HDiff, Eigen::Matrix<double, 5, 1> NLstep){
     
     if (success==1){
         size_t n = vc->y.rows();
@@ -100,6 +100,6 @@ void DataLog::writeData(const StateInfo *state, const VCInfo *vc, const ContactI
             << con->ind[0] << "," << con->ind[1] << "," << con->ind[2] << "," << con->ind[3] << ","
             << locoTick << "," << locoPhase << "," << flightPhaseRL << "," << flightPhaseLR << "," << DDiff << "," << HDiff  << ","
             << NLstep(0) << "," << NLstep(1) << "," << NLstep(2) << "," << NLstep(3) << "," 
-            << traj->FRstepLen << "," << traj->FLstepLen << "," << traj->RRstepLen << "," << traj->RLstepLen << std::endl;
+            << traj->FRstepLen << "," << traj->FLstepLen << "," << traj->RRstepLen << "," << traj->RLstepLen << "," << NLstep(4) << std::endl;
     }
 };

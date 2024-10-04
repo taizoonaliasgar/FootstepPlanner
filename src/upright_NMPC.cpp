@@ -633,9 +633,9 @@ int main(int argc, char **argv) {
     //server.launchServer();
     SRBNMPC* mpc_obj = new SRBNMPC(argc,argv,1,0);
     std::cout << "MPC_obj" << std::endl;  
-    //mpc_obj->generator();
+    mpc_obj->generator();
 
-    std::string file_name = "upright_h5_26";
+    std::string file_name = "upright_h5_54";//26
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
