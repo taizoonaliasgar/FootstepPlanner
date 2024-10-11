@@ -68,8 +68,9 @@ LocoWrapperwalk::~LocoWrapperwalk(){
     delete PP;
 }
 
-void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick){//}, Eigen::Matrix<double, 24, 1>& opt_HLstate){
+void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t duration){//}, Eigen::Matrix<double, 24, 1>& opt_HLstate){
     
+    //std::cout << "LocoWrapperwalk" << "\t" << duration << std::endl;
     quad->updateState(q,dq,R);      // update state
     float footPos[4] = {0};  // DUMMY VARS
 
@@ -124,7 +125,7 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
     Ddiff = (dyn->D-DRai).norm()/dyn->D.norm();
     Hdiff = (dyn->H-HRai).norm()/dyn->H.norm();
 
-    data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force,opt_HLstate,locoTick,phaseVar,flphase,rlphase,Ddiff,Hdiff,NLstep); 
+    data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force,opt_HLstate,locoTick,phaseVar,flphase,rlphase,Ddiff,Hdiff,NLstep,duration); 
     
     locoTick += (ctrlHz)/LL_Hz;     // increment locoTick
     gaitTemp = gait;

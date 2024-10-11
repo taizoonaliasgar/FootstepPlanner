@@ -25,6 +25,11 @@ namespace fs = std::filesystem;
 
 FiltStruct_f* filt = (FiltStruct_f*)malloc(sizeof(FiltStruct_f));
 
+double distx(size_t controlTick, double amp){
+    
+    return amp*sin((controlTick-8000)/1000.0/M_PI);
+    //return dist;
+};
 
 void setupCallback() {
     raisim::OgreVis *vis = raisim::OgreVis::get();
@@ -181,6 +186,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         //if(controlTick == loco_start){
         
         loco_obj->updatestate(jpos,jvel,rotMatrixDouble);
+        int duration_data =0;
         //}
         foot_position = loco_obj->getfootposition();
         hip_position = loco_obj->gethipposition();
@@ -193,7 +199,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             //std::cout << "controlMPC:" << controlMPC << std::endl;
             casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
             if(controlMPC<1){
-                q0.block(12,0,4,1) << 0.1,0.1,-0.1,-0.1;
+                q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);//0.15,0.15,-0.1,-0.1;
             }else{
                 q0(12) = double(X_prev(12));
                 q0(13) = double(X_prev(13));
@@ -211,7 +217,13 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             arg["x0"] = X_prev;
             arg["p"] = p;
             
+            auto start = std::chrono::high_resolution_clock::now();
             res = solver(arg);
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            duration_data = static_cast<int>(duration.count());
+            //std::cout << "NMPC Solve Time: " << duration_data << "ms" << std::endl;
+
             loco_plan->setprevioussol(res.at("x"));
             
             opt_HLMPC_state = loco_plan->getNMPCsol2(controlMPC);
@@ -219,6 +231,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             loco_obj->setoptNLstate(opt_HLMPC_state);
             loco_obj->setcontactconfig(controlMPC);
             loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
+            
 
             //float pose_temp[3] = {opt_HLMPC_state(0),opt_HLMPC_state(1),opt_HLMPC_state(2)};
             //float vel_temp[3] = {opt_HLMPC_state(3),opt_HLMPC_state(4),opt_HLMPC_state(15)};
@@ -230,7 +243,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         
         loco_obj->setRaisimD(Dr);
         loco_obj->setRaisimH(Hr);
-        loco_obj->calcTau(jpos,jvel,rotMatrixDouble,force,UPWALK,controlTick);
+        loco_obj->calcTau(jpos,jvel,rotMatrixDouble,force,UPWALK,controlTick,duration_data);
         
         tau = loco_obj->getTorque();
         
@@ -256,7 +269,21 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     // Set the desired torques
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setGeneralizedForce(jointTorqueFF);
+
+    // Example force in the x-direction
+
+    // Apply the disturbance force to the desired body
+    // Assuming the body index is 0, adjust as needed
+    if(controlTick > 8000 && controlTick < 9000){
+
+        double amp = 50.0;
+        double dist = distx(controlTick, amp);
+        Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
+        A1.back()->setExternalForce(0, disturbanceForce);
+    }
 };
+
+
 
 int main(int argc, char *argv[]) {
     // ============================================================ //
@@ -352,8 +379,11 @@ int main(int argc, char *argv[]) {
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
     //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3784, -1.244, 0.0, 2.3784, -1.244});
     //Rear offset -0.05
-    // A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
     //                                     -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3553, -1.2585, 0.0, 2.3553, -1.2585});
+    //Front offset 0.15
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                     -0.596, 0.9333, -1.8665, 0.596, 0.9333, -1.8665, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
     
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setName("A1_Robot");
@@ -371,7 +401,7 @@ int main(int argc, char *argv[]) {
     A1.back()->getCollisionBody("FR_foot/0").setMaterial("wood");
     A1.back()->getCollisionBody("FL_foot/0").setMaterial("wood");
 
-    world.setMaterialPairProp("wood", "rubber", 1.0, 0, 0);
+    world.setMaterialPairProp("wood", "rubber", 0.8, 0, 0);
 
     //auto& MMP = world.getMaterialPairProp(A1.back()->getCollisionBody("FR_foot/0").getMaterial(),
     //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
@@ -381,8 +411,8 @@ int main(int argc, char *argv[]) {
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    //loco_plan->generator();
-    std::string file_name = "upright_h5_56";
+    loco_plan->generator();
+    std::string file_name = "upright_h5_67";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -390,7 +420,7 @@ int main(int argc, char *argv[]) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 100},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Dict opts = {{"ipopt.print_level", 3}, {"print_time", 0},{"ipopt.max_iter", 20},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     float a[3] = {1.00000000, -1.99555712, 0.99556697};
@@ -413,9 +443,9 @@ int main(int argc, char *argv[]) {
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 60000;//300*ctrlHz;   // Sim end time
+    double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Sep27/videos/";
+    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "upright_A1";
     // std::string filename = "inplace_sim";

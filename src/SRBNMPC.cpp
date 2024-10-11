@@ -79,7 +79,7 @@ void SRBNMPC::generator(){
     writeMatrixToFile(g, basePath + "const.txt");
 
     casadi::Dict opts;
-    opts["ipopt.max_iter"] = 200;  // Replace Max_mpciter with its actual value
+    opts["ipopt.max_iter"] = 20;  // Replace Max_mpciter with its actual value
     opts["ipopt.print_level"] = 0;  // Can be changed to 0 or 3 based on verbosity required
     opts["print_time"] = 0;  // Disable printing solver time
     opts["ipopt.acceptable_tol"] = 1e-2;  // Tolerance for stopping criterion
@@ -88,7 +88,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_h5_56";
+    std::string file_name = "upright_h5_67";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -151,15 +151,15 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
 
     }
 
-    if(localvelocity>0.5){
-        front_off = 0.1+(localvelocity-0.5)/7;
-        rear_off = -0.1+(localvelocity-0.5)/4;
-        pitch_ref = 0;//3.14/6*(localvelocity-0.5);
-    }else{
-        front_off = 0.1;
-        rear_off = -0.1;
-        pitch_ref = 0; 
-    }
+    // if(localvelocity>0.5){
+    //     front_off = 0.1+(localvelocity-0.5)/7;
+    //     rear_off = -0.1+(localvelocity-0.5)/4;
+    //     pitch_ref = 0;//3.14/6*(localvelocity-0.5);
+    // }else{
+    //     front_off = 0.1;
+    //     rear_off = -0.05;
+    //     pitch_ref = 0; 
+    // }
     
      
     if((controlTick)%20 == 0){
@@ -246,7 +246,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     Q.block(3,3,3,3).diagonal() <<  1e5,1e4,1e4;//4e5//5e4//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
     Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//3e4//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
-    Q.block(9,9,3,3).diagonal() <<  1e2,1e2,1e2;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
+    Q.block(9,9,3,3).diagonal() <<  1e2,1e2,1e2;//1//1e2//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
     Q.block(12,12,4,4).diagonal() <<  1000,1000,1000,1000;//1e-2//1e3//1e5,1e5,1e5,1e5;
     //repdiag(Q,Q_rep,HORIZ+1);
     
@@ -355,25 +355,17 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
     casadi::SX f4 = con(casadi::Slice(9,12));
     
     casadi::SX A = casadi::SX::zeros(3,3);
-    A(0,0) = 1;
-    A(0,1) = sin(phi)*tan(theta);
-    A(0,2) = cos(phi)*tan(theta);
-    A(1,0) = 0;
-    A(1,1) = cos(phi);
-    A(1,2) = -sin(phi);
-    A(2,0) = 0;
-    A(2,1) = sin(phi)/cos(theta);
-    A(2,2) = cos(phi)/cos(theta);
-
     // A(0,0) = 1;
     // A(0,1) = sin(phi)*tan(theta);
-    // A(0,2) = -cos(phi)*tan(theta);
+    // A(0,2) = cos(phi)*tan(theta);
     // A(1,0) = 0;
     // A(1,1) = cos(phi);
-    // A(1,2) = sin(phi);
+    // A(1,2) = -sin(phi);
     // A(2,0) = 0;
-    // A(2,1) = -sin(phi)/cos(theta);
+    // A(2,1) = sin(phi)/cos(theta);
     // A(2,2) = cos(phi)/cos(theta);
+
+    A(0,0)=1;A(1,1)=1;A(2,2)=1;
 
     casadi::SX tau = GetTorque(st,con);
 
@@ -383,10 +375,12 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
 
     rhs(casadi::Slice(6,9)) = mtimes(A,st(casadi::Slice(9,12)))*MPC_dt;
 
-    casadi::SX Jw = mtimes(casadi::SX(Jstandcasadi),st(casadi::Slice(9,12)));
-    casadi::SX what = skewsym(st(casadi::Slice(9,12)));
-    casadi::SX wJw = mtimes(what,Jw);
-    rhs(casadi::Slice(9,12)) = mtimes(casadi::SX(Jinvcasadi),tau-wJw) * MPC_dt;
+    // casadi::SX Jw = mtimes(casadi::SX(Jstandcasadi),st(casadi::Slice(9,12)));
+    // casadi::SX what = skewsym(st(casadi::Slice(9,12)));
+    // casadi::SX wJw = mtimes(what,Jw);
+    //rhs(casadi::Slice(9,12)) = mtimes(casadi::SX(Jinvcasadi),tau-wJw) * MPC_dt;
+
+    rhs(casadi::Slice(9,12)) = mtimes(casadi::SX(Jinvcasadi),tau) * MPC_dt;
     
     // rhs(12) = (con(12))*conp1(0);
     // rhs(13) = (con(13))*conp1(1);
@@ -441,20 +435,20 @@ casadi::SX SRBNMPC::GetTorque(casadi::SX st,casadi::SX con){
     casadi::SX tauw = mtimes(Mr1,con(casadi::Slice(0,3)))+mtimes(Mr2,con(casadi::Slice(3,6)))+mtimes(Mr3,con(casadi::Slice(6,9)))+mtimes(Mr4,con(casadi::Slice(9,12)));
 
 
-    casadi::SX Rphi = casadi::SX::zeros(3,3);
-    casadi::SX Rtheta = casadi::SX::zeros(3,3);
-    casadi::SX Rpsi = casadi::SX::zeros(3,3);
+    // casadi::SX Rphi = casadi::SX::zeros(3,3);
+    // casadi::SX Rtheta = casadi::SX::zeros(3,3);
+    // casadi::SX Rpsi = casadi::SX::zeros(3,3);
 
-    Rphi(0,0) = 1; Rphi(1,1) = cos(st(6)); Rphi(1,2) = -sin(st(6));Rphi(2,1) = sin(st(6));Rphi(2,2) = cos(st(6));
-    Rtheta(0,0) = cos(st(7)); Rtheta(0,2) = sin(st(7)); Rtheta(1,1) = 1; Rtheta(2,0) = -sin(st(7)); Rtheta(2,2) = cos(st(7));
-    Rpsi(0,0) = cos(st(8)); Rpsi(0,1) = -sin(st(8)); Rpsi(1,0) = sin(st(8)); Rpsi(1,1) = cos(st(8)); Rpsi(2,2) = 1;
+    // Rphi(0,0) = 1; Rphi(1,1) = cos(st(6)); Rphi(1,2) = -sin(st(6));Rphi(2,1) = sin(st(6));Rphi(2,2) = cos(st(6));
+    // Rtheta(0,0) = cos(st(7)); Rtheta(0,2) = sin(st(7)); Rtheta(1,1) = 1; Rtheta(2,0) = -sin(st(7)); Rtheta(2,2) = cos(st(7));
+    // Rpsi(0,0) = cos(st(8)); Rpsi(0,1) = -sin(st(8)); Rpsi(1,0) = sin(st(8)); Rpsi(1,1) = cos(st(8)); Rpsi(2,2) = 1;
     
-    casadi::SX Ri = mtimes(Rpsi,Rtheta);
-    casadi::SX R = mtimes(Ri,Rphi);
+    // casadi::SX Ri = mtimes(Rpsi,Rtheta);
+    // casadi::SX R = mtimes(Ri,Rphi);
     
-    casadi::SX taub = mtimes(R,tauw);
+    // casadi::SX taub = mtimes(R,tauw);
     
-    return taub;
+    return tauw;
 }
 
 casadi::SX SRBNMPC::inequalitycons(casadi::SX con){
@@ -504,8 +498,8 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
         // }else{
             lbx(NFS*(k+1)+12) = p(0)-2*abs(Raibstep);
             lbx(NFS*(k+1)+13) = p(0)-2*abs(Raibstep);
-            lbx(NFS*(k+1)+14) = p(0)-2*abs(Raibstep);
-            lbx(NFS*(k+1)+15) = p(0)-2*abs(Raibstep);
+            lbx(NFS*(k+1)+14) = p(0)-2*abs(Raibstep)+rear_off;
+            lbx(NFS*(k+1)+15) = p(0)-2*abs(Raibstep)+rear_off;
         //}
 
         lbx(NFS*(HORIZ+1)+NFI*k+1) = 0;
@@ -513,15 +507,22 @@ casadi::DM SRBNMPC::lowerboundx(casadi::DM p, int controlMPC){
         lbx(NFS*(HORIZ+1)+NFI*(k)+8) = 0;
         lbx(NFS*(HORIZ+1)+NFI*(k)+11) = 0;
         
-        lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
-        lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
+        // lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+        if(Raibflag){
+            lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+            lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+            lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+            lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
+        }else{
+            lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
+            lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
+            lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
+            lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+        }
 
-        // lbx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
-        // lbx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
-        // lbx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
-        // lbx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
 
     }
     
@@ -559,8 +560,8 @@ casadi::DM SRBNMPC::upperboundx(casadi::DM p){
         //     ubx(NFS*(k+1)+15) = -0.1;//p(0)-2*abs(Raibstep);
 
         // }else{
-            ubx(NFS*(k+1)+12) = p(0)+2*abs(Raibstep);
-            ubx(NFS*(k+1)+13) = p(0)+2*abs(Raibstep);
+            ubx(NFS*(k+1)+12) = p(0)+2*abs(Raibstep)+front_off;
+            ubx(NFS*(k+1)+13) = p(0)+2*abs(Raibstep)+front_off;
             ubx(NFS*(k+1)+14) = p(0)+2*abs(Raibstep);
             ubx(NFS*(k+1)+15) = p(0)+2*abs(Raibstep);
         // }
@@ -570,11 +571,17 @@ casadi::DM SRBNMPC::upperboundx(casadi::DM p){
         ubx(NFS*(HORIZ+1)+NFI*(k)+8) = contact_index(2)*fzmaxr;
         ubx(NFS*(HORIZ+1)+NFI*(k)+11) = contact_index(3)*fzmaxr;
 
-        ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
-        ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
-
+        if(Raibflag){
+            ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
+            ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
+            ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
+            ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(vRaibstep);
+        }else{
+            ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
+            ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
+            ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
+            ubx(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
+        }
         // ubx(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(vRaibstep);
         // ubx(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(vRaibstep);
         // ubx(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(vRaibstep);
@@ -987,10 +994,10 @@ casadi::DM SRBNMPC::getprevioussol_ll(Eigen::Matrix<double,16,1> q0, Eigen::Matr
 
     x0(casadi::Slice(0,12)) = q0_dm(casadi::Slice(0,12));
     if(controlTick<1){
-        x0(12) = 0.1;//0.02
-        x0(13) = 0.1;
-        x0(14) = -0.1;
-        x0(15) = -0.1;
+        x0(12) = front_off;//0.02
+        x0(13) = front_off;
+        x0(14) = rear_off;
+        x0(15) = rear_off;
         casadi::DM sum_conseq;// = casadi::DM::sum1(contact_sequence_dm); 
         
         for(int i = 0; i<HORIZ; i++){

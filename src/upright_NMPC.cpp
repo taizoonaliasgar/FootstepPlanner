@@ -379,13 +379,14 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
             mpc_obj->setprevioussol(res.at("x"));
             mpc_obj->setsteplb(controlMPC);
             
-            //mpc_obj->getForce();
+            mpc_obj->getForce();
             mpc_obj->getOptForceCoeff(fit_order);
             
         }
         
-        forceFFvec = mpc_obj->getOptforce(controlTick%10,fit_order);
-        //forceFFvec = mpc_obj->returnForce();
+        //forceFFvec = mpc_obj->getOptforce(controlTick%10,fit_order);
+        //forceFFvec = mpc_obj->getOptforce(0,fit_order);
+        forceFFvec = mpc_obj->returnForce();
         
         p_foot = mpc_obj->getFootPos(); 
         
@@ -619,7 +620,7 @@ int main(int argc, char **argv) {
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 15*ctrlHz;   // Sim end time
     double fps = 5;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/videos/";
+    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct6/";
     std::string filename = "upright_SRB";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
@@ -635,7 +636,7 @@ int main(int argc, char **argv) {
     std::cout << "MPC_obj" << std::endl;  
     mpc_obj->generator();
 
-    std::string file_name = "upright_h5_54";//26
+    std::string file_name = "upright_h5_63";//26
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
