@@ -23,13 +23,9 @@ const std::string FILE_NAMES_MIT[FILE_CNT_MPC] = {
     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footforce.txt",
     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/desired_state.txt",
     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foot_position.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt"
-    // "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/datalog/actual_state_mit.txt",
-    // "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/datalog/mpc_state_mit.txt",
-    // "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/datalog/footposition_mit.txt",
-    // "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/datalog/hipposition_mit.txt"
-    //"/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/datalog/matrixlog_mit.txt"
+    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footposition.txt",
+    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footsim.txt"
+    //"/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt"
 };
 
 
@@ -69,7 +65,7 @@ public:
     void impactDetection(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void impactDetectionTrot(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void footstepplanner(Eigen::Matrix<double,12,1> &q0);
-    void mpcdataLog(Eigen::Matrix<double,17,1> q0, casadi::DM p, casadi::DM X_prev, size_t tick);//casadi::DM ubx,(Eigen::Matrix<double,12,1> &q0, size_t tick);
+    void mpcdataLog(Eigen::Matrix<double,17,1> q0, Eigen::Matrix<double,12,1> force, Eigen::Matrix<double, 12, 1> p_foot,size_t tick);//casadi::DM ubx,(Eigen::Matrix<double,12,1> &q0, size_t tick);
     void motionPlannerwll(Eigen::Matrix<double,12,1> &q0);
 
     //Integration with low level
@@ -93,10 +89,13 @@ public:
     void setprevioussol(casadi::Matrix<double> sol0){  previous_sol = sol0; };
     casadi::DM getprevioussol(Eigen::Matrix<double,17,1> q0, size_t controlTick);
     Eigen::Matrix<double,12,1> getOptforce();
-    Eigen::Matrix<double,12,1> getFootPos(casadi::DM p);
+    Eigen::Matrix<double,12,1> getFootPos();
     void writeMatrixToFile(const casadi::SX& matrix, const std::string& filename);
-    void setpreviousp(casadi::DM pp){ p_prev = pp; };
+    void setpreviousp(casadi::DM pp);//{ p_prev = pp; };
     Eigen::Matrix<double,4,1> getpreviousfoot();
+    void getOptForceCoeff(int order);
+    Eigen::Matrix<double,12,1> getOptforce(int phase,int order);
+    Eigen::Matrix<double,12,HORIZ> arrangeOptforce();
 
 private: 
     std::string filename;
@@ -149,7 +148,7 @@ private:
     // "Static" locomotion variables
     int phaseIdx = 2;
     int startTrot = 0;
-    Eigen::Matrix<double, 3, 1> desVel = {0.7,0,0};
+    Eigen::Matrix<double, 3, 1> desVel = {0.3,0,0};
     Eigen::Matrix<double, 3, 1> desOmega = {0,0,0};
     Eigen::Matrix<double, 3, 1> desVelWrld = {0,0,0};
     double yawLock = 0;
@@ -184,8 +183,8 @@ private:
     Eigen::Matrix<double,3,1> disturbforce = {0,0,0};
     Eigen::Matrix<double, 24, 1> opt_HLsol_;
 
-    casadi::MX contact_sequence = casadi::MX::ones(4,40);//,{0});
-    casadi::DM contact_sequence_dm = casadi::DM::ones(4,40);//,{0});
+    //casadi::MX contact_sequence = casadi::MX::ones(4,40);//,{0});
+    casadi::DM contact_sequence_dm;// = casadi::DM::ones(4,40);//,{0});
     casadi::DM gravityN = {0,0,9.81};
     casadi::DM Jstandcasadi = casadi::DM::zeros(3,3);
     casadi::DM Jinvcasadi = casadi::DM::zeros(3,3);
@@ -196,6 +195,12 @@ private:
     casadi::DM Footoffset = {0.2,0.2,-0.1,-0.1};
     casadi::DM p_prev =casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*HORIZ+8*HORIZ,1);
     double localvelocity = 0;
+
+    Eigen::MatrixXd forceCoeff;
+    //Eigen::Matrix<double, 12, 5> forceCoeff = Eigen::MatrixXd::Zero(12,5);
+    Eigen::Matrix<double, HORIZ,1> forcefitx = Eigen::MatrixXd::Zero(HORIZ,1);
+    Eigen::Matrix<double,12,1> OPTforce = Eigen::Matrix<double,12,1>::Zero();
+    //casadi::DM previousp = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1),1);
 };
 
 #endif

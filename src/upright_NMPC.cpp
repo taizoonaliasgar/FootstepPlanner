@@ -3,7 +3,7 @@
 // MIT License
 //
 // Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
-//
+// Author: Taizoon 
 
 #include "raisim/OgreVis.hpp"
 #include "raisimBasicImguiPanel.hpp"
@@ -194,6 +194,7 @@ void setdisturbforcewithvis(std::vector<raisim::ArticulatedSystem *> srbx2, size
                  const std::string& objname, size_t bodyidx, Eigen::Vector3d bodypos, Eigen::MatrixXd bodyrot, Eigen::Vector3d offset, Eigen::Vector3d extforce_e){
     Eigen::Vector3d offset_inertial;
     offset_inertial = offset;//bodyrot * offset; //offset;// 
+    offset_inertial -= bodypos;
     //std::cout <<offset_inertial.transpose() << std::endl;
 
     srbx2[agnum]->setExternalForce(bodyidx, {offset_inertial(0), offset_inertial(1), offset_inertial(2)}, {extforce_e(0), extforce_e(1), extforce_e(2)});
@@ -312,48 +313,13 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     q0.block(3,0,3,1) = jointVelTotal.block(0,0,3,1);
     q0.block(6,0,3,1) = eul;
     q0.block(9,0,3,1) = jointVelTotal.block(3,0,3,1);
-    //q0(16,0) = controlTick;
-    if(controlTick<1){
-        q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
-    }
     
     casadi::DM X_prev = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
-    X_prev = mpc_obj->getprevioussol(q0,controlTick); 
     
-    if(controlTick<1){
-        q0.block(12,0,4,1) << 0.2,0.2,-0.1,-0.1;
-    }else{
-        q0(12) = double(X_prev(12));
-        q0(13) = double(X_prev(13));
-        q0(14) = double(X_prev(14));
-        q0(15) = double(X_prev(15));
-    }
-    
-    std::map<std::string, casadi::DM> arg, res;
-    //std::cout << "p" << std::endl;
-    casadi::DM p = mpc_obj->motionPlannerN(q0,controlTick);// casadi::DM::zeros(NFS*(HORIZ+1),1);
-    //std::cout << "lbx" << std::endl;
-    arg["lbx"] = mpc_obj->lowerboundx(p);//-casadi::DM::inf();
-    //std::cout << "ubx" << std::endl;
-    arg["ubx"] =  mpc_obj->upperboundx(p);//casadi::DM::inf();
-    //std::cout << "lbg" << std::endl;
-    arg["lbg"] =  mpc_obj->lowerboundg();//0;
-    //std::cout << "ubg" << std::endl;
-    arg["ubg"] =  mpc_obj->upperboundg();//casadi::DM::inf();
-    //std::cout << "Xprev" << std::endl;
-    arg["x0"] = X_prev;
-    arg["p"] = p;
 
-    std::string basePath = "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/build/tmp/";
-    writeMatrixToFile(arg["lbx"], basePath + "args_lbx.txt");
-    writeMatrixToFile(arg["ubx"], basePath + "args_ubx.txt");
-    writeMatrixToFile(arg["lbg"], basePath + "args_lbg.txt");
-    writeMatrixToFile(arg["ubg"], basePath + "args_ubg.txt");
-    writeMatrixToFile(arg["x0"], basePath + "args_x0.txt");
-    writeMatrixToFile(arg["p"], basePath + "args_p.txt");
-
-    //casadi::DM ubxdata = mpc_obj->upperboundx(p); 
-    //std::cout << "ubx" << std::endl;
+    int fit_order = 6;
+    Eigen::Matrix<double,3,1> distforce = {50,0,0};
+    Eigen::Matrix<double,3,1> distpos = {0,0,0.1};
     
     //robot loadingq
 
@@ -369,21 +335,69 @@ void planner(std::vector<raisim::ArticulatedSystem*> srbx2,
     //locomotion
     else if(controlTick >= settling_temp){
         
-        res = solver(arg);
-        mpc_obj->setprevioussol(res.at("x"));
-        //std::cout << "setXprev" << std::endl;
-        forceFFvec = mpc_obj->getOptforce();
-        //std::cout << "force" << std::endl;
-        p_foot = mpc_obj->getFootPos();
-        //std::cout << "foot" << std::endl;
-        //mpc_obj->mpcdataLog(p,controlTick);
+        
+        if(controlTick%10==0){
+
+            int controlMPC = std::floor(controlTick/10);
+            //std::cout << "Yes1" <<std::endl;
+            X_prev = mpc_obj->getprevioussol(q0,controlMPC); 
+    
+            if(controlTick<1){
+                q0.block(12,0,4,1) << 0.1,0.1,-0.1,-0.1;
+                //q0.block(12,0,4,1) << 0.02,0.02,-0.01,-0.01;
+            }else{
+                q0(12) = double(X_prev(12));
+                q0(13) = double(X_prev(13));
+                q0(14) = double(X_prev(14));
+                q0(15) = double(X_prev(15));
+            }
+            
+            std::map<std::string, casadi::DM> arg, res;
+            
+            casadi::DM p = mpc_obj->motionPlannerN(q0,controlMPC);// casadi::DM::zeros(NFS*(HORIZ+1),1);
+            mpc_obj->setpreviousp(p);
+            
+    
+            arg["lbx"] = mpc_obj->lowerboundx(p,controlMPC);//-casadi::DM::inf();
+            arg["ubx"] =  mpc_obj->upperboundx(p);//casadi::DM::inf();
+            arg["lbg"] =  mpc_obj->lowerboundg();//0;
+            arg["ubg"] =  mpc_obj->upperboundg();//casadi::DM::inf();
+    
+            arg["x0"] = X_prev;
+            arg["p"] = p;
+
+            // std::string basePath = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/build/tmp/";
+            // writeMatrixToFile(arg["lbx"], basePath + "args_lbx.txt");
+            // writeMatrixToFile(arg["ubx"], basePath + "args_ubx.txt");
+            // writeMatrixToFile(arg["lbg"], basePath + "args_lbg.txt");
+            // writeMatrixToFile(arg["ubg"], basePath + "args_ubg.txt");
+            // writeMatrixToFile(arg["x0"], basePath + "args_x0.txt");
+            // writeMatrixToFile(arg["p"], basePath + "args_p.txt");
+            
+            res = solver(arg);
+            
+            mpc_obj->setprevioussol(res.at("x"));
+            mpc_obj->setsteplb(controlMPC);
+            
+            mpc_obj->getForce();
+            mpc_obj->getOptForceCoeff(fit_order);
+            
+        }
+        
+        //forceFFvec = mpc_obj->getOptforce(controlTick%10,fit_order);
+        //forceFFvec = mpc_obj->getOptforce(0,fit_order);
+        forceFFvec = mpc_obj->returnForce();
+        
+        p_foot = mpc_obj->getFootPos(); 
         
         setExtforcewithvis(srbx2,0, list, "extForceArrow0", 0, bodypos_e, bodyrot_e, p_foot.block(0,0,3,1), forceFFvec.block(0,0,3,1));
         setExtforcewithvis(srbx2,0, list, "extForceArrow1", 0, bodypos_e, bodyrot_e, p_foot.block(3,0,3,1), forceFFvec.block(3,0,3,1));
         setExtforcewithvis(srbx2,0, list, "extForceArrow2", 0, bodypos_e, bodyrot_e, p_foot.block(6,0,3,1), forceFFvec.block(6,0,3,1));
         setExtforcewithvis(srbx2,0, list, "extForceArrow3", 0, bodypos_e, bodyrot_e, p_foot.block(9,0,3,1), forceFFvec.block(9,0,3,1));
-           
-        mpc_obj->mpcdataLog(q0,p,X_prev,controlTick);
+        // if(controlTick>5000 && controlTick<5500){
+        //     setExtforcewithvis(srbx2,0, list, "disturbForceArrow0", 0, bodypos_e, bodyrot_e, q0.block(0,0,3,1)+distpos, distforce);
+        // }
+        mpc_obj->mpcdataLog(q0,forceFFvec,controlTick,p_foot);
     }
     std:: cout<< "controlTick: " << controlTick << std::endl;
     controlTick++;
@@ -546,7 +560,7 @@ int main(int argc, char **argv) {
         //srbx2.push_back(world.addArticulatedSystem(raisim::loadResource("togo/togo_manual_measure.urdf")));
         auto A1_vis = vis->createGraphicalObject(srbx2.back(), "SRB" + std::to_string(i));
 
-        srbx2.back()->setGeneralizedCoordinate({agentinitial(i, 0), agentinitial(i,1), 0.35, qw, qx, qy, qz});
+        srbx2.back()->setGeneralizedCoordinate({agentinitial(i, 0), agentinitial(i,1), 0.5, qw, qx, qy, qz});
 
         srbx2.back()->setGeneralizedForce(Eigen::VectorXd::Zero(srbx2.back()->getDOF()));
         srbx2.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);//PD_PLUS_FEEDFORWARD_TORQUE);
@@ -604,10 +618,10 @@ int main(int argc, char **argv) {
     //-----Video stuff-------//
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 300*ctrlHz;   // Sim end time
-    double fps = 2;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/videos/";
-    std::string filename = "upright_walk_f7";
+    double simlength = 15*ctrlHz;   // Sim end time
+    double fps = 5;            
+    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct6/";
+    std::string filename = "upright_SRB";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
     
@@ -622,7 +636,7 @@ int main(int argc, char **argv) {
     std::cout << "MPC_obj" << std::endl;  
     mpc_obj->generator();
 
-    std::string file_name = "upright_nlp_32";
+    std::string file_name = "upright_h5_63";//26
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -630,7 +644,8 @@ int main(int argc, char **argv) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name);
+    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 100},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     /// run the app using while loop
     signal(SIGINT, signalhandler);
@@ -641,11 +656,11 @@ int main(int argc, char **argv) {
     contact_sequence_dm(0,casadi::Slice(25,40)) = casadi::DM::zeros(1,15);
     contact_sequence_dm(3,casadi::Slice(28,40)) = casadi::DM::zeros(1,12);
 
-    while (!vis->getRoot()->endRenderingQueued() && simcounter <  3e7){
+    while (!vis->getRoot()->endRenderingQueued() && simcounter < simlength){
 
         planner(srbx2, 1, 0,mpc_obj,solver,contact_sequence_dm);// loco_pln0, 
         world.integrate();
-        if (simcounter%2 == 0){
+        if (simcounter%15 == 0){
             vis->renderOneFrame();
         }
 
