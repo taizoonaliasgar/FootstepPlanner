@@ -17,16 +17,18 @@ using MPCP = Settings::MPC_params;
 
 #include "fstream"
 
-const size_t FILE_CNT_MPC = 7;
+const size_t FILE_CNT_MPC = 5;
 const std::string FILE_NAMES_MIT[FILE_CNT_MPC] = {
     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/state.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footforce.txt",
+    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/inputs.txt",
     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/desired_state.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footposition.txt",
-   // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/steplength.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foothold.txt"
+    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foot_position.txt",
+    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt"
+//     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footposition.txt",
+//    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt",
+//     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/steplength.txt",
+//     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foothold.txt",
+//     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forcesol.txt"
 };
 
 
@@ -66,7 +68,7 @@ public:
     void impactDetection(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void impactDetectionTrot(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void footstepplanner(Eigen::Matrix<double,12,1> &q0);
-    void mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, size_t tick);//(Eigen::Matrix<double,12,1> &q0, size_t tick);
+    void mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, size_t tick,Eigen::Matrix<double, 12, 1> p_foot);//(Eigen::Matrix<double,12,1> &q0, size_t tick);
     void motionPlannerwll(Eigen::Matrix<double,12,1> &q0);
 
     //Integration with low level
@@ -78,16 +80,17 @@ public:
     casadi::DM motionPlannerN(Eigen::Matrix<double,16,1> q0,size_t controlTick);
     casadi::SX UpdateCostN(casadi::SX x, casadi::SX x_des);
     casadi::SX UpdateConstraintsN(casadi::SX x, casadi::SX p);
-    casadi::SX NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX conp1);
+    casadi::SX NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX conc,casadi::SX conp1,casadi::SX conm1);
     //casadi::MX NonlinearDynamics(casadi::MX st, casadi::MX con);//, int i, casadi::MX p);
     casadi::SX GetTorque(casadi::SX st,casadi::SX con);
     casadi::SX inequalitycons(casadi::SX con);
     casadi::SX skewsym(casadi::SX v3);
-    casadi::DM lowerboundx(casadi::DM p);
+    casadi::DM lowerboundx(casadi::DM p, int controlMPC);
     casadi::DM upperboundx(casadi::DM p);
     casadi::DM lowerboundg();
     casadi::DM upperboundg();
-    void setprevioussol(casadi::Matrix<double> sol0){  previous_sol = sol0; };
+    //void setprevioussol(casadi::Matrix<double> sol0){  previous_sol = sol0; };
+    void setprevioussol(casadi::DM sol0);
     casadi::DM getprevioussol(Eigen::Matrix<double,16,1> q0, size_t controlTick);
     Eigen::Matrix<double,12,1> getOptforce(int phase, int order);
     void getOptForceCoeff(int order);
@@ -99,10 +102,13 @@ public:
     Eigen::Matrix<double,12,HORIZ> arrangeOptforce();
     void getForce();
     Eigen::Matrix<double,12,1> returnForce(){return OPTforce;};
-    void setpreviousp(casadi::DM p){ previousp = p; };
+    void setpreviousp(casadi::DM p);
+    void setsteplb(int controlMPC);
 
     //Fill simulation
-    Eigen::Matrix<double,24,1> getNMPCsol();
+    Eigen::Matrix<double,32,1> getNMPCsol(int controlMPC);
+    Eigen::Matrix<double,33,1> getNMPCsol2(int controlMPC);
+    casadi::DM getprevioussol_ll(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, size_t controlTick);
 
 private: 
     std::string filename;
@@ -155,7 +161,7 @@ private:
     // "Static" locomotion variables
     int phaseIdx = 2;
     int startTrot = 0;
-    Eigen::Matrix<double, 3, 1> desVel = {0.7,0,0};
+    Eigen::Matrix<double, 3, 1> desVel = {0.5,0,0};
     Eigen::Matrix<double, 3, 1> desOmega = {0,0,0};
     Eigen::Matrix<double, 3, 1> desVelWrld = {0,0,0};
     double yawLock = 0;
@@ -166,18 +172,18 @@ private:
 
     //Taizoon params
     int con_prev[4] = {1,0,0,1};
-    size_t locomotionTick = 0; // reset every domain
+    int locomotionTick = 0; // reset every domain
     size_t mpcTick = 0;
     int16_t stance_flag = 1;
     int16_t simcounter = 0;
     int16_t planindex = 0;
     int16_t M = HORIZ;
-    double stand_height = 0.35;
+    double stand_height = 0.5;
     Eigen::Matrix<double, DOMAINSTEPS+HORIZ,1> vz_domain;
     double z_travel = 0;
     double fzmaxr = 250;
     double fzmaxf = 150;
-    double mu= 0.8; //mpc_params.mu_MPC;
+    double mu= 0.6/sqrt(2); //mpc_params.mu_MPC;
     Eigen::Matrix<double,3,4> foot_current = Eigen::MatrixXd::Zero(3,4);
     Eigen::Matrix<double,12,12> Anext, Bnext;
 
@@ -196,7 +202,7 @@ private:
     casadi::DM Jstandcasadi = casadi::DM::zeros(3,3);
     casadi::DM Jinvcasadi = casadi::DM::zeros(3,3);
     casadi::DM Raibheur = 0;//0.5*Tstance*desVel(0);
-    casadi::DM RaibMult = 4;
+    int RaibMult = 2;//8;//8;
     casadi::DM previous_sol = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
     double localvelocity = 0;
     casadi::DM x_dom_init = 0;
@@ -206,7 +212,17 @@ private:
     //Eigen::Matrix<double, 12, 5> forceCoeff = Eigen::MatrixXd::Zero(12,5);
     Eigen::Matrix<double, HORIZ,1> forcefitx = Eigen::MatrixXd::Zero(HORIZ,1);
     Eigen::Matrix<double,12,1> OPTforce = Eigen::Matrix<double,12,1>::Zero();
-    casadi::DM previousp = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1));
+    casadi::DM Raibstep = 0;//0.5*Tstance*desVel(0);
+    casadi::DM vRaibstep = 0;//0.5*Tstance*desVel(0);
+    int velsign = 1;
+
+    public:
+    casadi::DM previousp = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2),1);
+    casadi::DM optstephll = casadi::DM::zeros(4,1);
+    casadi::DM front_off = 0.1;
+    casadi::DM rear_off = -0.1; 
+    casadi::DM pitch_ref = 0;
+    int Raibflag = 0;
 };
 
 #endif

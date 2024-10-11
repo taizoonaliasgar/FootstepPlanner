@@ -72,11 +72,11 @@ void SRBNMPC::generator(){
     // Objective
     casadi::SX f = UpdateCostN(x,p);
     std::string basePath = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/build/tmp/";
-    writeMatrixToFile(f, basePath + "obj.txt");
+    //writeMatrixToFile(f, basePath + "obj.txt");
     
     // Constraints
     casadi::SX g = UpdateConstraintsN(x,p);
-    writeMatrixToFile(g, basePath + "const.txt");
+    //writeMatrixToFile(g, basePath + "const.txt");
 
     casadi::Dict opts;
     opts["ipopt.max_iter"] = 20;  // Replace Max_mpciter with its actual value
