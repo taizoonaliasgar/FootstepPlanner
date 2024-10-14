@@ -13,6 +13,7 @@
 #include "Filters.h"
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 
 //HDSRL header
 //#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/LocoWrapperfly.hpp"
@@ -21,7 +22,7 @@
 #include "LocoWrapperwalk.hpp"
 #include "SRBNMPC.hpp"
 using namespace std;
-namespace fs = std::filesystem;
+// namespace fs = std::filesystem;
 
 FiltStruct_f* filt = (FiltStruct_f*)malloc(sizeof(FiltStruct_f));
 
@@ -412,11 +413,13 @@ int main(int argc, char *argv[]) {
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "upright_h5_68";
+    std::string file_name = "upright_h5_69";
     // code predix
-    std::string prefix_code = fs::current_path().string() + "/";
+    // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
+    std::string prefix_code = std::filesystem::current_path().string() + "/";
     // shared library prefix
-    std::string prefix_lib = fs::current_path().string() + "/";
+    // std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
+    std::string prefix_lib = std::filesystem::current_path().string() + "/";
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
@@ -441,7 +444,7 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;             // Record?
+    bool record = false;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            

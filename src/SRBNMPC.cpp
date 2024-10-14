@@ -8,6 +8,8 @@
 #include <casadi/core/generic_type.hpp>
 #include <casadi/core/dae_builder.hpp>
 #include <casadi/core/optistack.hpp>
+#include <array>
+#include <vector>
 
 
 
@@ -85,19 +87,19 @@ void SRBNMPC::generator(){
     opts["print_time"] = 0;  // Disable printing solver time
     opts["ipopt.acceptable_tol"] = 1e-2;  // Tolerance for stopping criterion
     opts["ipopt.acceptable_obj_change_tol"] = 1e-2;  // Objective change tolerance for stopping
+    casadi::SXDict nlp_prob = {{"f", f}, {"x", x}, {"g", g}, {"p", p}};
 
-    casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
-
+    //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
+    casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "upright_h5_68";
+    std::string file_name = "upright_h5_6";
     // code predix
-    std::string prefix_code = fs::current_path().string() + "/";
+    std::string prefix_code = std::filesystem::current_path().string() + "/";
 
     // Generate C code for the NLP functions
     solver.generate_dependencies(file_name + ".c");
 
-    std::string prefix_lib = fs::current_path().string() + "/";
-
+    std::string prefix_lib = std::filesystem::current_path().string() + "/";
     // compile c code to a shared library
     std::string compile_command = "gcc -fPIC -shared -O3 " + 
         prefix_code + file_name + ".c -o " +
