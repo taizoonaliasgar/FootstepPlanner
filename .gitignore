@@ -1,2 +1,6 @@
 build/
 datalog/
+videos/
+build/CMakeFiles/*
+build/tmp/
+optimization/
