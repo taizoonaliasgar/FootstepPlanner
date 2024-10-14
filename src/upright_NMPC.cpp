@@ -620,7 +620,8 @@ int main(int argc, char **argv) {
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 15*ctrlHz;   // Sim end time
     double fps = 5;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct6/";
+    //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct6/";
+    std::string directory = "../datalog/Oct6/";
     std::string filename = "upright_SRB";
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);

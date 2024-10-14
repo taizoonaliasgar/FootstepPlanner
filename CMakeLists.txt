@@ -8,7 +8,8 @@ set(CMAKE_CXX_FLAGS "-O3")
 set(USE_QPSWIFT TRUE) 
 add_definitions(-DUSE_QPSWIFT=1)
 
-set(LL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../A1_LL_Exp-Arch_Change)
+# set(LL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../A1_LL_Exp-Arch_Change)
+set(LL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/LL_integrator)
 set(ROBOT_DIR "A1_New_wFoot")
 
 find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnv/raisimBuild/lib/cmake/raisim")
@@ -58,8 +59,10 @@ target_include_directories(dyn_lib PUBLIC
     ${LL_DIR}/dynamics
     ${LL_DIR}/dynamics/A1
     #${LL_DIR}/dynamics/${ROBOT_DIR}
-    ${LL_DIR}/util_include
-    ${LL_DIR}/global_include) 
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include) 
  
 
 # ===== Parameter library ===== #
@@ -87,13 +90,17 @@ target_include_directories(optimization_lib PUBLIC
 
 # ===== Control ===== #
 add_library(ctrl_lib
-    "${LL_DIR}/src/LowLevelCtrl.cpp"
+    #"${LL_DIR}/src/LowLevelCtrl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LowLevelCtrl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/VirtualConstraints.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DataLog.cpp")
 target_include_directories(ctrl_lib PUBLIC 
-    ${LL_DIR}/include
-    ${LL_DIR}/util_include
-    ${LL_DIR}/global_include)
+    #${LL_DIR}/include
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
 target_link_libraries(ctrl_lib PUBLIC 
     dyn_lib
     params_lib
@@ -105,8 +112,10 @@ add_library(plan_lib
     "${CMAKE_CURRENT_SOURCE_DIR}/src/MotionPlanner.cpp")
 target_include_directories(plan_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${LL_DIR}/global_include
-    ${LL_DIR}/util_include)
+    #${LL_DIR}/global_include
+    #${LL_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include)
 
 # ===== Upright walk wrapper Library ===== #
 add_library(wrapperwalk
@@ -163,5 +172,6 @@ target_compile_options(upright_NMPCR PRIVATE -std=c++17)
 add_executable(uprightwalk src/A1_up_walk.cpp)
 target_link_libraries(uprightwalk PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
 target_include_directories(uprightwalk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(uprightwalk PRIVATE -std=c++17)

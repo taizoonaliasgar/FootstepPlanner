@@ -19,11 +19,16 @@ using MPCP = Settings::MPC_params;
 
 const size_t FILE_CNT_MPC = 5;
 const std::string FILE_NAMES_MIT[FILE_CNT_MPC] = {
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/state.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/inputs.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/desired_state.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foot_position.txt",
-    "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt"
+    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/state.txt",
+    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/inputs.txt",
+    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/desired_state.txt",
+    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foot_position.txt",
+    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt"
+    "../datalog/state.txt",
+    "../datalog/inputs.txt",
+    "../datalog/desired_state.txt",
+    "../datalog/foot_position.txt",
+    "../datalog/contact_index.txt"
 //     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footposition.txt",
 //    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt",
 //     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/steplength.txt",

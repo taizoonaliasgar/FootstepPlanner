@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "upright_h5_67";
+    std::string file_name = "upright_h5_68";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
@@ -445,7 +445,8 @@ int main(int argc, char *argv[]) {
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
-    std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
+    //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
+    std::string directory = "../datalog/Oct14/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "upright_A1";
     // std::string filename = "inplace_sim";

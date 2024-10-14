@@ -71,7 +71,8 @@ void SRBNMPC::generator(){
 
     // Objective
     casadi::SX f = UpdateCostN(x,p);
-    std::string basePath = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/build/tmp/";
+    //std::string basePath = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/build/tmp/";
+    std::string basePath = "../build/tmp/";
     //writeMatrixToFile(f, basePath + "obj.txt");
     
     // Constraints
@@ -88,7 +89,7 @@ void SRBNMPC::generator(){
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
 
     // file name
-    std::string file_name = "upright_h5_67";
+    std::string file_name = "upright_h5_68";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 

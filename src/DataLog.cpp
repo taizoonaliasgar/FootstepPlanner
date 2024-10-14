@@ -4,7 +4,8 @@
 // Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
 //
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/include/DataLog.hpp"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/include/DataLog.hpp"
+#include "../include/DataLog.hpp"
 
 
 DataLog::DataLog(std::string filename){

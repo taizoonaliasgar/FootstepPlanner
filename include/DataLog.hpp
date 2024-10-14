@@ -1,7 +1,8 @@
 #ifndef DATALOG_HPP
 #define DATALOG_HPP
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+#include "../global_include/global_loco_structs.hpp"
 #include "iostream"
 #include "fstream"
 

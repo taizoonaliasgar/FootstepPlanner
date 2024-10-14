@@ -69,6 +69,10 @@ struct TrajInfo
     Eigen::Matrix<double, 3, 4> toeInit;
     Eigen::Matrix<double, 3, 4> toeFinal;
     double domLen = 0;
+    double FRstepLen = 0.0;
+    double FLstepLen = 0.0;
+    double RRstepLen = 0.0;
+    double RLstepLen = 0.0;
 };
 
 struct LLInfo{

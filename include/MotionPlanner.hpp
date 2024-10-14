@@ -1,11 +1,17 @@
 #ifndef PLANNER_HPP
 #define PLANNER_HPP
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+// #include "ContactEst.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Transforms.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Bezier.h"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/EigenUtils.hpp"
+
+#include "../global_include/global_loco_structs.hpp"
 #include "ContactEst.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Transforms.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Bezier.h"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/EigenUtils.hpp"
+#include "../util_include/Transforms.hpp"
+#include "../util_include/Bezier.h"
+#include "../util_include/EigenUtils.hpp"
 
 #define MAX_SL_F_X 0.16     // Max forward step length (magnitude)
 #define MAX_SL_R_X 0.16     // Max backward step length (magnitude)

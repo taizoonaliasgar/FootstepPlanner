@@ -1,7 +1,8 @@
 #ifndef CONTACT_ESTIMATION
 #define CONTACT_ESTIMATION
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+#include "../global_include/global_loco_structs.hpp"
 #include "stdint.h"
 
 #define NUM_EE 4 // DO NOT CHANGE CURRENTLY

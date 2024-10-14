@@ -1,18 +1,22 @@
 #ifndef LOCO_WRAPPERWALK
 #define LOCO_WRAPPERWALK
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/params/Parameters.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/dynamics/RobotModel.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/params/Parameters.hpp"
+// #include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/dynamics/RobotModel.hpp"
+#include "../global_include/global_loco_structs.hpp"
+#include "../params/Parameters.hpp"
+#include "../LL_integrator/dynamics/RobotModel.hpp"
 #ifdef USE_OSQP
 #include "LowLevelCtrl_OSQP.hpp"
 #else
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/include/LowLevelCtrl.hpp"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/include/LowLevelCtrl.hpp"
+#include "LowLevelCtrl.hpp"
 #endif
 #include "VirtualConstraints.hpp"
 #include "ContactEst.hpp"
 #include "MotionPlanner.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/include/DataLog.hpp"
+#include "DataLog.hpp"
 
 #include <memory>
 

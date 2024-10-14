@@ -1,8 +1,10 @@
 #ifndef VIRTUALCONSTRAINTS
 #define VIRTUALCONSTRAINTS
 
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
-#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Bezier.h"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/global_include/global_loco_structs.hpp"
+//#include "/home/taizoon/raisimEnv/raisimWorkspace/A1_LL_Exp-Arch_Change/util_include/Bezier.h"
+#include "../global_include/global_loco_structs.hpp"
+#include "../util_include/Bezier.h"
 
 using KinInf = KinematicsInfo;
 using ConInf = ContactInfo;

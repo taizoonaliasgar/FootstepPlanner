@@ -11,7 +11,8 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
 
 //    std::string filename = "/media/kavehakbarihamed/Data/A1_RaiSim_Outputs/LCSS_2021/Payload_Trot_10cm.txt";
 //    std::string filename = "/media/kavehakbarihamed/Data/A1_RaiSim_Outputs/nothing.txt";
-    std::string filename = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/nothing.csv";
+    //std::string filename = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/nothing.csv";
+    std::string filename = "../datalog/nothing.csv";
 //    std::string filename = ""; // empty string will produce no output file
     
     data = std::unique_ptr<DataLog>( new DataLog(filename) ); // make_unique DNE in c++11
