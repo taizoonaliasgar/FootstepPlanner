@@ -413,7 +413,7 @@ int main(int argc, char *argv[]) {
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "upright_h5_69";
+    std::string file_name = "upright_h5_70";
     // code predix
     // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
     std::string prefix_code = std::filesystem::current_path().string() + "/";
@@ -423,7 +423,7 @@ int main(int argc, char *argv[]) {
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";
-    casadi::Dict opts = {{"ipopt.print_level", 3}, {"print_time", 0},{"ipopt.max_iter", 20},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 20},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
     float a[3] = {1.00000000, -1.99555712, 0.99556697};
