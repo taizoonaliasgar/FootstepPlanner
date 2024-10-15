@@ -92,7 +92,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "upright_h5_70";
+    std::string file_name = "upright_h5_71";
     // code predix
     std::string prefix_code = std::filesystem::current_path().string() + "/";
 
