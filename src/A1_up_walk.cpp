@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "upright_h5_68";
+    std::string file_name = "upright_h5_69";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
     // shared library prefix
