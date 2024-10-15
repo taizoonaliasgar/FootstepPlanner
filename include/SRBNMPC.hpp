@@ -9,6 +9,7 @@
 #include "MPC_global_params.hpp"
 //#include "iswift_qp.h"
 #include <casadi/casadi.hpp>
+#include <filesystem>
 
 using DynInf = DynamicsInfo;
 using KinInf = KinematicsInfo;
