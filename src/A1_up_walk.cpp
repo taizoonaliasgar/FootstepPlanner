@@ -277,7 +277,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     // Assuming the body index is 0, adjust as needed
     if(controlTick > 8000 && controlTick < 9000){
 
-        double amp = 50.0;
+        double amp = 120.0;
         double dist = distx(controlTick, amp);
         Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
         A1.back()->setExternalForce(0, disturbanceForce);
@@ -408,11 +408,20 @@ int main(int argc, char *argv[]) {
     //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
     //const Ogre::MaterialPtr& footmaterial = A1.back()->getCollisionBody("FR_FOOT").getMaterial();
 
+    auto block1 = world.addBox(0.1, 0.46, 0.05, 1.0); // size (1x1x1) and mass (1.0)
+    auto block2 = world.addBox(0.1, 0.46, 0.05, 1.0); // size (2x0.5x0.5) and mass (2.0)
+
+    // Set the position of the blocks
+    block1->setPosition(1.0, 0.0, 0.025); // Position (x=0, y=0, z=0.5)
+    block2->setPosition(1.2, 0.0, 0.025); // Position (x=2, y=2, z=0.25)
     
+    vis->createGraphicalObject(block1, "block1", "checker_yellow");
+    vis->createGraphicalObject(block2, "block2", "checker_yellow");
+
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    loco_plan->generator();
+    //loco_plan->generator();
     std::string file_name = "upright_h5_71";
     // code predix
     // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
