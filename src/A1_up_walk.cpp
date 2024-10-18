@@ -275,13 +275,13 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
     // Apply the disturbance force to the desired body
     // Assuming the body index is 0, adjust as needed
-    if(controlTick > 8000 && controlTick < 9000){
+    // if(controlTick > 8000 && controlTick < 9000){
 
-        double amp = 120.0;
-        double dist = distx(controlTick, amp);
-        Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
-        A1.back()->setExternalForce(0, disturbanceForce);
-    }
+    //     double amp = 120.0;
+    //     double dist = distx(controlTick, amp);
+    //     Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
+    //     A1.back()->setExternalForce(0, disturbanceForce);
+    // }
 };
 
 
@@ -408,15 +408,116 @@ int main(int argc, char *argv[]) {
     //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
     //const Ogre::MaterialPtr& footmaterial = A1.back()->getCollisionBody("FR_FOOT").getMaterial();
 
-    auto block1 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (1x1x1) and mass (1.0)
-    auto block2 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (2x0.5x0.5) and mass (2.0)
+    // ----------- Added 2 blocks for rougth terrain ------------- //
+    // auto block1 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (1x1x1) and mass (1.0)
+    // auto block2 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (2x0.5x0.5) and mass (2.0)
 
-    // Set the position of the blocks
-    block1->setPosition(1.0, 0.0, 0.015); // Position (x=0, y=0, z=0.5)
-    block2->setPosition(1.2, 0.0, 0.015); // Position (x=2, y=2, z=0.25)
+    // // Set the position of the blocks
+    // block1->setPosition(1.0, 0.0, 0.015); // Position (x=0, y=0, z=0.5)
+    // block2->setPosition(1.2, 0.0, 0.015); // Position (x=2, y=2, z=0.25)
+
+    // vis->createGraphicalObject(block1, "block1", "checker_red");
+    // vis->createGraphicalObject(block2, "block2", "checker_red");
+
+    // ---------Jeeseop Code for adding blocks for rough terrain---------//
+
+    // ================================================= //
+   // =========== Ground Height Variations ============ //
+   // ================================================= //
+   int roughterrain = 1;
+   if(roughterrain){
+       long int randomSeed = std::time(nullptr);
+       // std::srand(randomSeed);
+       std::srand(163727240);
+       std::srand(1642619542);
+       std::cout << "RNG Seed: " << randomSeed << std::endl;
+       bool GroundHeightVariation = true;
+       if(GroundHeightVariation){
+           int numBlk = 20;//150;
+           double percent = 60; // there will be a block x percent of the time
+           int direction = 0; // 0 for x, 1 for y
+           int fwd_bwd = 1; // 1 for forward, -1 for backward
+           int maxHeight = 2;//4; // max height in centimeters
+           double startPos = fwd_bwd*0.5;//fwd_bwd*2;
+           double height, width, length;
+           double left, right;
+           const char * colors[3] ={"yellow","orange","red"};
+           int j = 0;
+           width = 0.14; length = 0.8;
+           double mass = 0.9;
+           for (int i=0; i<numBlk; i++){
+               left = rand() % 100;
+               right = rand() % 100;
+               if (left>(100-percent)){
+                   height = 1.0*(rand() % (maxHeight+1))/100.0;
+                   j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
+                   if(direction == 0){
+                       raisim::Box *box = world.addBox(width,length,height,mass);
+                       box->setPosition(startPos,length/2,0.01);
+                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
+                   }else{
+                       raisim::Box *box = world.addBox(length,width,height,mass);
+                       box->setPosition(length/2,startPos,0.01);
+                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
+                   }
+               }
+               if (right>(100-percent)){
+                   height = 1.0*(rand() % (maxHeight+1))/100.0;
+                   j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
+                   if(direction == 0){
+                       raisim::Box *box = world.addBox(width,length,height,mass);
+                       box->setPosition(startPos,-length/2,0.01);
+                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
+                   }else{
+                       raisim::Box *box = world.addBox(length,width,height,mass);
+                       box->setPosition(-length/2,startPos,0.01);
+                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
+                   }
+               }
+               startPos+=fwd_bwd*width;
+           }
+           if(maxHeight ==2 && numBlk != 150){
+               // stack blocks on top
+               startPos = fwd_bwd*2;
+               for (int i=numBlk+0; i<numBlk+numBlk; i++){
+                   left = rand() % 100;
+                   right = rand() % 100;
+                   if (left>(100-percent)){
+                       height = 1.0*(rand() % (maxHeight+1))/100.0;
+                       j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
+                       if(direction == 0){
+                           //raisim::Box *box = world.addBox(width,length,height,mass);
+                           //box->setPosition(startPos,length/2,0.01);
+                           raisim::Box *box = world.addBox(width*((rand()%200)*0.001+1),length*((rand()%300)*0.001+1),height,mass);
+                           box->setPosition(startPos*((rand()%5)*0.1+1),length/2,0.1);
+                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
+                       }else{
+                           raisim::Box *box = world.addBox(length,width,height,mass);
+                           box->setPosition(length/2,startPos,0.01);
+                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
+                       }
+                   }
+                   if (right>(100-percent)){
+                       height = 1.0*(rand() % (maxHeight+1))/100.0;
+                       j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
+                       if(direction == 0){
+                           //raisim::Box *box = world.addBox(width,length,height,mass);
+                           //box->setPosition(startPos,-length/2,0.01);
+                           raisim::Box *box = world.addBox(width*((rand()%200)*0.001+1),length*((rand()%300)*0.001+1),height,mass);
+                           box->setPosition(startPos*((rand()%5)*0.1+1),-length/2,0.1);
+                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
+                       }else{
+                           raisim::Box *box = world.addBox(length,width,height,mass);
+                           box->setPosition(-length/2,startPos,0.01);
+                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
+                       }
+                   }
+                   startPos+=fwd_bwd*width;
+               }
+           }
+       }
+   }
     
-    vis->createGraphicalObject(block1, "block1", "checker_red");
-    vis->createGraphicalObject(block2, "block2", "checker_red");
 
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
