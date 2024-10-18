@@ -408,15 +408,15 @@ int main(int argc, char *argv[]) {
     //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
     //const Ogre::MaterialPtr& footmaterial = A1.back()->getCollisionBody("FR_FOOT").getMaterial();
 
-    auto block1 = world.addBox(0.1, 0.46, 0.05, 1.0); // size (1x1x1) and mass (1.0)
-    auto block2 = world.addBox(0.1, 0.46, 0.05, 1.0); // size (2x0.5x0.5) and mass (2.0)
+    auto block1 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (1x1x1) and mass (1.0)
+    auto block2 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (2x0.5x0.5) and mass (2.0)
 
     // Set the position of the blocks
-    block1->setPosition(1.0, 0.0, 0.025); // Position (x=0, y=0, z=0.5)
-    block2->setPosition(1.2, 0.0, 0.025); // Position (x=2, y=2, z=0.25)
+    block1->setPosition(1.0, 0.0, 0.015); // Position (x=0, y=0, z=0.5)
+    block2->setPosition(1.2, 0.0, 0.015); // Position (x=2, y=2, z=0.25)
     
-    vis->createGraphicalObject(block1, "block1", "checker_yellow");
-    vis->createGraphicalObject(block2, "block2", "checker_yellow");
+    vis->createGraphicalObject(block1, "block1", "checker_red");
+    vis->createGraphicalObject(block2, "block2", "checker_red");
 
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
@@ -453,12 +453,12 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = false;             // Record?
+    bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../datalog/Oct14/";
+    std::string directory = "../datalog/Oct16/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "upright_A1";
     // std::string filename = "inplace_sim";
