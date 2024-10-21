@@ -324,8 +324,8 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                     //double tz[3] = {0};
                     //double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), params->swingHeight, 2*params->swingHeight, 
                     //            params->swingHeight, to+0.005, to, to};
-                    double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), params->swingHeight, 3*params->swingHeight, 
-                                3*params->swingHeight, params->swingHeight, 0.019,0.019};//traj->toeInit(2,i),traj->toeInit(2,i)};//0.02, 0.02};//to+0.01, to};
+                    double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
+                                3*params->swingHeight, 2*params->swingHeight, 0.019,0.019};//traj->toeInit(2,i),traj->toeInit(2,i)};//0.02, 0.02};//to+0.01, to};
                     calcBezierAll(n, az, phase, tz);
 
                 }else{
