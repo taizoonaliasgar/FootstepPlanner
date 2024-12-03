@@ -562,7 +562,7 @@ int main(int argc, char *argv[]) {
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
     std::string directory = "../datalog/Dec3/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "upright_A1R_5";
+    std::string filename = "upright_A1R_6";
     // std::string filename = "inplace_sim";
 
 
