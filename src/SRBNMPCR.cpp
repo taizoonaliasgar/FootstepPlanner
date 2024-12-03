@@ -183,10 +183,10 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t contro
             localvelocity = 0;
         }
         //Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
-        Raibheur(0) = Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
-        Raibheur(1) = Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
-        Raibheur(2) = Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
-        Raibheur(3) = Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+        Raibheur(0) = 0.5*Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(1) = 0.5*Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(2) = 0.5*Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+        Raibheur(3) = 0.5*Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
     }
     
     for(size_t i= 0; i< HORIZ; i++){
