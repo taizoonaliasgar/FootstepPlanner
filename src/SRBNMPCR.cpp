@@ -125,7 +125,7 @@ void SRBNMPCR::generator(){
     writeMatrixToFile(g, basePath + "const.txt");
 
     // Create an NLP solver instance 
-    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 200},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 20},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     //std::cout << "opts"<<std::endl;
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}}, opts);
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlppp);
@@ -183,10 +183,10 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t contro
             localvelocity = 0;
         }
         //Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
-        Raibheur(0) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
-        Raibheur(1) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
-        Raibheur(2) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
-        Raibheur(3) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+        Raibheur(0) = Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(1) = Tstance*localvelocity+0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(2) = Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+        Raibheur(3) = Tstance*localvelocity-0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
     }
     
     for(size_t i= 0; i< HORIZ; i++){
