@@ -153,7 +153,6 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
     std::map<std::string, casadi::DM> arg, res;
 
-    //std::cout << q0 << std::endl;
 
     int force[4] = {0};
     for(auto &con: A1.back()->getContacts()){
@@ -192,13 +191,14 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         foot_position = loco_obj->getfootposition();
         hip_position = loco_obj->gethipposition();
         int stancephase = loco_obj->stancecounter();
-        //std::cout << foot_position.block(0,1,3,1).transpose() << std::endl;
-        //std::cout << foot_position.block(0,0,3,1).transpose() << std::endl;
+        
+        
         if(controlTick%10==0){
 
             int controlMPC = std::floor(controlTick/10); 
             //std::cout << "controlMPC:" << controlMPC << std::endl;
             casadi::DM X_prev = loco_plan->getprevioussol(q0,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
+            
             //if(controlMPC<1){
                 q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);//0.15,0.15,-0.1,-0.1;
             //}else{
@@ -226,6 +226,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
             // //std::cout << "NMPC Solve Time: " << duration_data << "ms" << std::endl;
 
             loco_plan->setprevioussol(res.at("x"));
+            
             
             opt_HLMPC_state = loco_plan->getNMPCsol2(controlMPC);
             
@@ -522,8 +523,8 @@ int main(int argc, char *argv[]) {
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
     
     SRBNMPCR* loco_plan = new SRBNMPCR(argc,argv,1,0);
-    loco_plan->generator();
-    std::string file_name = "upright_h5_72R";
+    //loco_plan->generator();
+    std::string file_name = "upright_h5_73R";
     // code predix
     // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
     std::string prefix_code = std::filesystem::current_path().string() + "/";
@@ -561,7 +562,7 @@ int main(int argc, char *argv[]) {
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
     std::string directory = "../datalog/Oct16/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "upright_A1R";
+    std::string filename = "upright_A1R_2";
     // std::string filename = "inplace_sim";
 
 

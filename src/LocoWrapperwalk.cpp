@@ -43,21 +43,6 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
     contact_horizon.block(0,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
     contact_horizon.block(3,8,1,12) = Eigen::MatrixXd::Zero(1,12);
 
-   /*  contact_horizon.block(1,20-two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact);
-    contact_horizon.block(2,20-two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact);
-    contact_horizon.block(0,20+two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact);
-    contact_horizon.block(3,20+two_contact,1,two_contact) = Eigen::MatrixXd::Zero(1,two_contact); */
-
-    //contact_horizon.block(1,0,1,20) = Eigen::MatrixXd::Zero(1,20);
-    //contact_horizon.block(2,0,1,20) = Eigen::MatrixXd::Zero(1,20);
-    //contact_horizon.block(0,20,1,20) = Eigen::MatrixXd::Zero(1,20);
-    //contact_horizon.block(3,20,1,20) = Eigen::MatrixXd::Zero(1,20);
-    /* contact_horizon.block(1,20,1,10) = Eigen::MatrixXd::Zero(1,10);
-    contact_horizon.block(2,20,1,10) = Eigen::MatrixXd::Zero(1,10);
-    contact_horizon.block(0,30,1,10) = Eigen::MatrixXd::Zero(1,10);
-    contact_horizon.block(3,30,1,10) = Eigen::MatrixXd::Zero(1,10); */
-
-    //NLstep = Eigen::MatrixXd::Zero(4,1);
     
 }
 

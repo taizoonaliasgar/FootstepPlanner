@@ -134,7 +134,7 @@ void SRBNMPCR::generator(){
     //std::cout << num_variables << std::endl;
 
     // file name
-    std::string file_name = "upright_h5_72R";
+    std::string file_name = "upright_h5_73R";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -162,7 +162,7 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t contro
     casadi::DM x_des = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*(HORIZ)+8*(HORIZ));
     casadi::DM q0_dm(q0.rows(), q0.cols());
     
-    for (int i=0; i<17; i++){
+    for (int i=0; i<16; i++){
         q0_dm(i) = q0(i);
     }
     
