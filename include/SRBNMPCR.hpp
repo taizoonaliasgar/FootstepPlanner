@@ -67,7 +67,7 @@ public:
     void impactDetection(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void impactDetectionTrot(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait);
     void footstepplanner(Eigen::Matrix<double,12,1> &q0);
-    void mpcdataLog(Eigen::Matrix<double,17,1> q0, Eigen::Matrix<double,12,1> force, Eigen::Matrix<double, 12, 1> p_foot,size_t tick);//casadi::DM ubx,(Eigen::Matrix<double,12,1> &q0, size_t tick);
+    void mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, Eigen::Matrix<double, 3, 4> p_foot,size_t tick);//casadi::DM ubx,(Eigen::Matrix<double,12,1> &q0, size_t tick);
     void motionPlannerwll(Eigen::Matrix<double,12,1> &q0);
 
     //Integration with low level
@@ -76,7 +76,7 @@ public:
 
     //NMPC
     void generator();//(casadi::DM p);
-    casadi::DM motionPlannerN(Eigen::Matrix<double,17,1> q0,size_t controlTick);
+    casadi::DM motionPlannerN(Eigen::Matrix<double,16,1> q0,size_t controlTick);
     casadi::SX UpdateCostN(casadi::SX x, casadi::SX x_des);
     casadi::SX UpdateConstraintsN(casadi::SX x, casadi::SX p);
     casadi::SX NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX conp1);
@@ -89,7 +89,7 @@ public:
     casadi::DM lowerboundg();
     casadi::DM upperboundg();
     void setprevioussol(casadi::Matrix<double> sol0){  previous_sol = sol0; };
-    casadi::DM getprevioussol(Eigen::Matrix<double,17,1> q0, size_t controlTick);
+    casadi::DM getprevioussol(Eigen::Matrix<double,16,1> q0, size_t controlTick);
     Eigen::Matrix<double,12,1> getOptforce();
     Eigen::Matrix<double,12,1> getFootPos();
     void writeMatrixToFile(const casadi::SX& matrix, const std::string& filename);
@@ -98,6 +98,10 @@ public:
     void getOptForceCoeff(int order);
     Eigen::Matrix<double,12,1> getOptforce(int phase,int order);
     Eigen::Matrix<double,12,HORIZ> arrangeOptforce();
+
+    Eigen::Matrix<double,33,1> getNMPCsol2(int controlMPC);
+
+
 
 private: 
     std::string filename;
@@ -167,7 +171,7 @@ private:
     int16_t simcounter = 0;
     int16_t planindex = 0;
     int16_t M = HORIZ;
-    double stand_height = 0.35;
+    double stand_height = 0.5;
     Eigen::Matrix<double, DOMAINSTEPS+HORIZ,1> vz_domain;
     double z_travel = 0;
     double fzmaxr = 250;
@@ -190,7 +194,7 @@ private:
     casadi::DM gravityN = {0,0,9.81};
     casadi::DM Jstandcasadi = casadi::DM::zeros(3,3);
     casadi::DM Jinvcasadi = casadi::DM::zeros(3,3);
-    casadi::DM Raibheur = 0;//0.5*Tstance*desVel(0);
+    casadi::DM Raibheur = casadi::DM::zeros(4,1);//0.5*Tstance*desVel(0);
     casadi::DM RaibMult = 6;
     casadi::DM previous_sol = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*HORIZ,1);
     casadi::DM Raibcol = {Tstance*desVel(0),Tstance*desVel(0),0.5*Tstance*desVel(0),0.5*Tstance*desVel(0)};

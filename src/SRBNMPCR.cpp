@@ -39,10 +39,10 @@ SRBNMPCR::SRBNMPCR(int argc, char *argv[], int numRobots, int id) : Parameters(a
     // contact_sequence(0,casadi::Slice(25,40)) = casadi::MX::zeros(1,15);
     // contact_sequence(3,casadi::Slice(28,40)) = casadi::MX::zeros(1,12);
     contact_sequence_dm = casadi::DM::ones(4,40);
-    contact_sequence_dm(1,casadi::Slice(5,20)) = casadi::DM::zeros(1,15);
-    contact_sequence_dm(2,casadi::Slice(8,20)) = casadi::DM::zeros(1,12);
-    contact_sequence_dm(0,casadi::Slice(25,40)) = casadi::DM::zeros(1,15);
-    contact_sequence_dm(3,casadi::Slice(28,40)) = casadi::DM::zeros(1,12);
+    contact_sequence_dm(1,casadi::Slice(25,40)) = casadi::DM::zeros(1,15);
+    contact_sequence_dm(2,casadi::Slice(28,40)) = casadi::DM::zeros(1,12);
+    contact_sequence_dm(0,casadi::Slice(5,20)) = casadi::DM::zeros(1,15);
+    contact_sequence_dm(3,casadi::Slice(8,20)) = casadi::DM::zeros(1,12);
 
     localvelocity = 0;
     for (size_t i = 0; i < HORIZ; i++)
@@ -58,7 +58,7 @@ SRBNMPCR::SRBNMPCR(int argc, char *argv[], int numRobots, int id) : Parameters(a
 
 void SRBNMPCR::impactDetection(size_t tick, Eigen::Matrix<double,12,1> &q0, size_t gait){}
 
-void SRBNMPCR::mpcdataLog(Eigen::Matrix<double,17,1> q0, Eigen::Matrix<double,12,1> force, Eigen::Matrix<double, 12, 1> p_foot,size_t tick){//(Eigen::Matrix<double,12,1> &q0, size_t tick){
+void SRBNMPCR::mpcdataLog(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,12,1> force, Eigen::Matrix<double, 3, 4> p_foot,size_t tick){//(Eigen::Matrix<double,12,1> &q0, size_t tick){
      
     file[0] << tick << "\t" << q0(0) << "\t" << q0(1) << "\t" 
                 << q0(2) << "\t" << q0(3) << "\t" 
@@ -89,8 +89,8 @@ void SRBNMPCR::mpcdataLog(Eigen::Matrix<double,17,1> q0, Eigen::Matrix<double,12
     file[4] << p_prev(NFSR*(HORIZ+1)+(NFIR+4)*HORIZ) << "\t" << p_prev(NFSR*(HORIZ+1)+(NFIR+4)*HORIZ+1) << "\t" 
                 << p_prev(NFSR*(HORIZ+1)+(NFIR+4)*HORIZ+2) << "\t" << p_prev(NFSR*(HORIZ+1)+(NFIR+4)*HORIZ+3) << std::endl;
 
-    file[5] << p_foot(0) << "\t" << p_foot(3) << "\t" 
-                << p_foot(6) << "\t" << p_foot(9) << std::endl;
+    file[5] << p_foot(0,0) << "\t" << p_foot(0,1) << "\t" 
+                << p_foot(0,2) << "\t" << p_foot(0,3) << std::endl;
 
     // file[5] <<  X_prev(NFSR*(HORIZ+1))     << "\t" << X_prev(NFSR*(HORIZ+1) + 1) << "\t" << 
     //             X_prev(NFSR*(HORIZ+1) + 2) << "\t" << X_prev(NFSR*(HORIZ+1) + 3) << "\t" << 
@@ -134,7 +134,7 @@ void SRBNMPCR::generator(){
     //std::cout << num_variables << std::endl;
 
     // file name
-    std::string file_name = "upright_nlp_9r";
+    std::string file_name = "upright_h5_72R";
     // code predix
     std::string prefix_code = fs::current_path().string() + "/";
 
@@ -155,30 +155,40 @@ void SRBNMPCR::generator(){
 
 }
 
-casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,17,1> q0, size_t controlTick){
+casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t controlTick){
     
     //casadi::DM x_des = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*(HORIZ));
     //casadi::DM x_des = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*(HORIZ));
     casadi::DM x_des = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*(HORIZ)+8*(HORIZ));
     casadi::DM q0_dm(q0.rows(), q0.cols());
+    
     for (int i=0; i<17; i++){
         q0_dm(i) = q0(i);
     }
-    //x_des(casadi::Slice(0,2)) = q0_dm(casadi::Slice(0,2));
+    
     x_des(casadi::Slice(0,NFSR)) = q0_dm(casadi::Slice(0,NFSR));
     
     casadi::DM conp1, conp1_prev, contact_index;
-    if(controlTick%40 == 0){
-        if(localvelocity < desVel(0)){
-            localvelocity = localvelocity + 0.05;
-        }else{
-            localvelocity = desVel(0);
-        }
-        Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
-    }
-    //Raibheur = 0.5*Tstance*localvelocity;//desVel(0);
     
-    //contact_index = remainder(controlTick,40);
+
+    if(controlTick%40 == 0){
+
+        if(controlTick>199){
+            if(localvelocity < desVel(0)){
+                localvelocity = localvelocity + 0.05;
+            }else{
+                localvelocity = desVel(0);
+            }
+        }else{
+            localvelocity = 0;
+        }
+        //Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
+        Raibheur(0) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(1) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
+        Raibheur(2) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+        Raibheur(3) = Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
+    }
+    
     for(size_t i= 0; i< HORIZ; i++){
         
         conp1 =(controlTick+i)%40;//remainder(contact_index+i,40);
@@ -193,16 +203,7 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,17,1> q0, size_t contro
         x_des((i+1)*NFSR+2) = stand_height;                                 
         x_des((i+1)*NFSR+3) = localvelocity, 
         x_des((i+1)*NFSR+4) = desVel(1);
-        // x_des((i+1)*NFSR+12) = x_des(12)+Raibheur;
-        // x_des((i+1)*NFSR+13) = x_des(13)+Raibheur;
-        // x_des((i+1)*NFSR+14) = x_des(14)+Raibheur;
-        // x_des((i+1)*NFSR+15) = x_des(15)+Raibheur;
-
-        // x_des((HORIZ+1)*NFSR+i*NFIR+12) = Raibheur;
-        // x_des((HORIZ+1)*NFSR+i*NFIR+13) = Raibheur;
-        // x_des((HORIZ+1)*NFSR+i*NFIR+14) = Raibheur;
-        // x_des((HORIZ+1)*NFSR+i*NFIR+15) = Raibheur;
-
+        
         
         x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*i) = contact_sequence_dm(0,conp1);
         x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*i+1) = contact_sequence_dm(1,conp1);
@@ -219,9 +220,9 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,17,1> q0, size_t contro
             for (int leg = 0;leg<4;leg++){
                 if(contact_sequence_dm(leg,conp1).scalar() > contact_sequence_dm(leg,conp1_prev).scalar()){
                     if(i<1){
-                        x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*HORIZ+4*i+leg) = x_des(0)+Raibheur;//+0.2;//contact_sequence_dm(0,conp1);
+                        x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*HORIZ+4*i+leg) = x_des(0)+Raibheur(leg);//+0.2;//contact_sequence_dm(0,conp1);
                     }else{
-                        x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*HORIZ+4*i+leg) = x_des(NFSR*(i-1))+Raibheur;//-0.1;
+                        x_des(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*HORIZ+4*i+leg) = x_des(NFSR*(i-1))+Raibheur(leg);//-0.1;
                     }    
                 }else{
                     if(i<1){
@@ -256,11 +257,15 @@ casadi::SX SRBNMPCR::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     
     Q.setZero();
-    Q.block(0,0,3,3).diagonal() <<  1e4,1e4,8e5;//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
-    Q.block(3,3,3,3).diagonal() <<  1e4,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
-    Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e3;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
-    Q.block(9,9,3,3).diagonal() <<  1,1,1;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
+    // Q.block(0,0,3,3).diagonal() <<  1e4,1e4,8e5;//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
+    // Q.block(3,3,3,3).diagonal() <<  1e4,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
+    // Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
+    // Q.block(9,9,3,3).diagonal() <<  1,1,1;//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
     
+    Q.block(0,0,3,3).diagonal() <<  1e4,5e4,8e5;//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
+    Q.block(3,3,3,3).diagonal() <<  1e5,1e4,1e4;//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
+    Q.block(6,6,3,3).diagonal() <<  8e4,8e5,3e4;//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
+    Q.block(9,9,3,3).diagonal() <<  1e2,1e2,1e2;
     
     R_force.setZero();
     R_force.diagonal() << 0.01,0.01,0.01;//mpc_params.rx, mpc_params.ry, mpc_params.rz;
@@ -377,11 +382,11 @@ casadi::SX SRBNMPCR::GetTorque(casadi::SX st,casadi::SX con, casadi::SX conp1){
     casadi::SX r4 = casadi::SX::zeros(3,1);
     r1(0) = conp1(0)-st(0);
     r1(1) = -0.25-st(1);
-    r1(2) = 0.533-st(2);
+    r1(2) = 0.1805;
 
     r2(0) = conp1(1)-st(0);
     r2(1) = 0.25-st(1);
-    r2(2) = 0.533-st(2);
+    r2(2) = 0.1805;
     
     r3(0) = conp1(2)-st(0);
     r3(1) = -0.1321-st(1);
@@ -552,11 +557,11 @@ Eigen::Matrix<double,12,1> SRBNMPCR::getFootPos(){
 
 }
 
-casadi::DM SRBNMPCR::getprevioussol(Eigen::Matrix<double,17,1> q0, size_t controlTick){
+casadi::DM SRBNMPCR::getprevioussol(Eigen::Matrix<double,16,1> q0, size_t controlTick){
         
     casadi::DM x0 = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*HORIZ,1);
     casadi::DM q0_dm(q0.rows(), q0.cols());
-    for (int i=0; i<12; i++){
+    for (int i=0; i<16; i++){
         q0_dm(i) = q0(i);
     }
 
@@ -695,6 +700,148 @@ void SRBNMPCR::setpreviousp(casadi::DM p){
         } 
 };
 
+Eigen::Matrix<double,33,1> SRBNMPCR::getNMPCsol2(int controlMPC){
+    
+    Eigen::Matrix<double,33,1> nmpc_sol = Eigen::MatrixXd::Zero(33,1);
+    std::vector<double> v = previous_sol.get_elements();
+    
+    std::vector<double> optstate(v.begin() + NFSR, v.begin() + 2*NFSR);
+    std::vector<double> optforce(v.begin() + NFSR*(HORIZ+1), v.begin() + NFSR*(HORIZ+1) + NFIR);
+    
+    nmpc_sol.block(0,0,NFSR,1) = Eigen::Map<Eigen::Matrix<double,NFSR,1>>(optstate.data());
+    nmpc_sol.block(NFSR+4,0,NFIR,1) = Eigen::Map<Eigen::Matrix<double,NFIR,1>>(optforce.data());
+    
+    // nmpc_sol(3) = localvelocity;
+    // nmpc_sol(4) = 0;
+    // nmpc_sol(5) = 0;
+    //nmpc_sol.block(28,0,4,1) = Eigen::Map<Eigen::VectorXd>(Raibheur.nonzeros().data(),Raibheur.size());
+    nmpc_sol(28) = double(Raibheur(0));
+    nmpc_sol(29) = double(Raibheur(1));
+    nmpc_sol(30) = double(Raibheur(2));
+    nmpc_sol(31) = double(Raibheur(3));
+
+    // nmpc_sol(32) = static_cast<double>(vRaibstep(0));
+    return nmpc_sol;
+
+}
+
+// casadi::DM SRBNMPCR::motionPlannerNew(Eigen::Matrix<double,16,1> q0, size_t controlTick){
+    
+//     casadi::DM x_des = casadi::DM::zeros(NFSR*(HORIZ+1)+NFIR*(HORIZ)+4*(HORIZ+2)); 
+//     casadi::DM q0_dm = casadi::DM::zeros(16,1);
+    
+    
+//     for (int i=0; i<16; i++){
+//         q0_dm(i) = q0(i);
+//     }
+    
+//     x_des(casadi::Slice(0,NFS)) = q0_dm(casadi::Slice(0,NFS));
+    
+//     casadi::DM conm1=0;
+//     casadi::DM conp1=0;
+//     casadi::DM conp1_next=0;
+//     if(controlTick<1){
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = 1;//contact_sequence_dm(0,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = 1;//contact_sequence_dm(1,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = 1;//contact_sequence_dm(2,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = 1;//contact_sequence_dm(3,conp1);
+//     }else{
+//         conm1 = (controlTick-1)%40;
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = contact_sequence_dm(0,conm1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = contact_sequence_dm(1,conm1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = contact_sequence_dm(2,conm1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = contact_sequence_dm(3,conm1);
+//     }
+
+//     if(controlTick%40 == 0){
+
+//         if(controlTick>199){
+//             if(localvelocity < desVel(0)){
+//                 localvelocity = localvelocity + 0.05;
+//             }else{
+//                 localvelocity = desVel(0);
+//             }
+//         }else{
+//             localvelocity = 0;
+//         }
+
+//     }
+
+//     // if(localvelocity>0.5){
+//     //     front_off = 0.1+(localvelocity-0.5)/7;
+//     //     rear_off = -0.1+(localvelocity-0.5)/4;
+//     //     pitch_ref = 0;//3.14/6*(localvelocity-0.5);
+//     // }else{
+//     //     front_off = 0.1;
+//     //     rear_off = -0.05;
+//     //     pitch_ref = 0; 
+//     // }
+    
+     
+//     if((controlTick)%20 == 0){
+//         x_dom_init = q0_dm(0);
+//         Raibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
+//         //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
+//     }
+
+//     if(controlTick%20<9){
+//         vRaibstep = Raibstep;
+
+//     }else{
+//         vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));
+//     }
+//     casadi::DM x0 = x_dom_init;
+
+//     for(size_t i= 0; i< HORIZ; i++){
+        
+//         conp1 = (controlTick+i)%40;
+        
+//         x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+//         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
+//         x_des((i+1)*NFS+2) = stand_height;                                 
+//         x_des((i+1)*NFS+3) = localvelocity, 
+//         x_des((i+1)*NFS+4) = desVel(1);
+//         x_des((i+1)*NFS+7) = 0;
+
+//         //if(controlTick+i>0){
+//             conp1_next = (controlTick+i+1)%40;
+//         //}
+//         if((controlTick+i)%20 == 0){
+//             x0 = x_des(i*NFS);
+//         }
+
+//         x_des((i+1)*NFS+12) = contact_sequence_dm(0,conp1_next)*contact_sequence_dm(0,conp1)*x_des(i*NFS+12)+
+//                                 (1-contact_sequence_dm(0,conp1)*contact_sequence_dm(0,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+                                   
+//         x_des((i+1)*NFS+13) = contact_sequence_dm(1,conp1_next)*contact_sequence_dm(1,conp1)*x_des(i*NFS+13)+
+//                                 (1-contact_sequence_dm(1,conp1)*contact_sequence_dm(1,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+        
+//         x_des((i+1)*NFS+14) = contact_sequence_dm(2,conp1_next)*contact_sequence_dm(2,conp1)*x_des(i*NFS+14)+
+//                                 (1-contact_sequence_dm(2,conp1)*contact_sequence_dm(2,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+        
+//         x_des((i+1)*NFS+15) = contact_sequence_dm(3,conp1_next)*contact_sequence_dm(3,conp1)*x_des(i*NFS+15)+
+//                                 (1-contact_sequence_dm(3,conp1)*contact_sequence_dm(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
 
 
+//         x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm(0,conp1))*vRaibstep;//0.4
+//         x_des((HORIZ+1)*NFS+i*NFI+13) = (1-contact_sequence_dm(1,conp1))*vRaibstep;//0.4
+//         x_des((HORIZ+1)*NFS+i*NFI+14) = (1-contact_sequence_dm(2,conp1))*vRaibstep;//0.4
+//         x_des((HORIZ+1)*NFS+i*NFI+15) = (1-contact_sequence_dm(3,conp1))*vRaibstep;//0.4
 
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+4) = contact_sequence_dm(0,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+5) = contact_sequence_dm(1,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+6) = contact_sequence_dm(2,conp1);
+//         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+7) = contact_sequence_dm(3,conp1);
+//     }
+
+//     conp1 = (controlTick+HORIZ)%40;
+
+//     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)) = contact_sequence_dm(0,conp1);
+//     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+1) = contact_sequence_dm(1,conp1);
+//     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+2) = contact_sequence_dm(2,conp1);
+//     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+3) = contact_sequence_dm(3,conp1);
+    
+    
+//     return x_des;
+    
+// }

@@ -826,22 +826,13 @@ Eigen::Matrix<double,33,1> SRBNMPC::getNMPCsol2(int controlMPC){
     std::vector<double> optforce(v.begin() + NFS*(HORIZ+1), v.begin() + NFS*(HORIZ+1) + NFI);
     
     nmpc_sol.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optstate.data());
-    //nmpc_sol.block(12,0,4,1) = Eigen::Map<Eigen::Matrix<double,4,1>>(optfoothold.data());
     nmpc_sol.block(16,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
-    //nmpc_sol.block(28,0,4,1) = Eigen::Map<Eigen::Matrix<double,4,1>>(optsteplength.data());
-    //Eigen::Matrix<double,4,1> step = Eigen::Map<Eigen::Matrix<double,4,1>>(optsteplength.data());
-
-    //int16_t steptick = remainder(controlMPC,40);
-    // nmpc_sol(28) = step(0);//*(1.0-double(contact_sequence_dm(0,steptick))); 
-    // nmpc_sol(29) = step(1);//*(1.0-double(contact_sequence_dm(1,steptick)));
-    // nmpc_sol(30) = step(2);//*(1.0-double(contact_sequence_dm(2,steptick)));
-    // nmpc_sol(31) = step(3);//*(1.0-double(contact_sequence_dm(3,steptick)));
-    //std::cout << "optsteplength:" << "\t" << nmpc_sol(28) << "\t" << nmpc_sol(29) 
-    //                                        << "\t" << nmpc_sol(30) << "\t" << nmpc_sol(31) <<std::endl;
-
+    
     // nmpc_sol(3) = localvelocity;
     // nmpc_sol(4) = 0;
     // nmpc_sol(5) = 0;
+    //nmpc_sol.block(28,0,4,1) = double(Raibstep)*Eigen::MatrixXd::Ones(4,1);
+
     nmpc_sol(32) = static_cast<double>(vRaibstep(0));
     return nmpc_sol;
 

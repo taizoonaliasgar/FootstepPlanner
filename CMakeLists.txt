@@ -149,17 +149,17 @@ target_link_libraries(nmpc_lib PUBLIC
     params_lib
     -L/usr/local/lib)
 
-# add_library(nmpcr_lib
-#     "src/SRBNMPCR.cpp")
-# target_compile_options(nmpcr_lib PRIVATE -std=c++17)
+add_library(nmpcr_lib
+    "src/SRBNMPCR.cpp")
+target_compile_options(nmpcr_lib PRIVATE -std=c++17)
 
-# target_include_directories(nmpcr_lib PUBLIC
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-#     ${CMAKE_CURRENT_SOURCE_DIR}/util_include
-#     ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
-# target_link_libraries(nmpcr_lib PUBLIC 
-#     params_lib
-#     -L/usr/local/lib)
+target_include_directories(nmpcr_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
+target_link_libraries(nmpcr_lib PUBLIC 
+    params_lib
+    -L/usr/local/lib)
 
 
 
@@ -183,3 +183,10 @@ target_include_directories(uprightwalk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisim
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(uprightwalk PRIVATE -std=c++17)
+
+add_executable(uprightwalkR src/A1_up_walk_Raib.cpp)
+target_link_libraries(uprightwalkR PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk nmpcr_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_include_directories(uprightwalkR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+target_compile_definitions(uprightwalkR PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+target_compile_options(uprightwalkR PRIVATE -std=c++17)

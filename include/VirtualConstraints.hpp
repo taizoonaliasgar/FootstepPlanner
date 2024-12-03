@@ -24,6 +24,8 @@ public:
                                             double phaseVar, double phaseVarLR, double stepLenRL[3], double stepLenLR[3], MP *params, const LLInfo *ll);
 
     void updateVirtualConstraintswalk(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, 
+                                            double frontphase, double rearphase, MP *params, const LLInfo *ll); 
+    void updateVirtualConstraintswalkR(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, 
                                             double frontphase, double rearphase, MP *params, const LLInfo *ll);                                        
 
 private:
