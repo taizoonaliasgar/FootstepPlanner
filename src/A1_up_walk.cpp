@@ -287,6 +287,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
 
 int main(int argc, char *argv[]) {
+    
+    long int terrain_number = atoll(argv[3]); // Use atoll for long long int
+    //std::cout << "Received long integer: " << terrain_number << endl;
+    
     // ============================================================ //
     // =================== SETUP RAISIM/VISUALS =================== //
     // ============================================================ //
@@ -426,15 +430,15 @@ int main(int argc, char *argv[]) {
    // ================================================= //
    int roughterrain = 1;
    if(roughterrain){
-       long int randomSeed = std::time(nullptr);
-       // std::srand(randomSeed);
-       std::srand(163727240);
-       std::srand(1642619542);
-       std::cout << "RNG Seed: " << randomSeed << std::endl;
+       //long int randomSeed = std::time(nullptr);
+       std::srand(terrain_number);
+       //std::srand(163727240);
+       //std::srand(1642619542);
+       //std::cout << "RNG Seed: " << randomSeed << std::endl;
        bool GroundHeightVariation = true;
        if(GroundHeightVariation){
            int numBlk = 20;//150;
-           double percent = 60; // there will be a block x percent of the time
+           double percent = 70; // there will be a block x percent of the time
            int direction = 0; // 0 for x, 1 for y
            int fwd_bwd = 1; // 1 for forward, -1 for backward
            int maxHeight = 2;//4; // max height in centimeters
@@ -520,7 +524,7 @@ int main(int argc, char *argv[]) {
     
 
     LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
-    
+    loco_obj->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     //loco_plan->generator();
     std::string file_name = "upright_h5_71";
@@ -554,14 +558,14 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;             // Record?
+    bool record = false;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 30000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../datalog/Dec3/";
+    std::string directory = "../datalog/Dec4/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "upright_A1";
+    std::string filename = "upright_A1_1ms";
     // std::string filename = "inplace_sim";
 
 
@@ -684,7 +688,23 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+
+        if(jointPosTotal(18) > 0 || jointPosTotal(15) > 0 || jointPosTotal(1) < -0.04 || jointPosTotal(1) > 0.04 || jointPosTotal(2) < 0.45 || jointPosTotal(2) > 0.55){
+            int failure_mode = 0;
+            if(jointPosTotal(1)<-0.04 || jointPosTotal(1)>0.04){
+                failure_mode = -1;
+            }else if(jointPosTotal(2)<0.45 || jointPosTotal(2)>0.55){
+                failure_mode = -2;
+            }else{
+                failure_mode = -3;
+            }
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << failure_mode << std::endl;
+            break;
+        }else if(jointPosTotal(0)>7){
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << 1 << std::endl;
+            break;
+        }
         simcounter++;
         
     }

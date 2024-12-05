@@ -93,7 +93,13 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
 
         
         PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
-        VC->updateVirtualConstraintswalkR(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's
+        
+        if(RaibFlag){
+            VC->updateVirtualConstraintswalkR(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's   
+        }else{
+            VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's    
+        }
+
         VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
         
         z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         

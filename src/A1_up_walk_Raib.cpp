@@ -288,6 +288,24 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
 
 int main(int argc, char *argv[]) {
+
+    // FILE *fid;
+    // fid = fopen(argv[1],"r");
+    // double rterr = 0.0;
+    // char buffer[256];
+    // for (int i = 0; i < 6; ++i) {
+    //     if (fgets(buffer, sizeof(buffer), fid) == nullptr) {
+    //         std::cerr << "Error reading file: " << argv[1] << std::endl;
+    //         fclose(fid);
+    //         return 1;
+    //     }
+    // }
+    // int j = fscanf(fid, "%lf", &rterr);
+    // j = fclose(fid);
+
+    long int terrain_number = atoll(argv[3]); // Use atoll for long long int
+    //std::cout << "Received long integer: " << terrain_number << endl;
+    
     // ============================================================ //
     // =================== SETUP RAISIM/VISUALS =================== //
     // ============================================================ //
@@ -367,25 +385,6 @@ int main(int argc, char *argv[]) {
     //Rear offset -0.1
     A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
                                        -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
-    //Rear offset -0.01
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.247, -1.2899, 0.0, 2.247, -1.2899});
-    //Rear offset -0.04
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3305, -1.2703, 0.0, 2.3305, -1.2703});
-    //Rear offset -0.08
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4195, -1.2068, 0.0, 2.4195, -1.2068});
-
-    //Rear offset -0.06
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3784, -1.244, 0.0, 2.3784, -1.244});
-    //Rear offset -0.05
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                     -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3553, -1.2585, 0.0, 2.3553, -1.2585});
-    //Front offset 0.15
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                     -0.596, 0.9333, -1.8665, 0.596, 0.9333, -1.8665, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
     
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setName("A1_Robot");
@@ -427,15 +426,15 @@ int main(int argc, char *argv[]) {
    // ================================================= //
    int roughterrain = 1;
    if(roughterrain){
-       long int randomSeed = std::time(nullptr);
-       // std::srand(randomSeed);
-       std::srand(163727240);
-       std::srand(1642619542);
-       std::cout << "RNG Seed: " << randomSeed << std::endl;
+       //long int randomSeed = std::time(nullptr);
+       std::srand(terrain_number);
+       //std::srand(163727240);
+       //std::srand(1642619542);
+       //std::cout << "RNG Seed: " << randomSeed << std::endl;
        bool GroundHeightVariation = true;
        if(GroundHeightVariation){
            int numBlk = 20;//150;
-           double percent = 60; // there will be a block x percent of the time
+           double percent = 70; // there will be a block x percent of the time
            int direction = 0; // 0 for x, 1 for y
            int fwd_bwd = 1; // 1 for forward, -1 for backward
            int maxHeight = 2;//4; // max height in centimeters
@@ -555,14 +554,14 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;             // Record?
+    bool record = false;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 60000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 30000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../datalog/Dec3/";
+    std::string directory = "../datalog/Dec4/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "upright_A1R_6";
+    std::string filename = "upright_A1R_1ms";
     // std::string filename = "inplace_sim";
 
 
@@ -639,7 +638,7 @@ int main(int argc, char *argv[]) {
         world.integrate();        
         
         if (simcounter%15 == 0)
-            vis->renderOneFrame();
+           vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
             vis->startRecordingVideo(name);
@@ -685,7 +684,23 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << jointPosTotal(0) << "\t" << jointPosTotal(14) << "\t" << jointPosTotal(17) << std::endl;
+        if(jointPosTotal(18) > 0 || jointPosTotal(15) > 0 || jointPosTotal(1) < -0.04 || jointPosTotal(1) > 0.04 || jointPosTotal(2) < 0.45 || jointPosTotal(2) > 0.55){
+            int failure_mode = 0;
+            if(jointPosTotal(1)<-0.04 || jointPosTotal(1)>0.04){
+                failure_mode = -1;
+            }else if(jointPosTotal(2)<0.45 || jointPosTotal(2)>0.55){
+                failure_mode = -2;
+            }else{
+                failure_mode = -3;
+            }
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << failure_mode << std::endl;
+            break;
+        }else if(jointPosTotal(0)>7){
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << 1 << std::endl;
+            break;
+        }
         simcounter++;
         
     }

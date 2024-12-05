@@ -314,7 +314,7 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                     
                     //double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
                     //        kin->hipPos(0,i)+step[0], kin->hipPos(0,i)+step[0]};
-                    double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i)+step[0], 
+                    double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
                             traj->toeInit(0,i)+step[0], traj->toeInit(0,i)+step[0]};
                     double dax[4] {0, 0, hipVel(0), hipVel(0)};
                     double ddax[4] {0, 0, hipAcc(0), hipAcc(0)};

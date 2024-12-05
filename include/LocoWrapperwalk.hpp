@@ -54,6 +54,7 @@ public:
     //NMPC
     void setoptNLstate(Eigen::Matrix<double, 33, 1> HLopt);
     void setcontactconfig(int controlMPC);
+    void setRFfalse(){RaibFlag = false;};
 
     // Pointers to structs
     const StateInfo *state;
@@ -117,6 +118,7 @@ private:
 
     //NLState
     Eigen::Matrix<double, 5, 1> NLstep = Eigen::MatrixXd::Zero(5,1);
+    bool RaibFlag = true;
 
 };
 
