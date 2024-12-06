@@ -60,7 +60,7 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     forcefitx = forcefitx/10.0;
     //std::cout << forcefitx << std::endl;
 
-    
+    std::cout << desVel(0) << std::endl;
 }
 
 

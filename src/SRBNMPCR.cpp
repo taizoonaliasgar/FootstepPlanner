@@ -52,6 +52,8 @@ SRBNMPCR::SRBNMPCR(int argc, char *argv[], int numRobots, int id) : Parameters(a
 
     forcefitx = forcefitx/(HORIZ-1);
     forcefitx = forcefitx/10.0;
+
+    std::cout << desVel(0) << std::endl;
     
 }
 

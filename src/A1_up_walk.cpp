@@ -622,7 +622,6 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
         size_t dist_start = 40000*ctrlHz;               // Start the disturbance (if any)
@@ -690,21 +689,20 @@ int main(int argc, char *argv[]) {
         }*/
         //std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
-        if(jointPosTotal(18) > 0 || jointPosTotal(15) > 0 || jointPosTotal(1) < -0.04 || jointPosTotal(1) > 0.04 || jointPosTotal(2) < 0.45 || jointPosTotal(2) > 0.55){
-            int failure_mode = 0;
-            if(jointPosTotal(1)<-0.04 || jointPosTotal(1)>0.04){
-                failure_mode = -1;
-            }else if(jointPosTotal(2)<0.45 || jointPosTotal(2)>0.55){
-                failure_mode = -2;
-            }else{
-                failure_mode = -3;
-            }
-            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << failure_mode << std::endl;
+        if(abs(jointPosTotal(1))>0.04){
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
+            break;
+        }else if(abs(jointPosTotal(2)-0.5)>0.05){
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -2 << std::endl;
+            break;
+        }else if(jointPosTotal(15) > 0 || jointPosTotal(18) > 0){
+            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -3 << std::endl;
             break;
         }else if(jointPosTotal(0)>7){
             std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << 1 << std::endl;
             break;
         }
+        
         simcounter++;
         
     }
