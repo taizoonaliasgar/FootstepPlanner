@@ -52,8 +52,6 @@ SRBNMPCR::SRBNMPCR(int argc, char *argv[], int numRobots, int id) : Parameters(a
 
     forcefitx = forcefitx/(HORIZ-1);
     forcefitx = forcefitx/10.0;
-
-    std::cout << desVel(0) << std::endl;
     
 }
 
@@ -184,7 +182,8 @@ casadi::DM SRBNMPCR::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t contro
         }else{
             localvelocity = 0;
         }
-        //Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
+    }
+    if(controlTick%20 == 0){ //Raibheur = 0.5*Tstance*(abs(q0(3))) + sqrt(stand_height/9.81)*(abs(q0(3))-localvelocity);
         Raibheur(0) = 0.5*Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity) + 0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
         Raibheur(1) = 0.5*Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity) + 0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)+0.1;
         Raibheur(2) = 0.5*Tstance*localvelocity + sqrt(stand_height/9.81)*(q0(3)-localvelocity) - 0.1;// + sqrt(stand_height/9.81)*(q0(3)-localvelocity)-0.1;
