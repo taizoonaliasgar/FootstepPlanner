@@ -43,7 +43,21 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
     contact_horizon.block(0,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
     contact_horizon.block(3,8,1,12) = Eigen::MatrixXd::Zero(1,12);
 
-    
+    CoMhistory.block(2,0,1,fitsample+1) = 0.5*Eigen::MatrixXd::Ones(1,fitsample+1);
+    R_KF.block(3,3,3,3) = (Eigen::Matrix<double, 3, 3>() << 1.4892,  0.0431, -0.0366,
+                                        0.0431, 0.6475, -0.0204,
+                                        -0.0366, -0.0204, 0.2310).finished();
+    Q_KF.block(3,3,3,3) = (Eigen::Matrix<double, 3, 3>() << 3.9631, 0.0695, 1.7835,
+                                                0.0695, 5.4780, -0.0241,
+                                                1.7835, -0.0241, 7.8273).finished();
+    P_KF.block(3,3,3,3) = (Eigen::Matrix<double, 3, 3>() << 0.0066, 0.0015, -0.0058,
+                                                                0.0015, 0.0110, -0.0006,
+                                                                -0.0058, -0.0006, 0.0072).finished();
+    P_KF.block(0,0,3,3) = 0.01*Eigen::MatrixXd::Identity(3,3);                                     
+    x_est_prev(2) = 0.5;
+
+    A_KF.block(0,3,3,3) = 0.001*Eigen::MatrixXd::Identity(3,3);
+    B_KF.block(3,0,3,3) = 0.001*Eigen::MatrixXd::Identity(3,3);
 }
 
 LocoWrapperwalk::~LocoWrapperwalk(){
@@ -146,4 +160,106 @@ void LocoWrapperwalk::setcontactconfig(int controlMPC){
     
     conEst->setDesDomain(desired_contact);
     quad->updateSwingMatrices(con->ind,con->cnt); 
+}
+
+Eigen::Matrix<double, 6, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal){
+    
+    Eigen::Matrix<double, 6, 1> p_est =Eigen::MatrixXd::Zero(6,1);
+
+    Eigen::Matrix<double, 3, 4> stance_feet = Eigen::MatrixXd::Zero(3,4);
+    for (size_t i = 0; i < 4; i++)
+    {
+        //if(con->ind[i]==1){
+            stance_feet.block(0,i,3,1) = con->ind[i]*kin->toePos.block(0,i,3,1); 
+        //    std::cout << "stance_feet" << "\t" << i << "\t" << stance_feet.block(0,i,3,1).transpose() << std::endl;
+        //}  
+    }
+    
+    Eigen::Matrix<double, 3, 4> feet0CoM = quad->FootEstimator(jointPos);
+    //std::cout << "feet0CoM" << "\t" << feet0CoM << std::endl;
+
+    Eigen::Matrix<double, 3, 4> pCoM_raw = Eigen::MatrixXd::Zero(3,4);
+    for (size_t i = 0; i < 4; i++)
+    {
+        //if(con->ind[i]==1){
+            pCoM_raw.block(0,i,3,1) = stance_feet.block(0,i,3,1)-con->ind[i]*feet0CoM.block(0,i,3,1); 
+      //      std::cout << "pCoM_raw" << "\t" << i << "\t" << pCoM_raw.block(0,i,3,1).transpose() << std::endl;   
+        //}
+    }
+
+    p_est.block(0,0,3,1) = pCoM_raw.rowwise().sum()/con->cnt;
+    
+    // double* p_vel = jointPos;
+    // p_vel[0] = p_est(0);
+    // p_vel[1] = p_est(1);
+    // p_vel[2] = p_est(2);
+    // Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(p_vel);
+
+    // Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
+    // for(size_t i=2; i<4; i++){
+        
+    //     //pdot_Raw.block(3*i,0,3,1) = -con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
+    //     pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
+        
+    // }
+    // p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
+
+    CoMhistory.block(0,0,3,fitsample) = CoMhistory.block(0,1,3,fitsample);
+    CoMhistory.block(0,fitsample,3,1) = p_est.block(0,0,3,1);
+    p_est.block(3,0,3,1) = getvEstimate();
+    return p_est;
+
+}
+
+Eigen::Matrix<double, 3, 4> LocoWrapperwalk::getfootv(double jointPos[18],Eigen::VectorXd jointVelTotal){
+    //std::cout << "getfootv" << std::endl;
+    Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPos);
+    //std::cout << "JacobianFull" << "\t" << JacobianFull << std::endl;
+    Eigen::Matrix<double, 3, 4> footv = Eigen::MatrixXd::Zero(3,4);
+    for(size_t i=0; i<4; i++){
+        footv.block(0,i,3,1) = JacobianFull.block(3*i,0,3,18)*jointVelTotal;
+    }
+    return footv;
+
+}
+
+Eigen::Matrix<double,3,1> LocoWrapperwalk::getvEstimate(){
+
+    Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
+    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(fitsample + 1, fitorder + 1);
+    
+    X(0,0)=1;
+    for (size_t i = 1; i <= fitsample; ++i){
+        for (int j = 0; j <= fitorder; ++j){
+            X(i, j) = std::pow(i*0.001, j);
+        }
+    }
+
+    Eigen::MatrixXd Y = Eigen::VectorXd::Zero(fitsample + 1,1);
+    
+    for (size_t f_ind = 0; f_ind < 3; ++f_ind){
+
+        Y = CoMhistory.block(f_ind,0,1,fitsample+1).transpose();    
+        Eigen::VectorXd coeffs = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
+        
+        for(int i=1; i<=fitorder; i++){
+            v_estimate(f_ind) += i*coeffs(i)*std::pow((fitsample)*0.001, i-1);
+        }
+        
+    }
+
+    return v_estimate;
+}
+
+Eigen::Matrix<double, 6, 1> LocoWrapperwalk::VelKF(Eigen::Matrix<double, 6, 1> x_est, Eigen::Matrix<double, 3, 1> a_est){
+    
+    Eigen::Matrix<double, 6, 1> x_est_process = x_est_prev + B_KF*a_est;
+    
+    P_KF = A_KF*P_KF*A_KF.transpose() + Q_KF;
+    K_KF = P_KF*(P_KF+R_KF).inverse();
+    
+    x_est_prev = x_est_process + K_KF*(x_est - x_est_process);
+    P_KF = (Eigen::MatrixXd::Identity(6,6)-K_KF)*P_KF;
+
+    return x_est_prev;
 }

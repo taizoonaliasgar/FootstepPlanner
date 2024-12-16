@@ -116,6 +116,10 @@ public:
     Eigen::Matrix<double,33,1> getNMPCsol2(int controlMPC);
     casadi::DM getprevioussol_ll(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, size_t controlTick);
 
+    //Velocity estimation
+    void getVEstimate(Eigen::Matrix<double,3,1> p_est);
+    Eigen::Matrix<double,3,1> returnVEstimate(){return v_estimate;};
+
 private: 
     std::string filename;
     std::fstream fid;
@@ -229,6 +233,13 @@ private:
     casadi::DM rear_off = -0.1; 
     casadi::DM pitch_ref = 0;
     int Raibflag = 0;
+
+    //Velocity estimation
+    int fitorder = 15;
+    int fitsample = 13;
+    //Eigen::Matrix<double,3,11> CoMhistory = Eigen::MatrixXd::Zero(3,11);
+    Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,fitsample+1);
+    Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
 };
 
 #endif

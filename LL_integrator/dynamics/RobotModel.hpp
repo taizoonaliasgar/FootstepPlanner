@@ -22,6 +22,8 @@ public:
     const StateInfo *getStatePointer() { return &state; };
     const DynamicsInfo *getDynamicsPointer() { return &dyn; };
     const KinematicsInfo *getKinematicsPointer() { return &kin; };
+    Eigen::Matrix<double,3,4> FootEstimator(double q[18]);
+    Eigen::Matrix<double,12,18> JacobianEstimator(double q[18]);
 
 private:
     StateInfo state;

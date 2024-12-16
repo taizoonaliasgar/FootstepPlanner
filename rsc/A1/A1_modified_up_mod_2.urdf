@@ -71,6 +71,46 @@
     </inertial>
   </link>
 
+  <joint name="imu_joint" type="fixed">
+    <parent link="trunk"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Link that holds the IMU -->
+  <!--<link name="imu_link">
+    <inertial>
+      <mass value="0.01"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+  </link>
+  
+  <sensor type="imu" name="imu_sensor">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="imu_link"/>
+    <imu>
+      <angular_velocity>
+        <noise type="gaussian">
+          <mean value="0"/>
+          <stddev value="0.01"/>
+        </noise>
+      </angular_velocity>
+      <linear_acceleration>
+        <noise type="gaussian">
+          <mean value="0"/>
+          <stddev value="0.01"/>
+        </noise>
+      </linear_acceleration>
+    </imu>
+  </sensor>-->
+  <link name="realsense_d435" sensor="realsense435.xml"/>
 
   <joint name="FR_hip_joint" type="revolute">
     <origin rpy="0 0 0" xyz="0 -0.047 0.1805"/>

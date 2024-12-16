@@ -56,6 +56,12 @@ public:
     void setcontactconfig(int controlMPC);
     void setRFfalse(){RaibFlag = false;};
 
+    Eigen::Matrix<double, 6, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal);
+    Eigen::Matrix<double, 3, 4> getfootv(double jointPos[18],Eigen::VectorXd jointVelTotal);
+    Eigen::Matrix<double, 3, 1> getvEstimate();//(Eigen::MatrixXd CoMhistory);
+    Eigen::Matrix<double, 3, 1> returnAcceleration(){ return ll->ddq.block(0,0,3,1);};
+    Eigen::Matrix<double, 6, 1> VelKF(Eigen::Matrix<double, 6, 1> x_est, Eigen::Matrix<double, 3, 1> a_est);
+
     // Pointers to structs
     const StateInfo *state;
     const DynamicsInfo *dyn;
@@ -119,6 +125,20 @@ private:
     //NLState
     Eigen::Matrix<double, 5, 1> NLstep = Eigen::MatrixXd::Zero(5,1);
     bool RaibFlag = true;
+    Eigen::Matrix<double, 3, 4> stance_feet = Eigen::MatrixXd::Zero(3,4);
+    int fitorder = 15;
+    int fitsample = 13;
+    Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,fitsample+1);
+    
+    Eigen::Matrix<double, 6, 6> R_KF = Eigen::MatrixXd::Zero(6,6);
+    Eigen::Matrix<double, 6, 6> Q_KF = Eigen::MatrixXd::Zero(6,6);
+    Eigen::Matrix<double, 6, 6> P_KF = Eigen::MatrixXd::Zero(6,6);
+    Eigen::Matrix<double, 6, 6> K_KF = Eigen::MatrixXd::Identity(6,6);
+    Eigen::Matrix<double, 6, 1> x_est_prev = Eigen::MatrixXd::Zero(6,1);
+
+    Eigen::Matrix<double, 6, 6> A_KF = Eigen::MatrixXd::Identity(6,6);
+    Eigen::Matrix<double, 6, 3> B_KF = Eigen::MatrixXd::Zero(6,3);
+    Eigen::Matrix<double, 6, 6> C_KF = Eigen::MatrixXd::Identity(6,6);
 
 };
 

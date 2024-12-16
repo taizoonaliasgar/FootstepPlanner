@@ -224,8 +224,8 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
     // ====================================================================== //
     // ======================= Calculate Joint Angles ======================= //
     // ====================================================================== //
-    //ll.ddq = dyn->Dinv*(dyn->B*tau_eig.block(6,0,12,1)+kin->Jtoe.transpose()*ll.QP_force - dyn->H);
-    ll.ddq = dyn->Dinv*(dyn->B*tau_eig.block(6,0,12,1)+kin->Jtoe.transpose()*ll.QP_force - Hr);
+    ll.ddq = dyn->Dinv*(dyn->B*tau_eig.block(6,0,12,1)+kin->Jtoe.transpose()*ll.QP_force - dyn->H);
+    //ll.ddq = dyn->Dinv*(dyn->B*tau_eig.block(6,0,12,1)+kin->Jtoe.transpose()*ll.QP_force - Hr);
     ll.dq = state->dq+ll.ddq/LL_Hz;
     ll.q  = state->q+ll.dq/LL_Hz+0.5/(LL_Hz*LL_Hz)*ll.ddq;
     
@@ -584,10 +584,10 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
             (kin->Jc)*(dyn->Dinv)*(kin->Jc.transpose()), (kin->Jc)*(dyn->Dinv)*(dyn->B), Eigen::MatrixXd::Zero(conDim,outDim),
             (vc->H0)*(dyn->Dinv)*(kin->Jc.transpose()), (vc->H0)*(dyn->Dinv)*(dyn->B), Eigen::MatrixXd::Identity(outDim,outDim);
     
-    //b_QP.block(0,0,conDim+outDim,1) << (kin->Jc)*(dyn->Dinv)*(dyn->H) - (kin->dJc),
-    //                                 (-KP*(vc->y)-KD*(vc->dy)) + (vc->H0)*(dyn->Dinv)*(dyn->H) - (vc->dH0);
-    b_QP.block(0,0,conDim+outDim,1) << (kin->Jc)*(dyn->Dinv)*Hr - (kin->dJc),
-                                     (-KP*(vc->y)-KD*(vc->dy)) + (vc->H0)*(dyn->Dinv)*Hr - (vc->dH0) - Ki.block(0,0,outDim,outDim)*z.block(0,0,outDim,1);
+    b_QP.block(0,0,conDim+outDim,1) << (kin->Jc)*(dyn->Dinv)*(dyn->H) - (kin->dJc),
+                                     (-KP*(vc->y)-KD*(vc->dy)) + (vc->H0)*(dyn->Dinv)*(dyn->H) - (vc->dH0);
+    //b_QP.block(0,0,conDim+outDim,1) << (kin->Jc)*(dyn->Dinv)*Hr - (kin->dJc),
+    //                                 (-KP*(vc->y)-KD*(vc->dy)) + (vc->H0)*(dyn->Dinv)*Hr - (vc->dH0) - Ki.block(0,0,outDim,outDim)*z.block(0,0,outDim,1);
     // ====================================================================== //
     // ======================= Inequality Constraints ======================= //
     // ====================================================================== //

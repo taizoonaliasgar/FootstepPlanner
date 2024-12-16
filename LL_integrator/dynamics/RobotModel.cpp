@@ -155,3 +155,53 @@ void RobotModel::updateSwingMatrices(const int conInd[4], const int &numCon){
 }
 
 
+Eigen::Matrix<double,3,4> RobotModel::FootEstimator(double q[18]){
+    
+    Eigen::Matrix<double,3,4> foottemp = Eigen::Matrix<double,3,4>::Zero();
+    Eigen::Matrix<double,3,1>p1,p2,p3,p4;
+    state.q(0)=0;
+    state.q(1)=0;
+    state.q(2)=0;
+    for(int i=3; i<18; i++){
+        state.q(i) = q[i];
+        // state.dq(i) = dq_in[i];
+    }
+    // Toe forward kinematics
+    FK_FR_toe(p1.data(), state.q.data());
+    FK_FL_toe(p2.data(), state.q.data());
+    FK_RR_toe(p3.data(), state.q.data());
+    FK_RL_toe(p4.data(), state.q.data());
+    // kin.toePos.block<3,1>(0,FR_LEG) = p1;
+    // kin.toePos.block<3,1>(0,FL_LEG) = p2;
+    // kin.toePos.block<3,1>(0,RR_LEG) = p3;
+    // kin.toePos.block<3,1>(0,RL_LEG) = p4;
+    foottemp << p1,p2,p3,p4;
+
+    return foottemp;
+}
+
+Eigen::Matrix<double,12,18> RobotModel::JacobianEstimator(double q[18]){
+ 
+    Eigen::Matrix<double, 3, TOTAL_DOF> J1,J2,J3,J4;
+
+    Eigen::Matrix<double,12,18> Jfull = Eigen::Matrix<double,12,18>::Zero();
+    //state.q(0)=q[0];
+    //state.q(1)=q[1];
+    //state.q(2)=q[2];
+    for(int i=0; i<18; i++){
+        state.q(i) = q[i];
+        //state.dq(i) = dq_in[i];
+    }
+    //std::cout << "state.q" << "\t" << state.q(0) << "\t" << state.q(1) << "\t" << state.q(2) << std::endl;
+    J_FR_toe(J1.data(), state.q.data());
+    J_FL_toe(J2.data(), state.q.data());
+    J_RR_toe(J3.data(), state.q.data());
+    J_RL_toe(J4.data(), state.q.data());
+    
+    Jfull.block(0,0,3,18) = J1;
+    Jfull.block(3,0,3,18) = J2;
+    Jfull.block(6,0,3,18) = J3;
+    Jfull.block(9,0,3,18) = J4;
+
+    return Jfull;
+}

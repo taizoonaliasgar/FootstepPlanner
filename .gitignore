@@ -5,3 +5,4 @@ build/CMakeFiles/*
 build/tmp/
 optimization/
 rsc/activation.raisim
+*.txt
