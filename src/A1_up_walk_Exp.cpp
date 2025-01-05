@@ -116,11 +116,16 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     // // Get frame linear acceleration
     // A1.back()->getFrameAcceleration(frameId, linearAcceleration);
 
-    // auto imu_readings = A1.back()->getSensor<raisim::InertialMeasurementUnit>("imu")->getValues();
+    //auto imu_readings = A1.back()->getSensor<raisim::InertialMeasurementUnit>("imu")->getValues();
     // auto imu_readings = A1.back()->getSensor("imu")->getValues();
     // auto imu_readings = A1.back()->getSensor<IMUSensor>("imu")->getValues();
-    // auto imu = A1.back()->getSensorSet("realsense_d435")->getSensor<raisim::InertialMeasurementUnit>("imu");
-
+    auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
+    raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
+    Eigen::Matrix<double,3,1> acc_bFrame = Eigen::MatrixXd::Zero(3,1);
+    acc_bFrame(0) = linearAcceleration(0);
+    acc_bFrame(1) = linearAcceleration(1);
+    acc_bFrame(2) = linearAcceleration(2);
+     
     Eigen::Matrix<double,3,1> trunk_acc = loco_obj->returnAcceleration();
 
     raisim::MatDyn D = A1.back()->getMassMatrix();
@@ -146,6 +151,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
     jointVelTotal.segment(3,3) = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
 
+    Eigen::Matrix<double,3,1> acc_wFrame = rotE*acc_bFrame;
+    acc_wFrame(2) = acc_wFrame(2)-9.81;
+
     quat = jointPosTotal.block(3,0,4,1);
     quat_to_XYZ(quat,eul);
     //eul(1) = eul(1)-1.57079632679;
@@ -163,19 +171,22 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         jvel[i] = jointVelTotal(i);
     }
 
-    Eigen::Matrix<double,6,1> q_est_i = Eigen::MatrixXd::Zero(6,1);
+    Eigen::Matrix<double,6,1> q_est = Eigen::MatrixXd::Zero(6,1);
     if(controlTick<1){
-        q_est_i(2) = 0.5;
+        q_est(2) = 0.5;
     }else{
-        q_est_i = loco_obj->getStateEstimate(jpos,jointVelTotal);
-        //q_est.block(3,0,3,1) = loco_plan->returnVEstimate();
+        q_est = loco_obj->getStateEstimate(jpos,jointVelTotal);
+        q_est.block(3,0,3,1) = loco_plan->returnVEstimate();
+        //q_est.block(3,0,3,1) = loco_plan->getsatVEstimate(q_est.block(3,0,3,1));
     }
 
-    Eigen::Matrix<double,6,1> q_est = loco_obj->VelKF(q_est_i,trunk_acc);
+    //q_est = loco_obj->VelKF(q_est,acc_wFrame);
 
     std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
                     << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
-                                                 << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << std::endl;
+                                                 << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
+                                                    << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
+                                                    << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << std::endl;
 
     // for(size_t i=0; i<3; ++i){
     //     jpos[i] = q_est(i);
@@ -244,7 +255,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         //std::cout << foot_position.block(0,1,3,1).transpose() << std::endl;
         //std::cout << foot_position.block(0,0,3,1).transpose() << std::endl;
         if(controlTick%10==0){
-            //loco_plan->getVEstimate(q_est.block(0,0,3,1));
+            loco_plan->getVEstimate(q_est.block(0,0,3,1));
             int controlMPC = std::floor(controlTick/10); 
             //std::cout << "controlMPC:" << controlMPC << std::endl;
             casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
@@ -324,11 +335,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
     // Apply the disturbance force to the desired body
     // Assuming the body index is 0, adjust as needed
-    // if(controlTick > 8000 && controlTick < 9000){
+    // if(controlTick > 500 && controlTick < 1000){
 
-    //     double amp = 120.0;
-    //     double dist = distx(controlTick, amp);
-    //     Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
+    //     double amp = 600.0;
+    //     //double dist = distx(controlTick, amp);
+    //     Eigen::Vector3d disturbanceForce(amp,0.0,0.0); 
     //     A1.back()->setExternalForce(0, disturbanceForce);
     // }
 };
@@ -347,7 +358,7 @@ int main(int argc, char *argv[]) {
     raisim::World::setActivationKey(raisim::loadResource("activation.raisim"));
     raisim::World world;
     world.setTimeStep(simfreq_raisim);
-
+    
     raisim::OgreVis *vis = raisim::OgreVis::get();
 
     /// these method must be called before initApp
@@ -361,7 +372,7 @@ int main(int argc, char *argv[]) {
 
     /// starts visualizer thread
     vis->initApp();
-
+    
     /// create raisim objects
     raisim::TerrainProperties terrainProperties;
     terrainProperties.frequency = 0.0;
@@ -378,8 +389,8 @@ int main(int argc, char *argv[]) {
     vis->createGraphicalObject(ground, "terrain", "checkerboard_blue");
     world.setDefaultMaterial(0.8, 0.0, 0.0); //surface friction could be 0.8 or 1.0
     vis->addVisualObject("extForceArrow", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP); 
-     
-
+    
+    
     // // WEIGHT VISUALIZATION FOR LCSS PAPER, KEEP FOR NOW.
     // // create raisim objects
     // double scale = 1;
@@ -406,8 +417,10 @@ int main(int argc, char *argv[]) {
     // A1.push_back(world.addArticulatedSystem(raisim::loadResource("Go1/Go1.urdf"))); // WHEN USING Go1, BE SURE TO CHANGE CMAKE TO USE CORRECT DYNAMICS
     //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));
     //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod.urdf")));
-    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod_2.urdf")));
+    //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/realsense435.xml")));
+    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod_sensored.urdf")));
     //raisim::ArticulatedSystem::setComputeInverseDynamics(true);
+    
     vis->createGraphicalObject(A1.back(), "A1");
 
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.35, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
@@ -444,7 +457,7 @@ int main(int argc, char *argv[]) {
     A1.back()->setName("A1_Robot");
     //A1.back()->inverseDynamics(tau, ddq);
     //assignBodyColors(vis,"A1","collision","gray");
-
+    
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
@@ -479,7 +492,7 @@ int main(int argc, char *argv[]) {
     // ================================================= //
    // =========== Ground Height Variations ============ //
    // ================================================= //
-   int roughterrain = 1;
+   int roughterrain = 0;
    if(roughterrain){
        //long int randomSeed = std::time(nullptr);
        std::srand(terrain_number);
@@ -578,7 +591,7 @@ int main(int argc, char *argv[]) {
     loco_obj->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     //loco_plan->generator();
-    std::string file_name = "upright_h5_71";
+    std::string file_name = "take2_1";
     // code predix
     // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
     std::string prefix_code = std::filesystem::current_path().string() + "/";
@@ -614,9 +627,9 @@ int main(int argc, char *argv[]) {
     double simlength = 18000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../datalog/Dec12/";
+    std::string directory = "../builddata/Dec17/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "A1_est_test";
+    std::string filename = "A1_HL_fit_data_final";
     // std::string filename = "inplace_sim";
 
 

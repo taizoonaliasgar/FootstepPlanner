@@ -73,7 +73,7 @@
 
   <joint name="imu_joint" type="fixed">
     <parent link="trunk"/>
-    <child link="imu_link"/>
+    <child link="imu_parent"/>
     <origin xyz="0 0 0.1" rpy="0 0 0"/>
   </joint>
 
@@ -110,7 +110,8 @@
       </linear_acceleration>
     </imu>
   </sensor>-->
-  <link name="imu_link" sensor="realsense435.xml"/>
+  <link name="imu_parent" sensor="realsense435.xml" serial_number="12345678"/>
+  
 
   <joint name="FR_hip_joint" type="revolute">
     <origin rpy="0 0 0" xyz="0 -0.047 0.1805"/>

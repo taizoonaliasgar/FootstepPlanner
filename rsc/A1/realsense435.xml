@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<sensor_set name="realsense_d435">
+<sensor_set name="realsense435">
     <origin rpy="0.0 0.0 0.0" xyz="0 0 0.015"/>
     <link>
         <inertial>
@@ -8,12 +8,12 @@
             <mass value="0.061575"/>
             <inertia ixx="9.108e-05" ixy="0" ixz="0" iyy="2.51e-06" iyz="0" izz="8.931e-05"/>
         </inertial>
-        <visual>
+        <!--<visual>
             <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
             <geometry>
               <mesh filename="model://realsense_camera/meshes/realsense.dae" scale=".001 .001 .001"/>
             </geometry>
-        </visual>
+        </visual>-->
 <!--        <collision name='collision'>-->
 <!--            <origin rpy="0 0 0" xyz="0 0 0"/>-->
 <!--            <geometry>-->

@@ -189,12 +189,7 @@ Eigen::Matrix<double, 6, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18
 
     p_est.block(0,0,3,1) = pCoM_raw.rowwise().sum()/con->cnt;
     
-    // double* p_vel = jointPos;
-    // p_vel[0] = p_est(0);
-    // p_vel[1] = p_est(1);
-    // p_vel[2] = p_est(2);
-    // Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(p_vel);
-
+    // Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPos);
     // Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
     // for(size_t i=2; i<4; i++){
         
@@ -204,9 +199,10 @@ Eigen::Matrix<double, 6, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18
     // }
     // p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
 
-    CoMhistory.block(0,0,3,fitsample) = CoMhistory.block(0,1,3,fitsample);
-    CoMhistory.block(0,fitsample,3,1) = p_est.block(0,0,3,1);
-    p_est.block(3,0,3,1) = getvEstimate();
+    // CoMhistory.block(0,0,3,fitsample) = CoMhistory.block(0,1,3,fitsample);
+    // CoMhistory.block(0,fitsample,3,1) = p_est.block(0,0,3,1);
+    // p_est.block(3,0,3,1) = getvEstimate();
+    
     return p_est;
 
 }

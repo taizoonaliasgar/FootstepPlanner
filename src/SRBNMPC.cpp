@@ -59,7 +59,7 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     forcefitx = forcefitx/(HORIZ-1);
     forcefitx = forcefitx/10.0;
 
-    CoMhistory.block(2,0,1,fitsample+1) = stand_height*Eigen::MatrixXd::Ones(1,fitsample+1);
+    CoMhistory.block(2,0,1,deltaT*fitsample+1) = stand_height*Eigen::MatrixXd::Ones(1,deltaT*fitsample+1);
     
 }
 
@@ -92,7 +92,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "upright_h5_71";
+    std::string file_name = "take2_1";
     // code predix
     std::string prefix_code = std::filesystem::current_path().string() + "/";
 
@@ -1051,28 +1051,44 @@ void SRBNMPC::setpreviousp(casadi::DM p){
 void SRBNMPC::getVEstimate(Eigen::Matrix<double,3,1> p_est){
 
     v_estimate = Eigen::Matrix<double,3,1>::Zero();
-    CoMhistory.block(0,0,3,fitsample) = CoMhistory.block(0,1,3,fitsample);
-    CoMhistory.block(0,fitsample,3,1) = p_est;
+    CoMhistory.block(0,0,3,deltaT*fitsample) = CoMhistory.block(0,1,3,deltaT*fitsample);
+    CoMhistory.block(0,deltaT*fitsample,3,1) = p_est;
     //std::cout << CoMhistory << std::endl;
     Eigen::MatrixXd X = Eigen::MatrixXd::Zero(fitsample + 1, fitorder + 1);
     X(0,0)=1;
     for (size_t i = 1; i <= fitsample; ++i){
         for (int j = 0; j <= fitorder; ++j){
-            X(i, j) = std::pow(0.01*i, j);
+            X(i, j) = std::pow(deltaT*0.01*i, j);
         }
     }
     //std::cout << X << std::endl;
+    Eigen::MatrixXd CoMhistlocal = Eigen::MatrixXd::Zero(3,fitsample + 1);
+    for(int i=0; i<fitsample+1; i++){
+        CoMhistlocal.block(0,i,3,1) = CoMhistory.block(0,deltaT*i,3,1);
+    }
     Eigen::MatrixXd Y = Eigen::VectorXd::Zero(fitsample + 1,1);
-    for (size_t f_ind = 0; f_ind < 3; ++f_ind){
+    for (size_t f_ind = 0; f_ind < 3; f_ind++){
 
-        Y = CoMhistory.block(f_ind,0,1,fitsample+1).transpose();    
+        Y = CoMhistlocal.block(f_ind,0,1,fitsample+1).transpose();    
         Eigen::VectorXd coeffs = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
         //std::cout << coeffs.transpose() << std::endl;
         for(int i=1; i<=fitorder; i++){
-            v_estimate(f_ind) += i*coeffs(i)*std::pow(0.01*fitsample, i-1);
+            v_estimate(f_ind) += i*coeffs(i)*std::pow(deltaT*0.01*fitsample, i-1);
         }
         
     }
 
+}
+
+Eigen::Matrix<double,3,1> SRBNMPC::getsatVEstimate(Eigen::Matrix<double,3,1> v_est){
+
+    double dvthresh = 0.2;
+    Eigen::Matrix<double,3,1> v_sat = Eigen::Matrix<double,3,1>::Zero();
+
+    v_sat(0) = (v_est(0)>localvelocity+dvthresh)?localvelocity+dvthresh:(v_est(0)<localvelocity-dvthresh)?localvelocity-dvthresh:v_est(0);
+    v_sat(1) = (v_est(1)>dvthresh)?dvthresh:(v_est(1)<-dvthresh)?-dvthresh:v_est(1);
+    v_sat(2) = (v_est(2)>dvthresh)?dvthresh:(v_est(2)<-dvthresh)?-dvthresh:v_est(2);
+
+    return v_sat;
 }
 

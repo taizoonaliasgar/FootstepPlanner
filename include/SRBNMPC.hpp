@@ -119,6 +119,7 @@ public:
     //Velocity estimation
     void getVEstimate(Eigen::Matrix<double,3,1> p_est);
     Eigen::Matrix<double,3,1> returnVEstimate(){return v_estimate;};
+    Eigen::Matrix<double,3,1> getsatVEstimate(Eigen::Matrix<double,3,1> v_est);
 
 private: 
     std::string filename;
@@ -235,11 +236,13 @@ private:
     int Raibflag = 0;
 
     //Velocity estimation
-    int fitorder = 15;
-    int fitsample = 13;
+    int deltaT = 2;
+    int fitorder = 10;
+    int fitsample = 9;
     //Eigen::Matrix<double,3,11> CoMhistory = Eigen::MatrixXd::Zero(3,11);
-    Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,fitsample+1);
+    Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,deltaT*fitsample+1);
     Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
+    
 };
 
 #endif

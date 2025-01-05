@@ -147,7 +147,7 @@ void imguiRenderCallBack() {
     error.reserve(world->getContactSolver().getLoopCounter());
 
     for(int i=0; i<world->getContactSolver().getLoopCounter(); i++)
-      error.push_back(float(log(world->getContactSolver().getErrorHistory()[i])));
+      //error.push_back(float(log(world->getContactSolver().getErrorHistory()[i])));
 
     ImGui::PlotLines("Lines", &error[0], error.size(), 0, "avg 0.0", float(log(world->getContactSolver().getConfig().error_to_terminate)), 1.0f, ImVec2(500,300));
 

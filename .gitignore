@@ -4,5 +4,7 @@ videos/
 build/CMakeFiles/*
 build/tmp/
 optimization/
+builddata/
+data25/
 rsc/activation.raisim
 *.txt
