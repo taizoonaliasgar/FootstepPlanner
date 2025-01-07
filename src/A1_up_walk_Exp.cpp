@@ -95,6 +95,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     Eigen::Matrix<double, 3, 1> eul;
     Eigen::Matrix<double, 4, 1> quat;
 
+    Eigen::Matrix<double, 3, 1> imu_eul = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double, 4, 1> imu_quat = Eigen::MatrixXd::Zero(4,1);
+
     //For Taizoon High level
     Eigen::Matrix<double, 12, 1> QP_Force;
     const int* foot_state;
@@ -125,6 +128,15 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     acc_bFrame(0) = linearAcceleration(0);
     acc_bFrame(1) = linearAcceleration(1);
     acc_bFrame(2) = linearAcceleration(2);
+
+    auto imu_o = imu->getOrientation();   // Quaternion
+    auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+    imu_quat(0) = imu_o[0];
+    imu_quat(1) = imu_o[1];
+    imu_quat(2) = imu_o[2];
+    imu_quat(3) = imu_o[3];
+    quat_to_XYZ(imu_quat,imu_eul);
+
      
     Eigen::Matrix<double,3,1> trunk_acc = loco_obj->returnAcceleration();
 
@@ -171,27 +183,37 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         jvel[i] = jointVelTotal(i);
     }
 
-    Eigen::Matrix<double,6,1> q_est = Eigen::MatrixXd::Zero(6,1);
+    Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
     if(controlTick<1){
         q_est(2) = 0.5;
     }else{
         q_est = loco_obj->getStateEstimate(jpos,jointVelTotal);
-        q_est.block(3,0,3,1) = loco_plan->returnVEstimate();
+        //q_est.block(3,0,3,1) = loco_plan->returnVEstimate();
         //q_est.block(3,0,3,1) = loco_plan->getsatVEstimate(q_est.block(3,0,3,1));
     }
 
     //q_est = loco_obj->VelKF(q_est,acc_wFrame);
+    q_est.block(6,0,3,1) = imu_eul;
+    q_est(9) = imu_w(0);
+    q_est(10) = imu_w(1);
+    q_est(11) = imu_w(2);
 
     std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
                     << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
                                                  << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
                                                     << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
-                                                    << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << std::endl;
+                                                    << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
+                                                    << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
+                                                    << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+                                                    << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
+                                                    << q_est(9) << "\t" << q_est(10) << "\t" << q_est(11) << std::endl;
 
-    // for(size_t i=0; i<3; ++i){
-    //     jpos[i] = q_est(i);
-    //     jvel[i] = q_est(3+i);
-    // }
+    for(size_t i=0; i<3; ++i){
+        jpos[i] = q_est(i);
+        jvel[i] = q_est(3+i);
+        jpos[3+i] = q_est(6+i);
+        jvel[3+i] = q_est(9+i);
+    }
 
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
@@ -627,9 +649,9 @@ int main(int argc, char *argv[]) {
     double simlength = 18000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../builddata/Dec17/";
+    std::string directory = "../data25/Jan5/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "A1_HL_fit_data_final";
+    std::string filename = "JacVCL_OWCL_08_3";
     // std::string filename = "inplace_sim";
 
 

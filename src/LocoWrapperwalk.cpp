@@ -162,9 +162,9 @@ void LocoWrapperwalk::setcontactconfig(int controlMPC){
     quad->updateSwingMatrices(con->ind,con->cnt); 
 }
 
-Eigen::Matrix<double, 6, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal){
+Eigen::Matrix<double, 12, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal){
     
-    Eigen::Matrix<double, 6, 1> p_est =Eigen::MatrixXd::Zero(6,1);
+    Eigen::Matrix<double, 12, 1> p_est =Eigen::MatrixXd::Zero(12,1);
 
     Eigen::Matrix<double, 3, 4> stance_feet = Eigen::MatrixXd::Zero(3,4);
     for (size_t i = 0; i < 4; i++)
@@ -189,15 +189,15 @@ Eigen::Matrix<double, 6, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18
 
     p_est.block(0,0,3,1) = pCoM_raw.rowwise().sum()/con->cnt;
     
-    // Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPos);
-    // Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
-    // for(size_t i=2; i<4; i++){
+    Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPos);
+    Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
+    for(size_t i=2; i<4; i++){
         
-    //     //pdot_Raw.block(3*i,0,3,1) = -con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
-    //     pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
+        //pdot_Raw.block(3*i,0,3,1) = -con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
+        pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
         
-    // }
-    // p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
+    }
+    p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
 
     // CoMhistory.block(0,0,3,fitsample) = CoMhistory.block(0,1,3,fitsample);
     // CoMhistory.block(0,fitsample,3,1) = p_est.block(0,0,3,1);
