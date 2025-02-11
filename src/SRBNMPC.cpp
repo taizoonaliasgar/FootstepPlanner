@@ -92,7 +92,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "take2_1";
+    std::string file_name = "take2_w0p2";//"take2_1";
     // code predix
     std::string prefix_code = std::filesystem::current_path().string() + "/";
 
@@ -415,11 +415,11 @@ casadi::SX SRBNMPC::GetTorque(casadi::SX st,casadi::SX con){
     casadi::SX r3 = casadi::SX::zeros(3,1);
     casadi::SX r4 = casadi::SX::zeros(3,1);
     r1(0) = st(12)-st(0);
-    r1(1) = -0.25-st(1);
+    r1(1) = -wall_y-st(1);
     r1(2) = 0.1805;//-st(2);
 
     r2(0) = st(13)-st(0);
-    r2(1) = 0.25-st(1);
+    r2(1) = wall_y-st(1);
     r2(2) = 0.1805;//-st(2);
     
     r3(0) = st(14)-st(0);
@@ -670,7 +670,7 @@ Eigen::Matrix<double,12,1> SRBNMPC::getFootPos(){
     for(int leg=0;leg<4;leg++){
         foot_pos(3*leg) = foot_x(leg);
         if(leg<2){
-            foot_pos(3*leg+1) = pow(-1,leg+1)*0.25;
+            foot_pos(3*leg+1) = pow(-1,leg+1)*wall_y;//0.25;
             foot_pos(3*leg+2) = stand_height+0.1805;
         }else{
             foot_pos(3*leg+1) = pow(-1,leg+1)*0.1308;

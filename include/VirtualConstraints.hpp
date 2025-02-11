@@ -26,13 +26,15 @@ public:
     void updateVirtualConstraintswalk(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, 
                                             double frontphase, double rearphase, MP *params, const LLInfo *ll); 
     void updateVirtualConstraintswalkR(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, 
-                                            double frontphase, double rearphase, MP *params, const LLInfo *ll);                                        
+                                            double frontphase, double rearphase, MP *params, const LLInfo *ll);
+    void updateVirtualConstraintssetfoot(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, 
+                                            double phaseVar, MP *params, const LLInfo *ll, double frontphase, double rearphase, bool reachedwall);                                      
 
 private:
     VCInfo VC; // Needed by the low-level controller
     double h_sw = 0.08;
     Eigen::MatrixXd h0, dh0;
-    double wall_y = 0.25;
+    double wall_y = 0.2;
     double two_contact = 20;
 };
 

@@ -1,0 +1,127 @@
+#ifndef LOCO_WRAPPER
+#define LOCO_WRAPPER
+
+#include "global_loco_structs.hpp"
+#include "Parameters.hpp"
+#include "RobotModel.hpp"
+#ifdef USE_OSQP
+#include "LowLevelCtrl_OSQP.hpp"
+#else
+#include "LowLevelCtrl.hpp"
+#endif
+#include "VirtualConstraints.hpp"
+#include "ContactEst.hpp"
+#include "MotionPlanner.hpp"
+#include "DataLog.hpp"
+
+#include <memory>
+
+class LocoWrapper : public Parameters
+{
+public:
+    LocoWrapper(int argc, char *argv[]);
+    virtual ~LocoWrapper();
+
+    void calcTau(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t duration);
+    double* getTorque(){return LL->getTorque();};
+    const int* getConDes(){return con->des;};
+    Eigen::Matrix<double, 18, 1> getJointPosCmd(){return ll->q;};
+    Eigen::Matrix<double, 18, 1> getJointVelCmd(){return ll->dq;};
+    void initStandVars(Eigen::Matrix<double,3,1> com, double yaw, double standTime){ PP->updateStandVars(com,yaw,standTime);};
+    void updateDesiredForce(Eigen::Matrix<double, 12, 1> fDes){VC->setDesiredForce(fDes);};
+    void updateVel(const float vel[3]){PP->setVel(vel);};
+    void updatePose(const float pose[6]){PP->setPose(pose);};
+    void updatePoseType(size_t poseType_){PP->setPoseType(poseType_);};
+
+    //Taizoon functions to make upright
+    void calcTau2(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t duration, size_t shifttime, size_t movetime, size_t shifttime2, size_t movetime2, size_t movetime3);
+    void setcontactconfig(int controlMPC);
+    void plottingfoothd(const VCInfo *vc, const ContactInfo *con);
+    //Eigen::Matrix<double, 3, 4> getfootposition(){return kin->toePos;};
+    void getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight);
+    void setshiftedCoM(){PP->setshiftedCoM(CoMnew);};
+    void setswingContact(Eigen::Matrix<double,4,1>nContact){nextContact[0] = nContact(0);nextContact[1] = nContact(1);nextContact[2] = nContact(2);nextContact[3] = nContact(3);};
+    void tookfirststep(){LL->afterfirststep();};
+    void stepsonwall(int stepind){wallstep = stepind;};
+    void stopclimbing(){stopclimb = true;};
+    void incstep(){PP->increasesteplenth();};
+    void setrearhippose();
+    void setfinalCoM();
+    void settlesteps(int setsteps){settlestep = setsteps;};
+    void gotfinalstate(){atfinalstate = true;};
+    void setxzsteplength(size_t movetime);
+
+    //NMPC upright walk
+    int stancecounter(){return walk_tick;};
+    void setoptNLstate(Eigen::Matrix<double, 33, 1> HLopt);
+    void setRFfalse(){RaibFlag = false;};
+    Eigen::Matrix<double, 3, 4> getfootposition(){return kin->toePos;};
+    Eigen::Matrix<double, 3, 4> gethipposition(){return kin->hipPos;};
+    void updatestate(const double q[18], const double dq[18], const double R[9]){quad->updateState(q,dq,R);};
+    Eigen::Matrix<double, 12, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double, 3, 1> imu_eul, Eigen::Matrix<double, 3, 1> imu_omega);
+
+    //Stitching together
+    void readytowalk(){quad->fullyupright();};//LL->fullyupright();};
+    void setfinalCoM2();
+    void startwalking(){readytowalkf = true;LL->fullyupright();};
+
+    // Pointers to structs
+    const StateInfo *state;
+    const DynamicsInfo *dyn;
+    const KinematicsInfo *kin;
+    const ContactInfo *con;
+    const TrajInfo *traj;
+    const VCInfo *vcon;
+    const LLInfo *ll;
+
+private:
+    // size_t newDom = 0;
+    size_t locoTick = 0;
+    double phaseVar = 0;
+    double maxPhase = 0.996;
+    size_t gaitTemp = STAND;
+    size_t forceDomainChange = 0;
+
+    // Pointers to class objects
+    std::unique_ptr<DataLog> data;
+    RobotModel *quad;
+    LowLevelCtrl *LL;
+    VirtualConstraints *VC;
+    ContactEst *conEst;
+    MotionPlanner *PP;
+
+    //Taizoon Changes to go upright
+    Eigen::Matrix<double, 24, 1> opt_HLstate = Eigen::MatrixXd::Zero(24,1);
+    Eigen::Matrix<double, 5, 1> NLstep = Eigen::MatrixXd::Zero(5,1);
+    Eigen::Matrix<double,4,40> contact_horizon = Eigen::MatrixXd::Ones(4,40);
+    std::vector<int> desired_contact{1,1,1,1};
+    double flphase = 0.0;
+    double rlphase = 0.0;
+    Eigen::Matrix<double,18,1> Hr = Eigen::MatrixXd::Zero(18,1);
+    Eigen::Matrix<double,12,1> z = Eigen::MatrixXd::Zero(12,1); 
+    Eigen::Matrix<double,12,12> Ki = Eigen::MatrixXd::Zero(12,12);
+    Eigen::Matrix<double,4,1> CoMnew = Eigen::MatrixXd::Zero(4,1);
+    bool CoMshifted = false;
+    std::vector<int> nextContact = {1,1,1,1};
+    int wallstep = 0;
+    bool stopclimb = false;
+    int settlestep = 0;
+    bool atfinalstate = false;
+
+    //NMPC upright walk
+    int walk_tick = 0;
+    bool RaibFlag = true;
+    Eigen::Matrix<double,18,18> DRai = Eigen::MatrixXd::Zero(18,18);
+    Eigen::Matrix<double,18,1> HRai = Eigen::MatrixXd::Zero(18,1);
+
+    bool readytowalkf = false;
+    double switchtime = 24;
+    
+    
+};
+
+inline double getPhase(double time, double time_0, double time_f){
+    return (1.0*time-1.0*time_0)/(1.0*time_f-1.0*time_0);
+};
+
+#endif

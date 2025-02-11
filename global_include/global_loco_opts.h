@@ -33,6 +33,9 @@
 #define FLY             8
 #define PRONK           9
 #define UPWALK          10
+#define STANDUP         11
+#define SHIFTCOM        12
+#define MOVEARM         13
 
 #define POSE_X     0
 #define POSE_Y     1

@@ -92,11 +92,13 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     Eigen::VectorXd jointVelTotal = Eigen::MatrixXd::Zero(TOTAL_DOF,1);    
         
     raisim::Mat<3,3> rotMat;
+    raisim::Vec<4> quat_base;
     Eigen::Matrix<double, 3, 1> eul;
     Eigen::Matrix<double, 4, 1> quat;
 
     Eigen::Matrix<double, 3, 1> imu_eul = Eigen::MatrixXd::Zero(3,1);
     Eigen::Matrix<double, 4, 1> imu_quat = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double, 3, 1> imu_omega = Eigen::MatrixXd::Zero(3,1);
 
     //For Taizoon High level
     Eigen::Matrix<double, 12, 1> QP_Force;
@@ -110,18 +112,8 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     /////////////////////////////////////////////////////////////////////
     A1.back()->getState(jointPosTotal, jointVelTotal);
     A1.back()->getBaseOrientation(rotMat);
+    A1.back()->getBaseOrientation(quat_base);
 
-    // raisim::Vec<3> linearAcceleration;
-    // //raisim::Vec<3> angularVelocity;
-    // //A1.back()->getFrameAcceleration("imu_joint", linearAcceleration);
-    // //A1.back()->getFrameAngularVelocity("imu_link", angularVelocity);
-    // size_t frameId = A1.back()->getFrameIdxByName("imu_link");
-    // // Get frame linear acceleration
-    // A1.back()->getFrameAcceleration(frameId, linearAcceleration);
-
-    //auto imu_readings = A1.back()->getSensor<raisim::InertialMeasurementUnit>("imu")->getValues();
-    // auto imu_readings = A1.back()->getSensor("imu")->getValues();
-    // auto imu_readings = A1.back()->getSensor<IMUSensor>("imu")->getValues();
     auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
     raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
     Eigen::Matrix<double,3,1> acc_bFrame = Eigen::MatrixXd::Zero(3,1);
@@ -131,12 +123,23 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
     auto imu_o = imu->getOrientation();   // Quaternion
     auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+    
+    // std::cout << quat_base[0] << "\t" << quat_base[1] << "\t" << quat_base[2] << "\t" << quat_base[3] << "\t" <<
+    //                 imu_o[0] << "\t"    << imu_o[1]     << "\t" << imu_o[2]     << "\t"  << imu_o[3] << std::endl;
+
     imu_quat(0) = imu_o[0];
     imu_quat(1) = imu_o[1];
     imu_quat(2) = imu_o[2];
     imu_quat(3) = imu_o[3];
+
+    imu_omega(0) = imu_w[0];
+    imu_omega(1) = imu_w[1];
+    imu_omega(2) = imu_w[2];
+
     quat_to_XYZ(imu_quat,imu_eul);
 
+    Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
+    quat_to_R(imu_quat,rotIMU);
      
     Eigen::Matrix<double,3,1> trunk_acc = loco_obj->returnAcceleration();
 
@@ -160,6 +163,12 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     for(size_t i=0;i<9;i++){
         rotMatrixDouble[i] = rotMat[i];
     }
+    
+    // std::cout  << rotMat[0] << "\t" << rotMat[1] << "\t" << rotMat[2] << "\t" << rotMat[3] << "\t" << rotMat[4] << "\t" << rotMat[5] << "\t" << rotMat[6] << "\t" << rotMat[7] << "\t" << rotMat[8] << "\t"
+    //            << rotIMU(0,0) << "\t" << rotIMU(1,0) << "\t" << rotIMU(2,0) << "\t" << rotIMU(0,1) << "\t" << rotIMU(1,1) << "\t" << rotIMU(2,1) << "\t" 
+    //             << rotIMU(0,2) << "\t" << rotIMU(1,2) << "\t" << rotIMU(2,2) << std::endl;
+    
+    
     Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
     jointVelTotal.segment(3,3) = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
 
@@ -168,9 +177,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
 
     quat = jointPosTotal.block(3,0,4,1);
     quat_to_XYZ(quat,eul);
-    //eul(1) = eul(1)-1.57079632679;
-    //std::cout << "quat" << "\t" << quat << std::endl;
-    //std::cout << "eul" << "\t" << eul(0) << "\t" << eul(1) << "\t" << eul(2) << std::endl; 
+    
     for(size_t i=0; i<3; ++i){
         jpos[i] = jointPosTotal(i);
         jvel[i] = jointVelTotal(i);
@@ -186,8 +193,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
     if(controlTick<1){
         q_est(2) = 0.5;
+        loco_obj->tookfirststep();
+        loco_obj->readytowalk();
     }else{
-        q_est = loco_obj->getStateEstimate(jpos,jointVelTotal);
+        q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
         //q_est.block(3,0,3,1) = loco_plan->returnVEstimate();
         //q_est.block(3,0,3,1) = loco_plan->getsatVEstimate(q_est.block(3,0,3,1));
     }
@@ -198,28 +207,44 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     q_est(10) = imu_w(1);
     q_est(11) = imu_w(2);
 
-    std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
-                    << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
-                                                 << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
-                                                    << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
-                                                    << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
-                                                    << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
-                                                    << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
-                                                    << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
-                                                    << q_est(9) << "\t" << q_est(10) << "\t" << q_est(11) << std::endl;
+    //quat_to_R(imu_quat,rotIMU);
+    //R_XYZ(imu_eul,rotIMU);
+    // for(size_t i=0;i<3;i++){
+    //     for (size_t j = 0; j < 3; j++)
+    //     {
+    //         rotMatrixDouble[3*i+j] = rotIMU(j,i);
+    //     }
+    // }
+    // for (size_t i = 0; i < 9; i++)
+    // {
+    //     rotMatrixDouble[i] = 0;
+    // }
+    // rotMatrixDouble[0] = 1;
+    // rotMatrixDouble[4] = 1;
+    // rotMatrixDouble[8] = 1;
 
-    for(size_t i=0; i<3; ++i){
-        jpos[i] = q_est(i);
-        jvel[i] = q_est(3+i);
-        jpos[3+i] = q_est(6+i);
-        jvel[3+i] = q_est(9+i);
-    }
+    // std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
+    //                 << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
+    //                                              << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
+    //                                                 << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
+    //                                                 << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
+    //                                                 << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
+    //                                                 << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+    //                                                 << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
+    //                                                 << q_est(9) << "\t" << q_est(10) << "\t" << q_est(11) << std::endl;
+
+    // for(size_t i=0; i<3; ++i){
+    //     jpos[i] = q_est(i);
+    //     jvel[i] = q_est(3+i);
+    //     jpos[3+i] = q_est(6+i);
+    //     jvel[3+i] = q_est(9+i);
+    // }
 
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
     q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
     q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
-    q0.block(6,0,3,1) = eul;
+    q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
     q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
     std::map<std::string, casadi::DM> arg, res;
 
@@ -277,7 +302,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         //std::cout << foot_position.block(0,1,3,1).transpose() << std::endl;
         //std::cout << foot_position.block(0,0,3,1).transpose() << std::endl;
         if(controlTick%10==0){
-            loco_plan->getVEstimate(q_est.block(0,0,3,1));
+            //loco_plan->getVEstimate(q_est.block(0,0,3,1));
             int controlMPC = std::floor(controlTick/10); 
             //std::cout << "controlMPC:" << controlMPC << std::endl;
             casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
@@ -453,8 +478,11 @@ int main(int argc, char *argv[]) {
     
     //Full Order Simulation
     //Rear offset -0.1
+    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
+    //                                   -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+    //Wall at 0.2
     A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-                                       -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+                                       -0.5156, 1.1526, -2.3052, 0.5156, 1.1526, -2.3052, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
     //Rear offset -0.01
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
     //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.247, -1.2899, 0.0, 2.247, -1.2899});
@@ -483,8 +511,8 @@ int main(int argc, char *argv[]) {
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.37,0.4);
-    box_left->setPosition(0,0.37,0.4);
+    box_right->setPosition(0,-0.32,0.4);
+    box_left->setPosition(0,0.32,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -524,7 +552,7 @@ int main(int argc, char *argv[]) {
        bool GroundHeightVariation = true;
        if(GroundHeightVariation){
            int numBlk = 20;//150;
-           double percent = 70; // there will be a block x percent of the time
+           double percent = 55;//70 // there will be a block x percent of the time
            int direction = 0; // 0 for x, 1 for y
            int fwd_bwd = 1; // 1 for forward, -1 for backward
            int maxHeight = 2;//4; // max height in centimeters
@@ -613,7 +641,7 @@ int main(int argc, char *argv[]) {
     loco_obj->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     //loco_plan->generator();
-    std::string file_name = "take2_1";
+    std::string file_name = "take2_w0p2";
     // code predix
     // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
     std::string prefix_code = std::filesystem::current_path().string() + "/";
@@ -646,12 +674,12 @@ int main(int argc, char *argv[]) {
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 18000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 20000;//25000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../data25/Jan5/";
+    std::string directory = "../data25/Jan26/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "JacVCL_OWCL_08_3";
+    std::string filename = "W0p2_test_z_2";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
 
 
@@ -773,7 +801,7 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
         // if(abs(jointPosTotal(1))>0.04){
         //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;

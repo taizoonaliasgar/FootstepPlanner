@@ -69,10 +69,10 @@ struct TrajInfo
     Eigen::Matrix<double, 3, 4> toeInit;
     Eigen::Matrix<double, 3, 4> toeFinal;
     double domLen = 0;
-    double FRstepLen = 0.0;
-    double FLstepLen = 0.0;
-    double RRstepLen = 0.0;
-    double RLstepLen = 0.0;
+    Eigen::Matrix<double, 3, 1> FRstepLen = Eigen::Matrix<double, 3, 1>::Zero();
+    Eigen::Matrix<double, 3, 1> FLstepLen = Eigen::Matrix<double, 3, 1>::Zero();
+    Eigen::Matrix<double, 3, 1> RRstepLen = Eigen::Matrix<double, 3, 1>::Zero();
+    Eigen::Matrix<double, 3, 1> RLstepLen = Eigen::Matrix<double, 3, 1>::Zero();
 };
 
 struct LLInfo{

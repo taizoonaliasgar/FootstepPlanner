@@ -8,6 +8,7 @@
 //#include "randyImguiPanel.hpp"
 #include "raisimBasicImguiPanel.hpp"
 #include "raisimKeyboardCallback.hpp" // THIS IS WHERE cmd.vel AND cmd.pose ARE IMPLEMENTED (as globals)
+#include "raisim/RaisimServer.hpp"
 #include "helper.hpp"
 //#include "helper2.hpp"
 #include "Filters.h"
@@ -19,12 +20,20 @@
 //#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/LocoWrapperfly.hpp"
 //#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/locomotion_planner.h"
 //#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/LocoWrapperwalk.hpp"
-#include "LocoWrapperwalk.hpp"
+#include "LocoWrapper.hpp"
 #include "SRBNMPC.hpp"
 using namespace std;
 // namespace fs = std::filesystem;
 
 FiltStruct_f* filt = (FiltStruct_f*)malloc(sizeof(FiltStruct_f));
+
+void comparingfootv(raisim::Vec<3> FRfoot,raisim::Vec<3> FLfoot,raisim::Vec<3> RRfoot,raisim::Vec<3> RLfoot,Eigen::Matrix<double, 3, 4> foot_vel){
+    std::cout << FRfoot[0]-foot_vel(0,0) << "\t" << FRfoot[1]-foot_vel(1,0) << "\t" << FRfoot[2]-foot_vel(2,0) << "\t" <<
+                    FLfoot[0]-foot_vel(0,1) << "\t" << FLfoot[1]-foot_vel(1,1) << "\t" << FLfoot[2]-foot_vel(2,1) << "\t" <<
+                        RRfoot[0]-foot_vel(0,2) << "\t" << RRfoot[1]-foot_vel(1,2) << "\t" << RRfoot[2]-foot_vel(2,2) << "\t" <<
+                            RLfoot[0]-foot_vel(0,3) << "\t" << RLfoot[1]-foot_vel(1,3) << "\t" << RLfoot[2]-foot_vel(2,3) << std::endl;
+
+}
 
 double distx(size_t controlTick, double amp){
     
@@ -63,16 +72,19 @@ void setupCallback() {
     vis->getCameraMan()->setTopSpeed(5);
 }
 
-void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick, raisim::Contact contactInstance) {
+void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick, raisim::Contact contactInstance) {
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// INITIALIZE
     /////////////////////////////////////////////////////////////////////
     static size_t loco_kind = TROT;                        // Gait pattern to use
     size_t pose_kind = POSE_CMD;                   // Pose type to use (if loco_kind is set to POSE)
-    size_t settling = 0*0.2*ctrlHz;                   // Settling down
-    size_t duration = 0*0.8*ctrlHz;                   // Stand up 
+    size_t settling = 0.2*ctrlHz;                   // Settling down
+    size_t duration = 1.8*ctrlHz;                   // Stand up 
     size_t loco_start = settling + duration;        // Start the locomotion pattern
 
+    size_t shifttime = 0.75*ctrlHz;
+    size_t movetime = 0.3*ctrlHz;
+    size_t shifttime2 = 0.6*ctrlHz;
     
     double *tau;
     //double tau[18] = {0};
@@ -86,6 +98,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     Eigen::Matrix<double, 3, 1> eul;
     Eigen::Matrix<double, 4, 1> quat;
 
+    Eigen::Matrix<double, 3, 1> imu_eul = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double, 4, 1> imu_quat = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double, 3, 1> imu_omega = Eigen::MatrixXd::Zero(3,1);
+
     //For Taizoon High level
     Eigen::Matrix<double, 12, 1> QP_Force;
     const int* foot_state;
@@ -98,11 +114,33 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     /////////////////////////////////////////////////////////////////////
     A1.back()->getState(jointPosTotal, jointVelTotal);
     A1.back()->getBaseOrientation(rotMat);
+     
+    auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
+    raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
+    Eigen::Matrix<double,3,1> acc_bFrame = Eigen::MatrixXd::Zero(3,1);
+    acc_bFrame(0) = linearAcceleration(0);
+    acc_bFrame(1) = linearAcceleration(1);
+    acc_bFrame(2) = linearAcceleration(2);
+
+    auto imu_o = imu->getOrientation();   // Quaternion
+    auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
     
+    // std::cout << quat_base[0] << "\t" << quat_base[1] << "\t" << quat_base[2] << "\t" << quat_base[3] << "\t" <<
+    //                 imu_o[0] << "\t"    << imu_o[1]     << "\t" << imu_o[2]     << "\t"  << imu_o[3] << std::endl;
+
+    imu_quat(0) = imu_o[0];
+    imu_quat(1) = imu_o[1];
+    imu_quat(2) = imu_o[2];
+    imu_quat(3) = imu_o[3];
+
+    imu_omega(0) = imu_w[0];
+    imu_omega(1) = imu_w[1];
+    imu_omega(2) = imu_w[2];
+
+    quat_to_XYZ(imu_quat,imu_eul);
+
     raisim::MatDyn D = A1.back()->getMassMatrix();
     raisim::VecDyn H = A1.back()->getNonlinearities({0,0,-9.81});
-    
-    //raisim::Vec<3>& impulse = contactInstance.getImpulse();
 
     Eigen::Matrix<double,18,18> Dr;
     Eigen::Matrix<double,18,1> Hr;
@@ -119,14 +157,14 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     for(size_t i=0;i<9;i++){
         rotMatrixDouble[i] = rotMat[i];
     }
+    
+    
     Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
     jointVelTotal.segment(3,3) = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
 
     quat = jointPosTotal.block(3,0,4,1);
     quat_to_XYZ(quat,eul);
-    //eul(1) = eul(1)-1.57079632679;
-    //std::cout << "quat" << "\t" << quat << std::endl;
-    //std::cout << "eul" << "\t" << eul(0) << "\t" << eul(1) << "\t" << eul(2) << std::endl; 
+    
     for(size_t i=0; i<3; ++i){
         jpos[i] = jointPosTotal(i);
         jvel[i] = jointVelTotal(i);
@@ -135,26 +173,33 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
     }
 
     for(size_t i=6; i<18; ++i){
-        /*if((i-1)%3==0){
-            jpos[i] = jointPosTotal(i+1);//-1.57079632679;
-        }else{
-            jpos[i] = jointPosTotal(i+1);//-1.57079632679;
-        }*/
         jpos[i] = jointPosTotal(i+1);
         jvel[i] = jointVelTotal(i);
     }
+
+    // std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
+    //                 << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
+    //                                              << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
+    //                                                 << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
+    //                                                 << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
+    //                                                 << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
+    //                                                 << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+    //                                                 << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
     
+    // std::cout << controlTick << "\t" << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
+    //                                                << imu_eul[0] << "\t" << imu_eul[1] << "\t" << imu_eul[2] << "\t"
+    //                                                 << eul(0) << "\t" << eul(1) << "\t" << eul(2) //<< "\t"
+    //                                                 //<< q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
+    //                                                 << std::endl; 
 
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
     q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
     q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
-    q0.block(6,0,3,1) = eul;
+    q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
     q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
     std::map<std::string, casadi::DM> arg, res;
-
-    //std::cout << q0 << std::endl;
-
+    
     int force[4] = {0};
     for(auto &con: A1.back()->getContacts()){
         int conInd = con.getlocalBodyIndex();
@@ -162,135 +207,153 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapperwalk *lo
         force[conInd/3-1] = con.getNormal().e().norm();
     }
 
+    float vel_temp[3] = {0,0,0};//{cmd.vel[0],cmd.vel[1],cmd.vel[2]};
+    float pose_temp[6] = {0,0,0,0,0,0};
     float filt_vel_temp[3] = {jvel[0],jvel[1],jvel[2]};
     discrete_butter_f(filt,filt_vel_temp);
-    //printf("Fwd Vel: %0.3f || Lat Vel: %0.3f || Yaw Vel: %0.3f || Pitch: %0.3f\n",filt_vel_temp[0],filt_vel_temp[1],filt_vel_temp[2],jpos[4]);//cmd.pose[1]);
-
-
+    int duration_data =0;
+    Eigen::Matrix<double,4,1> nextcon = Eigen::MatrixXd::Ones(4,1);
+    int maxsteps = 14;
+    
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// CONTROL
     /////////////////////////////////////////////////////////////////////
     // Update the desired torques
     if(controlTick < settling){ // Settle down
         // loco_obj->posSetup(jointPosTotal.head(3));
-        //double temp[18] = {0};
-        //tau = temp;
-        //loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
+        double temp[18] = {0};
+        tau = temp;
+        loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
     }
     else if(controlTick >= settling & controlTick < loco_start){ // Start standing
-        //loco_obj->calcTau(jpos,jvel,rotMatrixDouble,force,STAND,controlTick);
-        //tau = loco_obj->getTorque();
+        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STAND,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+        tau = loco_obj->getTorque();
 
     }
-    else if(controlTick >= loco_start){ // Start locomotion
+    else if(controlTick >= loco_start & controlTick < loco_start+shifttime){
         
-        //if(controlTick == loco_start){
+        nextcon(0) = 0;
         
-        loco_obj->updatestate(jpos,jvel,rotMatrixDouble);
-        int duration_data =0;
-        //}
-        foot_position = loco_obj->getfootposition();
-        hip_position = loco_obj->gethipposition();
-        int stancephase = loco_obj->stancecounter();
-        //std::cout << foot_position.block(0,1,3,1).transpose() << std::endl;
-        //std::cout << foot_position.block(0,0,3,1).transpose() << std::endl;
-        if(controlTick%10==0){
+        if(controlTick==loco_start){
+            Eigen::Matrix<double, 4, 1> wfoot = 6*Eigen::MatrixXd::Ones(4,1);
+            wfoot(0)=1;//nextcon(0);
+            wfoot(1)=1;//nextcon(1);
+            loco_obj->getshiftedCoM(wfoot);
+            loco_obj->setshiftedCoM();
+        }
 
-            int controlMPC = std::floor(controlTick/10); 
-            //std::cout << "controlMPC:" << controlMPC << std::endl;
-            casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
-            if(controlMPC<1){
-                q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);//0.15,0.15,-0.1,-0.1;
+        loco_obj->setswingContact(nextcon);
+        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+        tau = loco_obj->getTorque();
+
+    }else if(controlTick >= loco_start+shifttime){// & controlTick < loco_start + shifttime){ // Start locomotion
+        
+        int stepind = std::floor((controlTick-loco_start-shifttime)/(shifttime+movetime));
+        
+        if(stepind<maxsteps){
+            loco_obj->stepsonwall(stepind);
+        
+            if(stepind==1){
+                loco_obj->tookfirststep();
+                //std::cout << "First step" << "\t" << controlTick << std::endl; 
+            }
+        
+            if(stepind%2==0){
+                nextcon(0) = 0;
+                if(controlTick == loco_start+shifttime + stepind*(shifttime+movetime)){
+                    loco_obj->incstep();
+                }
+                
             }else{
-                q0(12) = double(X_prev(12));
-                q0(13) = double(X_prev(13));
-                q0(14) = double(X_prev(14));
-                q0(15) = double(X_prev(15));
+                nextcon(1) = 0;
+            }
+
+            
+        
+         
+            if(controlTick==loco_start + (stepind+1)*(movetime + shifttime)){// + stepind*(shifttime+movetime+shifttime2)){
+                Eigen::Matrix<double, 4, 1> wfoot = 6*Eigen::MatrixXd::Ones(4,1);//3
+                wfoot(0)=1;//nextcon(1);
+                wfoot(1)=1;//nextcon(0);
+                //wfoot(2)=1+1*wfoot(0);
+                //wfoot(3)=1+1*wfoot(1);
+                loco_obj->getshiftedCoM(wfoot);
+                loco_obj->setshiftedCoM();
+                //std::cout << "controlTick:" << "\t" << controlTick << "\t" << "stepind" << "\t" << stepind << std::endl;
+            }
+            // else if(controlTick == loco_start + (stepind)*(movetime + shifttime) + shifttime && stepind>0){
+            //     Eigen::Matrix<double, 4, 1> wfoot = 6*Eigen::MatrixXd::Ones(4,1);//3
+            //     wfoot(0)=1;//nextcon(0);
+            //     wfoot(1)=1;//nextcon(1);
+            //     //wfoot(2)=2+2*wfoot(0);
+            //     //wfoot(3)=2+2*wfoot(1);
+            //     loco_obj->getshiftedCoM(wfoot);
+            //     loco_obj->setshiftedCoM();
+            // }
+
+            loco_obj->setswingContact(nextcon);
+            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+            tau = loco_obj->getTorque();
+        
+        
+        }else{
+  
+            
+            if(controlTick==loco_start + shifttime + (maxsteps)*(movetime + shifttime)){// + stepind*(shifttime+movetime+shifttime2)){
+                loco_obj->stopclimbing();
+                loco_obj->stepsonwall(maxsteps);
+                Eigen::Matrix<double, 4, 1> wfoot = 6*Eigen::MatrixXd::Ones(4,1);
+                wfoot(0)=1;
+                wfoot(1)=1;
+                //wfoot(2)=1+1*wfoot(0);
+                //wfoot(3)=1+1*wfoot(1);
+                loco_obj->getshiftedCoM(wfoot);
+                loco_obj->setshiftedCoM();
+                // nextcon(0) = 1;
+                // nextcon(1) = 0;
+                // loco_obj->setswingContact(nextcon);
+                //std::cout << "controlTick:" << "\t" << controlTick << "\t" << "stepind" << "\t" << stepind << std::endl; 
             }
             
-            casadi::DM p = loco_plan->motionPlannerN(q0,controlMPC);
-            loco_plan->setpreviousp(p);
-
-            arg["lbx"] = loco_plan->lowerboundx(p, controlMPC);
-            arg["ubx"] =  loco_plan->upperboundx(p);
-            arg["lbg"] =  loco_plan->lowerboundg();
-            arg["ubg"] =  loco_plan->upperboundg();
-            arg["x0"] = X_prev;
-            arg["p"] = p;
-            
-            auto start = std::chrono::high_resolution_clock::now();
-            res = solver(arg);
-            auto end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            duration_data = static_cast<int>(duration.count());
-            //std::cout << "NMPC Solve Time: " << duration_data << "ms" << std::endl;
-
-            loco_plan->setprevioussol(res.at("x"));
-            
-            opt_HLMPC_state = loco_plan->getNMPCsol2(controlMPC);
-            
-            loco_obj->setoptNLstate(opt_HLMPC_state);
-            loco_obj->setcontactconfig(controlMPC);
-            loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
-            
-
-            //float pose_temp[3] = {opt_HLMPC_state(0),opt_HLMPC_state(1),opt_HLMPC_state(2)};
-            //float vel_temp[3] = {opt_HLMPC_state(3),opt_HLMPC_state(4),opt_HLMPC_state(15)};
-            //loco_obj->updateVel(vel_temp);
-            //loco_obj->updatePose(pose_temp);
+            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+            tau = loco_obj->getTorque();
         }
-        //float vel_temp[3] = {0.5,0,0};
-        //loco_obj->updateVel(vel_temp);
-        
-        loco_obj->setRaisimD(Dr);
-        loco_obj->setRaisimH(Hr);
-        loco_obj->calcTau(jpos,jvel,rotMatrixDouble,force,UPWALK,controlTick,duration_data);
-        
-        tau = loco_obj->getTorque();
-        
-        //tau = tau*0;//Eigen::MatrixXd::Zero(18,1);// >(tau,18);
 
-        //double temp[18] = {0};
-        //tau = temp;
-        //std::cout<< "Torque deploy" << std::endl;
-        //for(int i=0;i<18;i++){
-        //    tau[i] = 0;
-        //}
+        // loco_obj->updateVel(vel_temp);
+        // loco_obj->updatePose(pose_temp);
+        // if(controlTick%10==0){
+        //     int controlMPC = std::floor(controlTick/10);
+        //     loco_obj->setcontactconfig(controlMPC);
+        // }
+        
     }
 
-    //std::cout<< "Torque deploy 1.3" << std::endl;
+    
     jointTorqueFF = Eigen::Map< Eigen::Matrix<double,18,1> >(tau,18);
-    //for(int i=0;i<18;i++){
-    //        jointTorqueFF(i) = tau[i];
-    //}
-    //std::cout<< "Torque deploy 1.5" << std::endl;
-
     jointTorqueFF.block(0,0,6,1).setZero();
     
     // Set the desired torques
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setGeneralizedForce(jointTorqueFF);
 
-    // Example force in the x-direction
-
     // Apply the disturbance force to the desired body
     // Assuming the body index is 0, adjust as needed
-    // if(controlTick > 8000 && controlTick < 9000){
+    // if(controlTick > 500 && controlTick < 1000){
 
-    //     double amp = 120.0;
-    //     double dist = distx(controlTick, amp);
-    //     Eigen::Vector3d disturbanceForce(dist, 0.0, 0.0); 
+    //     double amp = 600.0;
+    //     //double dist = distx(controlTick, amp);
+    //     Eigen::Vector3d disturbanceForce(0,amp,0); 
     //     A1.back()->setExternalForce(0, disturbanceForce);
     // }
+
 };
 
 
 
 int main(int argc, char *argv[]) {
     
-    long int terrain_number = atoll(argv[3]); // Use atoll for long long int
-    //std::cout << "Received long integer: " << terrain_number << endl;
-    
+    //long int terrain_number = atoll(argv[3]); // Use atoll for long long int
+
     // ============================================================ //
     // =================== SETUP RAISIM/VISUALS =================== //
     // ============================================================ //
@@ -298,7 +361,7 @@ int main(int argc, char *argv[]) {
     raisim::World::setActivationKey(raisim::loadResource("activation.raisim"));
     raisim::World world;
     world.setTimeStep(simfreq_raisim);
-
+    
     raisim::OgreVis *vis = raisim::OgreVis::get();
 
     /// these method must be called before initApp
@@ -312,7 +375,7 @@ int main(int argc, char *argv[]) {
 
     /// starts visualizer thread
     vis->initApp();
-
+    
     /// create raisim objects
     raisim::TerrainProperties terrainProperties;
     terrainProperties.frequency = 0.0;
@@ -329,8 +392,8 @@ int main(int argc, char *argv[]) {
     vis->createGraphicalObject(ground, "terrain", "checkerboard_blue");
     world.setDefaultMaterial(0.8, 0.0, 0.0); //surface friction could be 0.8 or 1.0
     vis->addVisualObject("extForceArrow", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP); 
-     
-
+    
+    
     // // WEIGHT VISUALIZATION FOR LCSS PAPER, KEEP FOR NOW.
     // // create raisim objects
     // double scale = 1;
@@ -355,50 +418,25 @@ int main(int argc, char *argv[]) {
     // ============================================================ //
     std::vector<raisim::ArticulatedSystem*> A1;
     // A1.push_back(world.addArticulatedSystem(raisim::loadResource("Go1/Go1.urdf"))); // WHEN USING Go1, BE SURE TO CHANGE CMAKE TO USE CORRECT DYNAMICS
-    //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));
-    //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod.urdf")));
-    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod_2.urdf")));
+    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));
+    //A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_up_mod_sensored.urdf")));
+    
+    
     vis->createGraphicalObject(A1.back(), "A1");
 
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.35, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.5804, 1.8973, -2.3609, 0.5804, 1.8973, -2.3609, 0.0, 3.0156, -2.2091, 0.0, 3.0156, -2.2091});
-
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.45, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.4944, 0.8218, -1.6435, 0.4944, 0.8218, -1.6435, 0.0, 2.6951, -1.5379, 0.0, 2.6951, -1.5379});
-    
-    //Full Order Simulation
     //Rear offset -0.1
-    A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-                                       -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
-    //Rear offset -0.01
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.247, -1.2899, 0.0, 2.247, -1.2899});
-    //Rear offset -0.04
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3305, -1.2703, 0.0, 2.3305, -1.2703});
-    //Rear offset -0.08
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4195, -1.2068, 0.0, 2.4195, -1.2068});
-
-    //Rear offset -0.06
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                    -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3784, -1.244, 0.0, 2.3784, -1.244});
-    //Rear offset -0.05
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                     -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.3553, -1.2585, 0.0, 2.3553, -1.2585});
-    //Front offset 0.15
-    //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
-    //                                     -0.596, 0.9333, -1.8665, 0.596, 0.9333, -1.8665, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
-    
+    //                                  -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+    A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1, 0, 0, 0,
+                                        0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6});   
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setName("A1_Robot");
-    //assignBodyColors(vis,"A1","collision","gray");
-
+    
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.37,0.4);
-    box_left->setPosition(0,0.37,0.4);
+    box_right->setPosition(0,-0.32,0.4);
+    box_left->setPosition(0,0.32,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -408,131 +446,14 @@ int main(int argc, char *argv[]) {
 
     world.setMaterialPairProp("wood", "rubber", 0.8, 0, 0);
 
-    //auto& MMP = world.getMaterialPairProp(A1.back()->getCollisionBody("FR_foot/0").getMaterial(),
-    //                                    ground->getCollisionObject().getMaterial());//box_right->getCollisionObject().getMaterial()"");//raisim::MaterialPairProperties
-    //const Ogre::MaterialPtr& footmaterial = A1.back()->getCollisionBody("FR_FOOT").getMaterial();
 
-    // ----------- Added 2 blocks for rougth terrain ------------- //
-    // auto block1 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (1x1x1) and mass (1.0)
-    // auto block2 = world.addBox(0.1, 0.46, 0.03, 1.0); // size (2x0.5x0.5) and mass (2.0)
-
-    // // Set the position of the blocks
-    // block1->setPosition(1.0, 0.0, 0.015); // Position (x=0, y=0, z=0.5)
-    // block2->setPosition(1.2, 0.0, 0.015); // Position (x=2, y=2, z=0.25)
-
-    // vis->createGraphicalObject(block1, "block1", "checker_red");
-    // vis->createGraphicalObject(block2, "block2", "checker_red");
-
-    // ---------Jeeseop Code for adding blocks for rough terrain---------//
-
-    // ================================================= //
-   // =========== Ground Height Variations ============ //
-   // ================================================= //
-   int roughterrain = 0;
-   if(roughterrain){
-       //long int randomSeed = std::time(nullptr);
-       std::srand(terrain_number);
-       //std::srand(163727240);
-       //std::srand(1642619542);
-       //std::cout << "RNG Seed: " << randomSeed << std::endl;
-       bool GroundHeightVariation = true;
-       if(GroundHeightVariation){
-           int numBlk = 20;//150;
-           double percent = 70; // there will be a block x percent of the time
-           int direction = 0; // 0 for x, 1 for y
-           int fwd_bwd = 1; // 1 for forward, -1 for backward
-           int maxHeight = 2;//4; // max height in centimeters
-           double startPos = fwd_bwd*0.5;//fwd_bwd*2;
-           double height, width, length;
-           double left, right;
-           const char * colors[3] ={"yellow","orange","red"};
-           int j = 0;
-           width = 0.14; length = 0.8;
-           double mass = 0.9;
-           for (int i=0; i<numBlk; i++){
-               left = rand() % 100;
-               right = rand() % 100;
-               if (left>(100-percent)){
-                   height = 1.0*(rand() % (maxHeight+1))/100.0;
-                   j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
-                   if(direction == 0){
-                       raisim::Box *box = world.addBox(width,length,height,mass);
-                       box->setPosition(startPos,length/2,0.01);
-                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
-                   }else{
-                       raisim::Box *box = world.addBox(length,width,height,mass);
-                       box->setPosition(length/2,startPos,0.01);
-                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
-                   }
-               }
-               if (right>(100-percent)){
-                   height = 1.0*(rand() % (maxHeight+1))/100.0;
-                   j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
-                   if(direction == 0){
-                       raisim::Box *box = world.addBox(width,length,height,mass);
-                       box->setPosition(startPos,-length/2,0.01);
-                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
-                   }else{
-                       raisim::Box *box = world.addBox(length,width,height,mass);
-                       box->setPosition(-length/2,startPos,0.01);
-                       vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
-                   }
-               }
-               startPos+=fwd_bwd*width;
-           }
-           if(maxHeight ==2 && numBlk != 150){
-               // stack blocks on top
-               startPos = fwd_bwd*2;
-               for (int i=numBlk+0; i<numBlk+numBlk; i++){
-                   left = rand() % 100;
-                   right = rand() % 100;
-                   if (left>(100-percent)){
-                       height = 1.0*(rand() % (maxHeight+1))/100.0;
-                       j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
-                       if(direction == 0){
-                           //raisim::Box *box = world.addBox(width,length,height,mass);
-                           //box->setPosition(startPos,length/2,0.01);
-                           raisim::Box *box = world.addBox(width*((rand()%200)*0.001+1),length*((rand()%300)*0.001+1),height,mass);
-                           box->setPosition(startPos*((rand()%5)*0.1+1),length/2,0.1);
-                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
-                       }else{
-                           raisim::Box *box = world.addBox(length,width,height,mass);
-                           box->setPosition(length/2,startPos,0.01);
-                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"left",colors[j]);
-                       }
-                   }
-                   if (right>(100-percent)){
-                       height = 1.0*(rand() % (maxHeight+1))/100.0;
-                       j = (height<=(1.0*(maxHeight)/300.0)) ? 0 : (height<=(2.0*(maxHeight)/300.0)) ? 1 : 2;
-                       if(direction == 0){
-                           //raisim::Box *box = world.addBox(width,length,height,mass);
-                           //box->setPosition(startPos,-length/2,0.01);
-                           raisim::Box *box = world.addBox(width*((rand()%200)*0.001+1),length*((rand()%300)*0.001+1),height,mass);
-                           box->setPosition(startPos*((rand()%5)*0.1+1),-length/2,0.1);
-                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
-                       }else{
-                           raisim::Box *box = world.addBox(length,width,height,mass);
-                           box->setPosition(-length/2,startPos,0.01);
-                           vis->createGraphicalObject(box,"box"+std::to_string(i)+"right",colors[j]);
-                       }
-                   }
-                   startPos+=fwd_bwd*width;
-               }
-           }
-       }
-   }
-    
-
-    LocoWrapperwalk* loco_obj = new LocoWrapperwalk(argc,argv);
-    loco_obj->setRFfalse();
+    LocoWrapper* loco_obj = new LocoWrapper(argc,argv);
+    //loco_obj->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     //loco_plan->generator();
-    std::string file_name = "take2_1";//"upright_h5_71";
-    // code predix
-    // std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
+    std::string file_name = "take2_1";
+    
     std::string prefix_code = std::filesystem::current_path().string() + "/";
-    // shared library prefix
-    // std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//fs::current_path().string() + "/";
     std::string prefix_lib = std::filesystem::current_path().string() + "/";
 
     // Create a new NLP solver instance from the compiled code
@@ -558,14 +479,14 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = false;             // Record?
+    bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 30000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 20000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../datalog/Dec4/";
+    std::string directory = "../data25/Jan17/";
     // std::string filename = "Payload_Inplace";
-    std::string filename = "upright_A1_1ms";
+    std::string filename = "climb_11";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
 
 
@@ -689,19 +610,19 @@ int main(int argc, char *argv[]) {
         }*/
         //std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
-        if(abs(jointPosTotal(1))>0.04){
-            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
-            break;
-        }else if(abs(jointPosTotal(2)-0.5)>0.05){
-            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -2 << std::endl;
-            break;
-        }else if(jointPosTotal(15) > 0 || jointPosTotal(18) > 0){
-            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -3 << std::endl;
-            break;
-        }else if(jointPosTotal(0)>7){
-            std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << 1 << std::endl;
-            break;
-        }
+        // if(abs(jointPosTotal(1))>0.04){
+        //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
+        //     break;
+        // }else if(abs(jointPosTotal(2)-0.5)>0.05){
+        //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -2 << std::endl;
+        //     break;
+        // }else if(jointPosTotal(15) > 0 || jointPosTotal(18) > 0){
+        //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -3 << std::endl;
+        //     break;
+        // }else if(jointPosTotal(0)>7){
+        //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << 1 << std::endl;
+        //     break;
+        // }
         
         simcounter++;
         
@@ -719,3 +640,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+

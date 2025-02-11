@@ -56,11 +56,13 @@ public:
     void setcontactconfig(int controlMPC);
     void setRFfalse(){RaibFlag = false;};
 
-    Eigen::Matrix<double, 12, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal);
+    Eigen::Matrix<double, 12, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double,3,1> imu_eul, Eigen::Matrix<double,3,1> imu_omega);
     Eigen::Matrix<double, 3, 4> getfootv(double jointPos[18],Eigen::VectorXd jointVelTotal);
     Eigen::Matrix<double, 3, 1> getvEstimate();//(Eigen::MatrixXd CoMhistory);
     Eigen::Matrix<double, 3, 1> returnAcceleration(){ return ll->ddq.block(0,0,3,1);};
     Eigen::Matrix<double, 6, 1> VelKF(Eigen::Matrix<double, 6, 1> x_est, Eigen::Matrix<double, 3, 1> a_est);
+    void tookfirststep(){LL->afterfirststep();};
+    void readytowalk(){quad->fullyupright();};//LL->fullyupright();};
 
     // Pointers to structs
     const StateInfo *state;

@@ -2,7 +2,7 @@
 #define QUADRUPED_MODEL
 
 #include "global_loco_structs.hpp"
-#include "A1_Dynamics.h"     
+#include "A1_Dynamics_full.h"     
 #include "Transforms.hpp"
 
 #define HIST_LEN 50        // Length of moving average window (in samples, not time) for comFiltered
@@ -25,6 +25,12 @@ public:
     Eigen::Matrix<double,3,4> FootEstimator(double q[18]);
     Eigen::Matrix<double,12,18> JacobianEstimator(double q[18]);
 
+    void fullyupright(){upright = true;};
+    void updateDynamicsUp();
+    void updateJacobianUp();
+    void updateJacobianDotUp();
+    void updateFwdKinematicsUp();
+
 private:
     StateInfo state;
     DynamicsInfo dyn;
@@ -32,6 +38,7 @@ private:
 
     Eigen::Matrix<double, 3, HIST_LEN> comHist; // Circular array for efficiency
     int histInd = 0;
+    bool upright = false;
 };
 
 #endif

@@ -59,11 +59,39 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(dyn_srcs 
-    "${LL_DIR}/dynamics/A1/A1_Dynamics_upr.cpp"
+    "${LL_DIR}/dynamics/A1/A1_Dynamics_z.cpp"
     "${LL_DIR}/dynamics/RobotModel.cpp")
     
 add_library(dyn_lib ${dyn_srcs})
 target_include_directories(dyn_lib PUBLIC
+    ${LL_DIR}/dynamics
+    ${LL_DIR}/dynamics/A1
+    #${LL_DIR}/dynamics/${ROBOT_DIR}
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include) 
+
+set(dyn_srcs_o 
+    "${LL_DIR}/dynamics/A1/A1_Dynamics.cpp"
+    "${LL_DIR}/dynamics/RobotModel.cpp")
+    
+add_library(dyn_lib_o ${dyn_srcs_o})
+target_include_directories(dyn_lib_o PUBLIC
+    ${LL_DIR}/dynamics
+    ${LL_DIR}/dynamics/A1
+    #${LL_DIR}/dynamics/${ROBOT_DIR}
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
+
+set(dyn_srcs_full 
+    "${LL_DIR}/dynamics/A1/A1_Dynamics_z_full.cpp"
+    "${LL_DIR}/dynamics/RobotModel.cpp")
+    
+add_library(dyn_lib_full ${dyn_srcs_full})
+target_include_directories(dyn_lib_full PUBLIC
     ${LL_DIR}/dynamics
     ${LL_DIR}/dynamics/A1
     #${LL_DIR}/dynamics/${ROBOT_DIR}
@@ -110,7 +138,42 @@ target_include_directories(ctrl_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/util_include
     ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
 target_link_libraries(ctrl_lib PUBLIC 
+    #dyn_lib_full
     dyn_lib
+    params_lib
+    optimization_lib)
+
+add_library(ctrl_lib_o
+    #"${LL_DIR}/src/LowLevelCtrl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LowLevelCtrl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/VirtualConstraints.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DataLog.cpp")
+target_include_directories(ctrl_lib_o PUBLIC 
+    #${LL_DIR}/include
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
+target_link_libraries(ctrl_lib_o PUBLIC 
+    dyn_lib_o#full
+    params_lib
+    optimization_lib)
+
+add_library(ctrl_lib_full
+    #"${LL_DIR}/src/LowLevelCtrl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LowLevelCtrl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/VirtualConstraints.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DataLog.cpp")
+target_include_directories(ctrl_lib_full PUBLIC 
+    #${LL_DIR}/include
+    #${LL_DIR}/util_include
+    #${LL_DIR}/global_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
+target_link_libraries(ctrl_lib_full PUBLIC 
+    dyn_lib_full
     params_lib
     optimization_lib)
 
@@ -126,15 +189,42 @@ target_include_directories(plan_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/util_include)
 
 # ===== Upright walk wrapper Library ===== #
-add_library(wrapperwalk
+# add_library(wrapperwalk
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapperwalk.cpp")
+# target_include_directories(wrapperwalk PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+#  target_link_libraries(wrapperwalk PUBLIC
+#     ctrl_lib
+#     plan_lib)
+
+# add_library(wrapper
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapper.cpp")
+# target_include_directories(wrapper PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+#  target_link_libraries(wrapper PUBLIC
+#     ctrl_lib_o
+#     plan_lib)
+
+# # ===== Combining dynamics for both configurations ===== #
+add_library(wrapperwalk2
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapperwalk.cpp")
-target_include_directories(wrapperwalk PUBLIC
+target_include_directories(wrapperwalk2 PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
  
- target_link_libraries(wrapperwalk PUBLIC
-    ctrl_lib
+ target_link_libraries(wrapperwalk2 PUBLIC
+    ctrl_lib_full
     plan_lib)
 
+add_library(wrapper2
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapper.cpp")
+target_include_directories(wrapper2 PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+ target_link_libraries(wrapper2 PUBLIC
+    ctrl_lib_full
+    plan_lib)
 
 # # ===== NMPC Library ===== #
 add_library(nmpc_lib
@@ -178,22 +268,36 @@ target_compile_options(upright_NMPC PRIVATE -std=c++17)
 # target_compile_options(upright_NMPCR PRIVATE -std=c++17)
 
 add_executable(uprightwalk src/A1_up_walk.cpp)
-target_link_libraries(uprightwalk PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(uprightwalk PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
 target_include_directories(uprightwalk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(uprightwalk PRIVATE -std=c++17)
 
 add_executable(uprightwalkR src/A1_up_walk_Raib.cpp)
-target_link_libraries(uprightwalkR PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk nmpcr_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(uprightwalkR PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpcr_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
 target_include_directories(uprightwalkR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(uprightwalkR PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(uprightwalkR PRIVATE -std=c++17)
 
 add_executable(uprightwalkExp src/A1_up_walk_Exp.cpp)
-target_link_libraries(uprightwalkExp PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(uprightwalkExp PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
 target_include_directories(uprightwalkExp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(uprightwalkExp PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(uprightwalkExp PRIVATE -std=c++17)
+
+add_executable(makeUpright src/A1_makeupright.cpp)
+target_link_libraries(makeUpright PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_include_directories(makeUpright PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+target_compile_definitions(makeUpright PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+target_compile_options(makeUpright PRIVATE -std=c++17)
+
+add_executable(fullExpSim src/A1_Experiment_Script.cpp)
+target_link_libraries(fullExpSim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_include_directories(fullExpSim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+target_compile_options(fullExpSim PRIVATE -std=c++17)

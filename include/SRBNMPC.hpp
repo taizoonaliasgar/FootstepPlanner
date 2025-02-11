@@ -242,6 +242,8 @@ private:
     //Eigen::Matrix<double,3,11> CoMhistory = Eigen::MatrixXd::Zero(3,11);
     Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,deltaT*fitsample+1);
     Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
+
+    double wall_y =0.2;
     
 };
 

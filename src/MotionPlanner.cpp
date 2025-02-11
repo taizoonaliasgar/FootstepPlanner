@@ -226,14 +226,14 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
 
         if(con->changeDomain==1){
 
-        	//if(startTrot<5){
-            //    opt_HLstate.block(15,0,3,1) << 0,0,0;
-            //    startTrot+=1;
-            //}
- 
-            Eigen::Vector3d desVelBody = {state->R(0,0)*opt_HLstate(15,0)+state->R(1,0)*opt_HLstate(16,0)+state->R(2,0)*opt_HLstate(17,0),
-                                             state->R(0,1)*opt_HLstate(15,0)+state->R(1,1)*opt_HLstate(16,0)+state->R(2,1)*opt_HLstate(17,0),
-                                                state->R(0,2)*opt_HLstate(15,0)+state->R(1,2)*opt_HLstate(16,0)+state->R(2,2)*opt_HLstate(17,0)}; 
+        	if(startTrot>5){
+               //opt_HLstate.block(15,0,3,1) << 0,0,0;
+               updateVel(desVel, desOmega, params);
+            }
+            startTrot+=1;
+            // Eigen::Vector3d desVelBody = {state->R(0,0)*opt_HLstate(15,0)+state->R(1,0)*opt_HLstate(16,0)+state->R(2,0)*opt_HLstate(17,0),
+            //                                  state->R(0,1)*opt_HLstate(15,0)+state->R(1,1)*opt_HLstate(16,0)+state->R(2,1)*opt_HLstate(17,0),
+            //                                     state->R(0,2)*opt_HLstate(15,0)+state->R(1,2)*opt_HLstate(16,0)+state->R(2,2)*opt_HLstate(17,0)}; 
  
             
             // ================================================ //
@@ -241,14 +241,14 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
             // ================================================ //
             if(con->ind[0]==1){
                 con_obj->setDesDomain({0, 1, 1, 0});
-                traj.toeInit.block(0,0,3,1) = kin->toePos.block(0,0,3,1);
-                traj.toeInit.block(0,3,3,1) = kin->toePos.block(0,3,3,1);   
+                //traj.toeInit.block(0,0,3,1) = kin->toePos.block(0,0,3,1);
+                //traj.toeInit.block(0,3,3,1) = kin->toePos.block(0,3,3,1);   
             }else{
                 con_obj->setDesDomain({1, 0, 0, 1});
-                traj.toeInit.block(0,1,3,2) = kin->toePos.block(0,1,3,2);
+                //traj.toeInit.block(0,1,3,2) = kin->toePos.block(0,1,3,2);
             }
             traj.domLen = domLenSec*ctrlHz;
-            //traj.toeInit = kin->toePos;
+            traj.toeInit = kin->toePos;
 
             // ================================================ //
             // Marc Raibert foothold selection (similar)
@@ -256,7 +256,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
             
             //std::vector<double> KP = {0.1596,0.1596,0};
             std::vector<double> KP = {0.04,0.02,0.0};
-            setStep_Raibert(state,domLenSec,desVelBody,KP);
+            setStep_Raibert(state,domLenSec,desVel,KP);
         }
    
     }else if(gait==FLY){
@@ -352,6 +352,20 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         //if(ctrlTick%10==0){
         //    setStep_NMPC(NLstep,opt_HLstate(3),state,params);
         //}
+    }else if(gait==STANDUP){
+        //if(ctrlTick<1 || phase==0){
+        //    traj.toeInit = kin->toePos;
+        //}
+        if(con->changeDomain==1){
+            //if(phase<0.3){
+                traj.toeInit = kin->toePos;
+                setFoot(kin);
+            //    traj.toeInit.block(0,0,3,2) = kin->toePos.block(0,0,3,2);
+            //}else{
+            //    traj.toeInit.block(0,2,3,2) = kin->toePos.block(0,2,3,2);
+            //}
+            con_obj->forceDom0(); 
+        }
     }
     
     if(standTrigger && params->neverStopTrot!=1){
@@ -361,15 +375,12 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
     // Step length saturation
     // traj.stepLen[0] = (traj.stepLen[0]>MAX_SL_F_X) ? MAX_SL_F_X : (traj.stepLen[0]< -MAX_SL_R_X) ? -MAX_SL_R_X : traj.stepLen[0];
     // traj.stepLen[1] = (traj.stepLen[1]>MAX_SL_Y) ? MAX_SL_Y : (traj.stepLen[1]< -MAX_SL_Y) ? -MAX_SL_Y : traj.stepLen[1];
-
-    if(gait!=STAND && gait!=POSE && gait!=TAP && gait!=FLY){
-        double dt = (1.0/LL_Hz);
+    double dt = (1.0/LL_Hz);
+    if(gait!=STAND && gait!=POSE && gait!=TAP && gait!=FLY && gait!=UPWALK && gait!=STANDUP){
         
-        //Eigen::Matrix<double, 3, 1> desVelWorld = toWorld(desVel,state->R);
-        //Eigen::Matrix<double, 3, 1> desOmegaWorld = toWorld(opt_HLstate.block(21,0,3,1),state->R);
         
-        Eigen::Matrix<double, 3, 1> desVelWorld = opt_HLstate.block(3,0,3,1);
-        Eigen::Matrix<double, 3, 1> desOmegaWorld = opt_HLstate.block(9,0,3,1);
+        Eigen::Matrix<double, 3, 1> desVelWorld = toWorld(desVel,state->R);
+        Eigen::Matrix<double, 3, 1> desOmegaWorld = toWorld(desOmega,state->R);
 
         yawOffset = (desOmegaWorld(2)==0) ? yawOffset : state->q(5) + desOmegaWorld(2)*dt;
 
@@ -388,23 +399,30 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
             quatMult(quatyaw, quatBody, quatWorld);
             quat_to_XYZ(quatWorld,pose);
         }
-
-        
         
         traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + desVelWorld*dt;
-        //traj.comDes(1) = 0;//params->standHeight;
         traj.comDes(2) = params->standHeight;
         traj.comDes.block(3,0,3,1) << desVelWorld;
         //traj.comDes(4) = 0;
         //traj.comDes(5) = 0;
-
-        //traj.comDes(6) = pose(0);
-        //traj.comDes(7) = pose(1);
-        //traj.comDes(8) = yawOffset;
-        traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
-        
+        traj.comDes(6) = pose(0);
+        traj.comDes(7) = pose(1);
+        traj.comDes(8) = yawOffset;
+        //traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
         traj.comDes.block(9,0,3,1) = desOmegaWorld;      
 
+    }else if(gait == UPWALK){
+        traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + opt_HLstate.block(3,0,3,1)*dt;
+        traj.comDes(2) = 0.5;//params->standHeight;
+        traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
+        traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
+        traj.comDes.block(9,0,3,1) = opt_HLstate.block(9,0,3,1);
+    
+    }else if(gait == STANDUP){
+        //shiftCoM(state->q(0), state->q(1), state->q(2),0.0);
+        traj.comDes.block(0,0,12,1) = Eigen::MatrixXd::Zero(12,1);
+        //traj.comDes.block(0,0,3,1) = state->q.block(0,0,3,1);
+        traj.comDes(2) = params->standHeight;
     }
 }
 
@@ -456,7 +474,7 @@ void MotionPlanner::setStep_Raibert(const StateInfo *state, double domLenSec, co
     Eigen::Matrix<double, 3, 1> stepLenTemp;
     stepLenTemp = toBody(state->comFiltered,state->R)-desVel;                   // Vel error
     stepLenTemp(0) *= KP[0]; stepLenTemp(1) *= KP[1]; stepLenTemp(2) *= KP[2];  // mult by KP
-    stepLenTemp = (domLenSec*desVel)/2;                                        // Raibert Heuristic
+    stepLenTemp += (domLenSec*desVel)/2;                                        // Raibert Heuristic
     toWorld(traj.stepLen,stepLenTemp,state->R);                                 // set step length in world frame
 }
 
@@ -497,13 +515,273 @@ void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,5,1> NLstep, double vdes, 
     // traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
     // traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
     if(phase<0.3){
-        traj.FRstepLen =  NLstep(0);  
-        traj.FLstepLen =  NLstep(1); 
+        traj.FRstepLen(0) =  NLstep(0);  
+        traj.FLstepLen(0) =  NLstep(1); 
     }else{
-        traj.RLstepLen =  NLstep(3); 
-        traj.RRstepLen =  NLstep(2);  
+        traj.RLstepLen(0) =  NLstep(3); 
+        traj.RRstepLen(0) =  NLstep(2);  
     }                                
                                     
 }
 
 
+void MotionPlanner::setFoot(const KinematicsInfo *kin){
+
+    double wall_y = 0.2;
+
+    double wall_thresh = 0.18;
+    double lat_step = 0.01;
+
+    if(kin->toePos(1,0)>-wall_thresh){
+        traj.FRstepLen(1) = -lat_step;
+        traj.FRstepLen(2) = 0;
+    }else{
+        reachedWall = true;
+        traj.FRstepLen(0) = lat_step;
+        traj.FRstepLen(1) = -wall_y-kin->toePos(1,0);
+        traj.FRstepLen(2) = 0*lat_step;
+    }
+
+    if(kin->toePos(1,1)<wall_thresh){
+        traj.FLstepLen(1) = lat_step;
+        traj.FLstepLen(2) = 0;
+    }else{
+        reachedWall = true;
+        traj.FLstepLen(0) = lat_step;
+        traj.FLstepLen(1) = wall_y-kin->toePos(1,1);//0;//wall_thresh+lat_step-kin->toePos(1,0);
+        traj.FLstepLen(2) = 0*lat_step;
+    }
+
+    //traj.FRstepLen =  0.0; 
+    //traj.FLstepLen =  0.0;
+    // traj.RLstepLen(1) =  0.0; 
+    // traj.RRstepLen(1) =  0.0;
+}
+
+void MotionPlanner::shiftCoM(ContactEst *con_obj, double phase, size_t shifttime){
+    double s = (phase>1) ? 1 : ((phase<0) ? 0 : phase);
+    
+    double alpha_x[8] = { x0,x0,x0,
+                 x0+(xnew-x0)/4,
+                 x0+3*(xnew-x0)/4,
+                 xnew,xnew,xnew};
+    double alpha_y[8] = {y0,y0,y0,
+                 y0+(ynew-y0)/4,
+                 y0+3*(ynew-y0)/4,
+                 ynew,ynew,ynew};
+    double alpha_z[8] = {z0,z0,z0,
+                 z0+(znew-z0)/4,
+                 z0+3*(znew-z0)/4,
+                 znew,znew,znew};
+
+    double traj_x[3], traj_y[3], traj_z[3];
+    calcBezierAll((int)8, alpha_x, s, traj_x);
+    calcBezierAll((int)8, alpha_y, s, traj_y);
+    calcBezierAll((int)8, alpha_z, s, traj_z);
+
+    // traj.comDes -> pos, vel, theta, omega
+    traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
+    traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
+    traj.comDes.block(6,0,3,1) << 0, 0, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    con_obj->setDesDomain({1,1,1,1});
+
+    traj.domLen = shifttime-30;
+    // traj.toeInit.setZero();
+    // traj.toeFinal.setZero();
+    // traj.toeOffset[2] = Z_TOE_OFFSET;
+
+}
+
+void MotionPlanner::movefoot(size_t movetime, size_t wallsteps){
+    
+    double pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch; 
+    
+    traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
+    traj.comDes.block(3,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, pitch_imp, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    //con_obj->setDesDomain({1,1,1,1});
+    double frontstep = std::floor(wallsteps/2)*0.05;
+    frontstep = (frontstep<0.20) ? frontstep : 0.2;
+
+    traj.domLen = movetime+10;
+    traj.FRstepLen = {frontstep,0,upstep};//-0.15};
+    traj.FLstepLen = {frontstep,0,upstep};//-0.15};
+    traj.RLstepLen = {0,0,0};
+    traj.RRstepLen = {0,0,0};
+}
+
+
+void MotionPlanner::movefoot2(size_t movetime, double phase){
+    
+    double s = (phase>1) ? 1 : ((phase<0) ? 0 : phase);
+    
+    double alpha_x[8] = { x0,x0,x0,
+                 x0+(xnew-x0)/4,
+                 x0+3*(xnew-x0)/4,
+                 xnew,xnew,xnew};
+    double alpha_y[8] = {y0,y0,y0,
+                 y0+(ynew-y0)/4,
+                 y0+3*(ynew-y0)/4,
+                 ynew,ynew,ynew};
+    double alpha_z[8] = {z0,z0,z0,
+                 z0+(znew-z0)/4,
+                 z0+3*(znew-z0)/4,
+                 znew,znew,znew};
+
+    double traj_x[3], traj_y[3], traj_z[3];
+    calcBezierAll((int)8, alpha_x, s, traj_x);
+    calcBezierAll((int)8, alpha_y, s, traj_y);
+    calcBezierAll((int)8, alpha_z, s, traj_z);
+    
+    
+    traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
+    traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
+    //traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
+    //traj.comDes.block(3,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, 0, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    //con_obj->setDesDomain({1,1,1,1});
+
+    traj.domLen = movetime+20;
+    traj.FRstepLen = {0,0,-0.15};
+    traj.FLstepLen = {0,0,-0.15};
+    traj.RLstepLen = {0,0,0};
+    traj.RRstepLen = {0,0,0};
+    //std::cout << "Entered here" << std::endl;
+}
+
+
+void MotionPlanner::shiftCoM2(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps){
+    double s = (phase>1) ? 1 : ((phase<0) ? 0 : phase);
+    
+    double pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch;
+    
+    //if(maxsteps){
+    //    pitch_imp = minpitch;
+    //}else{
+        // xnew = rhip_x + 0.183*cos(pitch_imp);
+        // znew = rhip_z - 0.183*sin(pitch_imp);
+    //    pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch;
+   // }
+
+    if(!maxsteps){
+        xnew = rhip_x + 0.183*cos(pitch_imp);
+        znew = rhip_z - 0.183*sin(pitch_imp);
+    }
+
+    double alpha_x[8] = { x0,x0,x0,
+                 x0+(xnew-x0)/4,
+                 x0+3*(xnew-x0)/4,
+                 xnew,xnew,xnew};
+    double alpha_y[8] = {y0,y0,y0,
+                 y0+(ynew-y0)/4,
+                 y0+3*(ynew-y0)/4,
+                 ynew,ynew,ynew};
+    double alpha_z[8] = {z0,z0,z0,
+                 z0+(znew-z0)/4,
+                 z0+3*(znew-z0)/4,
+                 znew,znew,znew};
+
+    double alpha_p[8] = {p0,p0,p0,
+                 p0+(pitch_imp-p0)/4,
+                 p0+3*(pitch_imp-p0)/4,
+                 pitch_imp,pitch_imp,pitch_imp};
+
+    double traj_x[3], traj_y[3], traj_z[3], traj_p[3];
+    calcBezierAll((int)8, alpha_x, s, traj_x);
+    calcBezierAll((int)8, alpha_y, s, traj_y);
+    calcBezierAll((int)8, alpha_z, s, traj_z);
+    calcBezierAll((int)8, alpha_p, s, traj_p);
+
+    // traj.comDes -> pos, vel, theta, omega
+    traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
+    traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
+    traj.comDes.block(6,0,3,1) << 0, traj_p[0], 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    con_obj->setDesDomain({1,1,1,1});
+
+    traj.domLen = shifttime-30;
+    // traj.toeInit.setZero();
+    // traj.toeFinal.setZero();
+    // traj.toeOffset[2] = Z_TOE_OFFSET;
+
+}
+
+void MotionPlanner::movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps){
+    
+    traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
+    traj.comDes.block(3,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, pitchnew, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    traj.domLen = movetime+10;
+    traj.FRstepLen = {xzsteps(0),0,xzsteps(1)};//-0.15};
+    traj.FLstepLen = {xzsteps(2),0,xzsteps(3)};//-0.15};
+    traj.RLstepLen = {0,0,0};
+    traj.RRstepLen = {0,0,0};
+}
+
+
+void MotionPlanner::shiftCoM3(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps){
+    double s = (phase>1) ? 1 : ((phase<0) ? 0 : phase);
+    
+    double pitch_imp = pitchnew;
+
+    double alpha_x[8] = { x0,x0,x0,
+                 x0+(xnew-x0)/4,
+                 x0+3*(xnew-x0)/4,
+                 xnew,xnew,xnew};
+    double alpha_y[8] = {y0,y0,y0,
+                 y0+(ynew-y0)/4,
+                 y0+3*(ynew-y0)/4,
+                 ynew,ynew,ynew};
+    double alpha_z[8] = {z0,z0,z0,
+                 z0+(znew-z0)/4,
+                 z0+3*(znew-z0)/4,
+                 znew,znew,znew};
+
+    double alpha_p[8] = {p0,p0,p0,
+                 p0+(pitch_imp-p0)/4,
+                 p0+3*(pitch_imp-p0)/4,
+                 pitch_imp,pitch_imp,pitch_imp};
+
+    double traj_x[3], traj_y[3], traj_z[3], traj_p[3];
+    calcBezierAll((int)8, alpha_x, s, traj_x);
+    calcBezierAll((int)8, alpha_y, s, traj_y);
+    calcBezierAll((int)8, alpha_z, s, traj_z);
+    calcBezierAll((int)8, alpha_p, s, traj_p);
+
+    // traj.comDes -> pos, vel, theta, omega
+    traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
+    traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
+    traj.comDes.block(6,0,3,1) << 0, traj_p[0], 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    con_obj->setDesDomain({1,1,1,1});
+
+    traj.domLen = shifttime;
+    // traj.toeInit.setZero();
+    // traj.toeFinal.setZero();
+    // traj.toeOffset[2] = Z_TOE_OFFSET;
+
+}
+
+void MotionPlanner::movefoot3(size_t movetime){
+    
+    traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
+    traj.comDes.block(3,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, pitchnew, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    traj.domLen = movetime;
+    traj.FRstepLen = {0.1,0,0};//-0.15};
+    traj.FLstepLen = {0.1,0,0};//-0.15};
+    traj.RLstepLen = {0,0,0};
+    traj.RRstepLen = {0,0,0};
+}

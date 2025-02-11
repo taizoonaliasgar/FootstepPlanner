@@ -33,6 +33,7 @@ public:
     void setPose(const float pose[6]){for(int i=0;i<6;++i){pose_(i)=pose[i];};};
     void setPoseType(size_t poseType_){poseType = poseType_;};
     const TrajInfo* getTrajInfoPointer(){return &traj;};
+    void setToeInit(const KinematicsInfo *kin){traj.toeInit = kin->toePos;};
     
 
     //Taizoon changes
@@ -40,7 +41,20 @@ public:
     void updatesteplen(ContactEst *con_obj);
     //NMPC footstep planner
     void setStep_NMPC(Eigen::Matrix<double,5,1> NLstep,double vdes, const StateInfo *state, MP * params, double phase);
-
+    void setFoot(const KinematicsInfo *kin);
+    bool getReachedWall(){return reachedWall;};
+    void setshiftedCoM(Eigen::Matrix<double,4,1> CoMnew){xnew = CoMnew(0); ynew = CoMnew(1); znew = CoMnew(2); pitchnew = CoMnew(3);};
+    void shiftCoM(ContactEst *con_obj, double phase, size_t shifttime);
+    void movefoot(size_t movetime, size_t wallsteps);//, size_t wallstep);
+    void movefoot2(size_t movetime, double phase);
+    void setx0y0z0(double x0_, double y0_, double z0_, double p0_){x0 = x0_; y0 = y0_; z0 = z0_;p0 = p0_;};
+    void datalogger(size_t ctrlTick){std::cout << ctrlTick << "\t" << x0 << "\t" << y0 << "\t" << z0 << "\t" << xnew << "\t" << ynew << "\t" << znew << std::endl;};
+    void increasesteplenth(){if(upstep<-0.01){upstep = upstep+0.04;}else{upstep = -0.01;};};
+    void setrearhip(double x, double y, double z){rhip_x = x; rhip_y = y; rhip_z = z;};
+    void shiftCoM2(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
+    void movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps);
+    void shiftCoM3(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
+    void movefoot3(size_t movetime);
 
 protected:
     inline void setStepLen(double x, double y, double z){
@@ -64,6 +78,18 @@ private:
 
     double stepLenRL[3] = {0.0,0.0,0.0};
     double stepLenLR[3] = {0.0,0.0,0.0};
+    bool reachedWall = false;
+    double xnew = 0;
+    double ynew = 0;
+    double znew = 0;
+    double pitchnew = 0;
+    double upstep = -0.2;
+    double rhip_x = 0;
+    double rhip_y = 0;
+    double rhip_z = 0;
+    double p0 = 0;
+    double minpitch = -1.2;
+    
 };
 
 #endif

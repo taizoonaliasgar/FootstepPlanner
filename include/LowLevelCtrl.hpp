@@ -31,6 +31,8 @@ public:
     //Taizoon changes
     void arrangeFlightTorque(const ConInf *con);
     void setFlightTorque();
+    void afterfirststep(){firststeptaken=true;};
+    void fullyupright(){uprighty = true;};
 
 private:
 
@@ -47,6 +49,7 @@ private:
     void costwalk(LLP *params, const VCInfo *vc, const ConInf *con, size_t &outDim, size_t &conDim, size_t &numDec, size_t &useCLF);
     void constraintswalk(LLP *params, const DynInf *dyn, const KinInf *kin, const VCInfo *vc, const ConInf *con, size_t &outDim, size_t &conDim, 
                             size_t &numDec, size_t &useCLF,  Eigen::Matrix<double,18,1> Hr, Eigen::Matrix<double,12,1> z, Eigen::Matrix<double,12,12> Ki);
+    
 
     Eigen::Matrix<double, 31, 31> P_QP; // Each QP matrix is set to the max size for any domain
     Eigen::Matrix<double, 31,  1> c_QP;
@@ -89,6 +92,8 @@ private:
 
     double tau[6+TOTAL_IN] = {0};
     double flighttau[6+TOTAL_IN] = {0};
+    bool firststeptaken = false;
+    bool uprighty = false;
 
 };
 

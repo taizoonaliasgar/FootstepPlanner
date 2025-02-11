@@ -94,8 +94,8 @@ void VirtCon::updateVirtualConstraints(const StateInfo *state, const KinInf *kin
 
                 n = 8;
                 double tz[3] = {0};
-                double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), params->swingHeight, params->swingHeight, 
-                               params->swingHeight, to+0.005, to+0.005, to};
+                double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
+                               2*params->swingHeight, to+0.005, to+0.005, to};
                 calcBezierAll(n, az, phaseVar, tz);
 
                 // Save foot traj
@@ -261,16 +261,16 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                 switch (i)
                 {
                 case 0:
-                    step[0] = traj->FRstepLen;
+                    step[0] = traj->FRstepLen(0);
                     break;
                 case 1:
-                    step[0] = traj->FLstepLen;
+                    step[0] = traj->FLstepLen(0);
                     break;
                 case 2:
-                    step[0] = traj->RRstepLen;
+                    step[0] = traj->RRstepLen(0);
                     break;
                 case 3:
-                    step[0] = traj->RLstepLen;
+                    step[0] = traj->RLstepLen(0);
                     break;
                 }
 
@@ -324,8 +324,8 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                     //double tz[3] = {0};
                     //double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), params->swingHeight, 2*params->swingHeight, 
                     //            params->swingHeight, to+0.005, to, to};
-                    double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
-                                3*params->swingHeight, 2*params->swingHeight, 0.019,0.019};//traj->toeInit(2,i),traj->toeInit(2,i)};//0.02, 0.02};//to+0.01, to};
+                    double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 3*params->swingHeight, 4*params->swingHeight, 
+                                4*params->swingHeight, 3*params->swingHeight, 0.019,0.019};//traj->toeInit(2,i),traj->toeInit(2,i)};//0.02, 0.02};//to+0.01, to};
                     calcBezierAll(n, az, phase, tz);
 
                 }else{
@@ -439,16 +439,16 @@ void VirtCon::updateVirtualConstraintswalkR(const StateInfo *state, const KinInf
                 switch (i)
                 {
                 case 0:
-                    step[0] = traj->FRstepLen;
+                    step[0] = traj->FRstepLen(0);
                     break;
                 case 1:
-                    step[0] = traj->FLstepLen;
+                    step[0] = traj->FLstepLen(0);
                     break;
                 case 2:
-                    step[0] = traj->RRstepLen;
+                    step[0] = traj->RRstepLen(0);
                     break;
                 case 3:
-                    step[0] = traj->RLstepLen;
+                    step[0] = traj->RLstepLen(0);
                     break;
                 }
 
@@ -546,6 +546,211 @@ void VirtCon::updateVirtualConstraintswalkR(const StateInfo *state, const KinInf
                     VC.dhd.block(6+cnts,0,3,1)  << tx[1], ty[1]*ds, tz[1];
                     VC.ddhd.block(6+cnts,0,3,1) << tx[2], ty[2]*ds*ds, tz[2]; // z scaling necessary!!
                 }
+                cnts+=3;
+            }
+        }
+    }
+    dh0 = VC.H0*state->dq;
+
+    VC.y = h0-VC.hd;
+    VC.dy = dh0-VC.dhd;
+}
+
+
+void VirtCon::updateVirtualConstraintssetfoot(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, double phaseVar, MP *params, const LLInfo *ll, double frontphase, double rearphase, bool reachedwall){
+    size_t outDim = 6+3*(4-con->cnt);
+    size_t conDim = 3*con->cnt;
+
+    h0.setZero(outDim,1);
+    dh0.setZero(outDim,1);
+    VC.H0.setZero(outDim,TOTAL_DOF);
+    VC.dH0.setZero(outDim,1);
+    VC.hd.setZero(outDim,1);
+    VC.dhd.setZero(outDim,1);
+    VC.ddhd.setZero(outDim,1);
+    VC.y.setZero(outDim,1);
+    VC.dy.setZero(outDim,1);
+    VC.y_ST.setZero(conDim,1);
+    VC.dy_ST.setZero(conDim,1);
+    VC.hd_ST.setZero(conDim,1);
+    VC.dhd_ST.setZero(conDim,1);
+    VC.H0.block(0,0,6,6) = Eigen::MatrixXd::Identity(6,6);
+    
+    h0 = VC.H0*state->q;
+    double step[3] = {0.0,0.0,0.0};
+    if (gait==STAND){
+        VC.hd.block(0,0,3,1)   << traj->comDes.block(0,0,3,1);
+        VC.dhd.block(0,0,3,1)  << traj->comDes.block(3,0,3,1);;
+        VC.ddhd.block(0,0,3,1) << 0, 0, 0;
+        VC.hd.block(3,0,3,1)   << traj->comDes.block(6,0,3,1);
+        VC.dhd.block(3,0,3,1)  << 0, 0, 0;
+        VC.ddhd.block(3,0,3,1) << 0, 0, 0;
+    }
+    else {
+        VC.hd.block(0,0,3,1) = traj->comDes.block(0,0,3,1);
+        VC.hd.block(3,0,3,1) = traj->comDes.block(6,0,3,1);
+        VC.dhd.block(0,0,3,1) = traj->comDes.block(3,0,3,1);
+        VC.dhd.block(3,0,3,1) = traj->comDes.block(9,0,3,1);
+        VC.ddhd.block(0,0,3,1) << 0,0,0;
+        VC.ddhd.block(3,0,3,1) << 0,0,0;
+
+        Eigen::VectorXd hipAcc(3);
+        Eigen::VectorXd hipVel(3);
+
+        size_t cnts = 0;
+        size_t cntc = 0;
+        double to = traj->toeOffset[2];
+
+        double phase = phaseVar;
+        double ds = (1.0*ctrlHz)/traj->domLen;
+        double dt = traj->domLen/(1.0*ctrlHz);
+        
+        for(size_t i=0; i<4; i++){
+            if(con->ind[i]==0){
+                switch (i)
+                {
+                case 0:
+                    step[0] = traj->FRstepLen(0);
+                    step[1] = traj->FRstepLen(1);
+                    step[2] = traj->FRstepLen(2);
+                    break;
+                case 1:
+                    step[0] = traj->FLstepLen(0);
+                    step[1] = traj->FLstepLen(1);
+                    step[2] = traj->FLstepLen(2);
+                    break;
+                case 2:
+                    step[0] = traj->RRstepLen(0);
+                    step[1] = traj->RRstepLen(1);
+                    step[2] = traj->RRstepLen(2);
+                    break;
+                case 3:
+                    step[0] = traj->RLstepLen(0);
+                    step[1] = traj->RLstepLen(1);
+                    step[2] = traj->RLstepLen(2);
+                    break;
+                }
+                
+                h0.block(6+cnts,0,3,1) = kin->toePos.block(0,i,3,1);
+                VC.H0.block(6+cnts,0,3,TOTAL_DOF) = kin->Jtoe.block(3*i,0,3,TOTAL_DOF);
+                VC.dH0.block(6+cnts,0,3,1) = kin->dJtoe.block(3*i,0,3,1);
+                
+
+                // Swing leg to follow time varying bezier
+                hipVel = kin->Jhip.block(3*i,0,3,18)*state->dq;
+                hipAcc = ( kin->Jhip.block(3*i,0,3,18)*ll->ddq + kin->dJhip.block(3*i,0,3,1) );
+                // hipAcc.setZero();
+                
+                double tune=0;
+                if (gait==PACE){
+                    tune = (2*(i%2==0)-1)*0.04; // eventually this needs to be rotated by R (body to world)
+                }
+                
+                double tx[3] = {0};
+                double ty[3] = {0};
+                double tz[3] = {0};
+                int n = 4;
+                
+                if(i>1){
+                    phase = rearphase;
+                    dt = (115)/(1.0*ctrlHz);
+                    ds = (1.0*ctrlHz)/(115);
+                
+                    
+                    //double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
+                    //            kin->hipPos(0,i)+traj->stepLen[0], kin->hipPos(0,i)+traj->stepLen[0]};
+                    // double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i)+1*(traj->toeInit(0,i)-kin->hipPos(0,i)), 
+                    //                 traj->toeInit(0,i)+1*(traj->toeInit(0,i)-kin->hipPos(0,i)), traj->toeInit(0,i)};
+                    double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
+                               traj->toeInit(0,i), traj->toeInit(0,i)};
+                    double dax[4] {0, 0, hipVel(0), hipVel(0)};
+                    double ddax[4] {0, 0, hipAcc(0), hipAcc(0)};
+                    calcVaryingBezierAll(n,dt,ax,dax,ddax,phase,tx);
+                
+                
+                    //double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                    //                kin->hipPos(1,i)+traj->stepLen[1]+tune, kin->hipPos(1,i)+traj->stepLen[1]+tune};
+                    double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                                traj->toeInit(1,i)+step[1], traj->toeInit(1,i)+step[1]};
+                    //double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                    //                    pow(-1,(i+1))*0.133, pow(-1,(i+1))*0.133};//traj->toeInit(1,i)+step[1]};
+                    double day[4] = {0, 0, hipVel(1), hipVel(1)};
+                    double dday[4] = {0, 0, hipAcc(1), hipAcc(1)};
+                    calcVaryingBezierAll(n,dt,ay,day,dday,phase,ty);
+
+                    n = 8;
+                    //double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
+                    //               2*params->swingHeight, to+0.005, to+0.005, to};
+                    double az[8]= {traj->toeInit(2,i), 1*params->swingHeight+step[2], 1.5*params->swingHeight+step[2], 
+                               1.5*params->swingHeight+step[2], 1*params->swingHeight+step[2], 1*params->swingHeight+step[2], traj->toeInit(2,i)+step[2]};
+                    calcBezierAll(n, az, phaseVar, tz);
+                }else{
+                    
+                    if(reachedwall){
+
+                        n=4;
+                        //double tz[3] = {0};
+                        // double az[4] = {traj->toeInit(2,i), kin->hipPos(2,i)-0.23+step[2]/4+tune,//traj->toeInit(2,i), 
+                        //             kin->hipPos(2,i)-0.23+3*step[2]/4+tune, kin->hipPos(2,i)-0.23+step[2]+tune};
+                        double az[4] = {traj->toeInit(2,i), kin->hipPos(2,i)+step[2]+tune,//traj->toeInit(2,i), 
+                                    kin->hipPos(2,i)+step[2]+tune, kin->hipPos(2,i)+step[2]+tune};
+                        //double az[4] = {traj->toeInit(2,i), traj->toeInit(2,i)+0.5*params->swingHeight, 
+                        //            traj->toeInit(2,i)+0.5*params->swingHeight, traj->toeInit(2,i)+step[2]+tune};
+                        double daz[4] = {0, 0, hipVel(2), hipVel(2)};
+                        double ddaz[4] = {0, 0, hipAcc(2), hipAcc(2)};
+                        calcVaryingBezierAll(n,dt,az,daz,ddaz,phase,tz);
+
+                        double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
+                                        kin->hipPos(0,i)+step[0], kin->hipPos(0,i)+step[0]};
+                        // double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i),//+step[0]/2, //+0.1
+                        //             traj->toeInit(0,i)+step[0], traj->toeInit(0,i)+step[0]};
+                        double dax[4] {0, 0, hipVel(0), hipVel(0)};
+                        double ddax[4] {0, 0, hipAcc(0), hipAcc(0)};
+                        calcVaryingBezierAll(n,dt,ax,dax,ddax,phase,tx);
+
+                        n = 8;
+                        //double ty[3] = {0};
+                        //double ay[8]= {traj->toeInit(1,i), traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, 
+                        //            pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, pow(-1,i+1)*wall_y+pow(-1,i)*(to+0.005), pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y+pow(-1,i)*to};
+                        //double ay[8]= {traj->toeInit(1,i), traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.5*params->swingHeight, pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, 
+                        //        pow(-1,i+1)*wall_y+pow(-1,i)*0.5*params->swingHeight, pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y};
+                        double ay[8]= {traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.06, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, 
+                                pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.03, pow(-1,i+1)*(wall_y+0.02)};
+
+                        calcBezierAll(n, ay, phase, ty);
+
+                    }else{
+
+                        n=4;
+                        double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i), 
+                               traj->toeInit(0,i), traj->toeInit(0,i)};
+                        double dax[4] {0, 0, hipVel(0), hipVel(0)};
+                        double ddax[4] {0, 0, hipAcc(0), hipAcc(0)};
+                        calcVaryingBezierAll(n,dt,ax,dax,ddax,phase,tx);
+                
+                
+                        //double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                        //                kin->hipPos(1,i)+traj->stepLen[1]+tune, kin->hipPos(1,i)+traj->stepLen[1]+tune};
+                        double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                                traj->toeInit(1,i)+step[1], traj->toeInit(1,i)+step[1]};
+                        double day[4] = {0, 0, hipVel(1), hipVel(1)};
+                        double dday[4] = {0, 0, hipAcc(1), hipAcc(1)};
+                        calcVaryingBezierAll(n,dt,ay,day,dday,phase,ty);
+
+                        n = 8;
+                        //double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
+                        //               2*params->swingHeight, to+0.005, to+0.005, to};
+                        double az[8]= {traj->toeInit(2,i), 2*params->swingHeight+step[2], 3*params->swingHeight+step[2], 
+                               3*params->swingHeight+step[2], 3*params->swingHeight+step[2], 2*params->swingHeight+step[2], traj->toeInit(2,i)+step[2]};
+                        calcBezierAll(n, az, phaseVar, tz);
+                    }
+                }
+
+                // Save foot traj
+                VC.hd.block(6+cnts,0,3,1)   << tx[0], ty[0], tz[0];
+                VC.dhd.block(6+cnts,0,3,1)  << tx[1], ty[1], tz[1]*ds;
+                VC.ddhd.block(6+cnts,0,3,1) << tx[2], ty[2], tz[2]*ds*ds; // z scaling necessary!!
+
                 cnts+=3;
             }
         }

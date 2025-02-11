@@ -1,0 +1,404 @@
+//
+// Authror: Randy Fawcett on 12/2021.
+//
+// Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
+//
+
+#include "LocoWrapper.hpp"
+#include "iostream"
+
+LocoWrapper::LocoWrapper(int argc, char *argv[]) : Parameters(argc,argv){
+
+//    std::string filename = "/media/kavehakbarihamed/Data/A1_RaiSim_Outputs/LCSS_2021/Payload_Trot_10cm.txt";
+//    std::string filename = "/media/kavehakbarihamed/Data/A1_RaiSim_Outputs/nothing.txt";
+    std::string filename = "../datalog/nothing.csv";
+//    std::string filename = ""; // empty string will produce no output file
+    
+    data = std::unique_ptr<DataLog>( new DataLog(filename) ); // make_unique DNE in c++11
+    quad = new RobotModel();
+    conEst = new ContactEst();
+    LL = new LowLevelCtrl();
+    VC = new VirtualConstraints();
+    PP = new MotionPlanner();
+
+    state = quad->getStatePointer();
+    dyn = quad->getDynamicsPointer();
+    kin = quad->getKinematicsPointer();
+    con = conEst->getConInfoPointer();
+    traj = PP->getTrajInfoPointer();
+    vcon = VC->getVCPointer();
+    ll = LL->getllPointer();
+    
+    contact_horizon.block(1,25,1,15) = Eigen::MatrixXd::Zero(1,15);//15
+    contact_horizon.block(2,28,1,12) = Eigen::MatrixXd::Zero(1,12);
+    contact_horizon.block(0,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
+    contact_horizon.block(3,8,1,12) = Eigen::MatrixXd::Zero(1,12);
+}
+
+LocoWrapper::~LocoWrapper(){
+    delete quad;
+    delete conEst;
+    delete LL;
+    delete VC;
+    delete PP;
+}
+
+void LocoWrapper::calcTau(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t duration){
+    
+    //phaseVar = getPhase(1.0*locoTick, 0.0, 1.0*traj->domLen);   // update phase variable
+    quad->updateState(q,dq,R);                                  // update state
+    
+
+    // float footPos[4] = {0};  // DUMMY VARS
+    // if (gait!=gaitTemp || (phaseVar>maxPhase && gait!=STAND) ){ 
+    //     // Change domain immediately since gait changed
+    //     conEst->forceDomChange();                                                       // force con->changeDomain=1 to plan properly
+    //     // std::cout << "Time trigger: " << phaseVar << std::endl;
+    //     phaseVar = 0;
+    //     PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);     // plan trajectory
+    //     conEst->updateConState(footPos,phaseVar,force);                                 // update contact detection
+    //     locoTick = 0;
+    // }else {
+    //     // Wait for impact to change domain
+    //     conEst->updateConState(footPos,phaseVar,force);                                 // impact detection
+    //     if (con->changeDomain==1 && gait!=STAND){
+    //         locoTick = 0;
+    //         // std::cout << "Contact trigger: " << phaseVar << std::endl;
+    //         phaseVar = 0;
+    //     }
+    //     PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params,  opt_HLstate, NLstep);     // plan trajectory
+    // }
+
+    float footPos[4] = {0};  // DUMMY VARS
+    if (ctrlTick<1 || gait!=gaitTemp || (phaseVar>maxPhase && gait!=STAND) ){ 
+        locoTick = 0;
+        phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+        flphase = 0;
+        rlphase = 0;
+        //conEst->forceDomChange();
+        //std::cout << ctrlTick << "\t" << locoTick << "\t" << phaseVar << "\t" << "Yes1" << std::endl;
+        //traj->toeInit = kin->toePos;
+            
+    }else{
+        phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+        flphase = getPhase(1.0*locoTick-49, 0.0, 145);
+        rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
+        flphase = (flphase<0)?0:(flphase>1)?1:flphase;
+        rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
+        if(locoTick==50){//||locoTick==80){
+            conEst->forceDomChange();
+        }
+        //std::cout << ctrlTick << "\t" << locoTick << "\t" << phaseVar << "\t" << "Yes2" << std::endl;           
+    }
+    
+    PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);
+    bool reachedwall = PP->getReachedWall();
+    quad->updateSwingMatrices(con->ind,con->cnt);                                             // update the jacobians
+    if(gait==STANDUP){
+        VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,reachedwall);    // update VC's
+        if(reachedwall){
+            LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+        }else{  
+            LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);    
+        } 
+    }else{
+        VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+        LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);
+    }
+                                    // run low level controller
+    //data->writeData(state,vcon,traj,ll,ctrlTick,force);                                        // log relavent data
+    plottingfoothd(vcon,con);
+    data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force,opt_HLstate,locoTick,phaseVar,flphase,rlphase,0.0,0.0,NLstep,duration);
+    locoTick += (ctrlHz)/LL_Hz;     // increment locoTick
+    gaitTemp = gait;                // update the previous gait used
+}
+
+void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t loco_start, size_t shifttime, size_t movetime, size_t shifttime2, size_t movetime2, size_t movetime3){
+
+    phaseVar = getPhase(1.0*locoTick, 0.0, 1.0*traj->domLen);   // update phase variable
+    phaseVar = (phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar);
+
+    quad->updateState(q,dq,R); 
+    
+    if(gait==STAND){
+        //conEst->updateConState(footPos,phaseVar,force);
+        //phaseVar = getPhase(1.0*locoTick, 0.0, 1.0*traj->domLen);
+        
+        PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);
+        quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+        VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+        LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);   
+                                         // run low level controller                                       // log relavent data
+    }else if(gait == UPWALK){
+
+        
+        if(readytowalkf){
+        
+            if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+                locoTick = 0;
+                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+                flphase = 0;
+                rlphase = 0;
+                //conEst->forceDomChange();
+                z = Eigen::MatrixXd::Zero(12,1);
+            
+            }else{
+                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+                flphase = getPhase(1.0*locoTick-49, 0.0, 145);
+                rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
+                flphase = (flphase<0)?0:(flphase>1)?1:flphase;
+                rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
+                if(locoTick==50||locoTick==80){
+                    conEst->forceDomChange();
+                }            
+            }
+   
+            PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
+            VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's    
+            VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+            z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         
+            LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, HRai, z, Ki);                                     // run low level controller
+        
+        }else{
+
+            if( ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3) || ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3)+shifttime2){
+                locoTick = 0;
+                phaseVar = 0;
+                PP->setToeInit(kin);
+                PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+            }
+
+            if(ctrlTick < switchtime*ctrlHz + settlestep*(shifttime2+movetime3)+shifttime2){
+                PP->shiftCoM3(conEst,phaseVar,shifttime2,true);
+                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            }else{
+                if(settlestep%2==0){
+                    nextContact[0] = 0;
+                    nextContact[1] = 1;
+                }else{
+                    nextContact[0] = 1;
+                    nextContact[1] = 0;
+                }
+                conEst->setDesDomain(nextContact);
+                PP->movefoot3(movetime3);
+                quad->updateSwingMatrices(con->ind,con->cnt);
+                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            }
+
+        }
+
+
+    }else{
+
+        if(stopclimb){
+
+            if( ctrlTick == loco_start+shifttime+(wallstep)*(shifttime+movetime)+settlestep*(shifttime2+movetime2) || ctrlTick == loco_start+shifttime+(wallstep)*(shifttime+movetime)+settlestep*(shifttime2+movetime2)+shifttime2){
+                locoTick = 0;
+                phaseVar = 0;
+                PP->setToeInit(kin);
+                PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+            }
+            
+            if(atfinalstate){
+                PP->shiftCoM2(conEst,phaseVar,shifttime2,true);
+                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            }else{
+                
+                if(ctrlTick < loco_start+shifttime+(wallstep)*(shifttime+movetime) + settlestep*(shifttime2+movetime2)+shifttime2){
+                    PP->shiftCoM2(conEst,phaseVar,shifttime2,true);
+                    quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                    VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                    LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+                }else{
+                    if(settlestep%2==0){
+                        nextContact[0] = 0;
+                        nextContact[1] = 1;
+                    }else{
+                        nextContact[0] = 1;
+                        nextContact[1] = 0;
+                    }
+                    conEst->setDesDomain(nextContact);
+                    setxzsteplength(movetime2);
+                    //PP->movefoot(movetime,wallstep);
+                    quad->updateSwingMatrices(con->ind,con->cnt);
+                    VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                    LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+                }
+            }
+
+        }else{
+        
+            if(gait!=gaitTemp || ctrlTick == loco_start+shifttime || ctrlTick == loco_start+(wallstep+1)*(shifttime+movetime) || ctrlTick == loco_start+shifttime+(wallstep)*(shifttime+movetime)){
+                locoTick = 0;
+                phaseVar = 0;
+                PP->setToeInit(kin);
+                PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+                if(ctrlTick == loco_start+shifttime){
+                    setrearhippose();
+                }
+            }
+
+            if(ctrlTick < loco_start+shifttime){
+            
+                PP->shiftCoM(conEst,phaseVar,shifttime);
+                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);
+        
+            }else if(ctrlTick < loco_start+(wallstep+1)*(shifttime+movetime)){
+
+                conEst->setDesDomain(nextContact);
+                //if(wallstep<1){
+                PP->movefoot(movetime,wallstep);//,wallstep);//(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);
+                //}else{
+                //PP->movefoot2(movetime,phaseVar);
+                //}
+                quad->updateSwingMatrices(con->ind,con->cnt);
+                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+        
+            }else{
+
+                PP->shiftCoM2(conEst,phaseVar,shifttime,false);
+                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);  
+            }
+        }
+    }
+    
+    //PP->datalogger(ctrlTick);
+    data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force,opt_HLstate,locoTick,phaseVar,flphase,rlphase,0.0,0.0,NLstep,loco_start);
+    locoTick += (ctrlHz)/LL_Hz;     // increment locoTick
+    gaitTemp = gait;
+
+}
+
+void LocoWrapper::setcontactconfig(int controlMPC){
+    
+    for(int i=0;i<4;i++){
+        desired_contact[i]=contact_horizon(i,controlMPC%40); 
+    }
+    
+    conEst->setDesDomain(desired_contact);
+    quad->updateSwingMatrices(con->ind,con->cnt); 
+}
+
+void LocoWrapper::plottingfoothd(const VCInfo *vc, const ContactInfo *con){
+
+    NLstep(0) = (1-con->ind[0])*vc->hd(7);
+    NLstep(1) = (1-con->ind[1])*vc->hd(7);
+    NLstep(2) = (1-con->ind[2])*vc->hd(11);
+    NLstep(3) = (1-con->ind[0])*vc->hd(11);
+}
+
+void LocoWrapper::getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight){
+
+    Eigen::Matrix<double, 3, 4> footpos = kin->toePos;
+    CoMnew.block(0,0,2,1) = footweight(0)*footpos.block(0,0,2,1) + footweight(1)*footpos.block(0,1,2,1) + footweight(2)*footpos.block(0,2,2,1) + footweight(3)*footpos.block(0,3,2,1);
+    // x_new = newCoM(0);
+    // y_new = newCoM(1);
+    // z_new = newCoM(2);
+    CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
+    CoMnew(2)=0.25;//CoMnew(2);
+    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.15;
+}
+
+void LocoWrapper::setrearhippose(){
+
+    double hip_x = (kin->hipPos(0,2)+kin->hipPos(0,3))/2;
+    double hip_y = (kin->hipPos(1,2)+kin->hipPos(1,3))/2;
+    double hip_z = (kin->hipPos(2,2)+kin->hipPos(2,3))/2;
+    PP->setrearhip(hip_x,hip_y,hip_z);
+}
+
+void LocoWrapper::setfinalCoM(){
+    
+    Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
+    CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;
+    CoM_final(2) = 0.5;
+    CoM_final(3) = -1.2;
+    PP->setshiftedCoM(CoM_final);
+
+};
+
+void LocoWrapper::setfinalCoM2(){
+    
+    double pitch = ((0.3-0.1*(settlestep+1))>0) ? (0.3-0.1*(settlestep+1)) : 0;
+
+    double rhipz = (kin->hipPos(2,2) + kin->hipPos(2,3))/2;
+    Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
+    CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
+    CoM_final(2) = 0.5;//rhipz + 0.183*cos(pitch)-0.05;//0.5
+    CoM_final(3) = pitch;///(phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar)
+    PP->setshiftedCoM(CoM_final);
+
+};
+
+void LocoWrapper::setxzsteplength(size_t movetime){
+                    
+    Eigen::Matrix<double, 4, 1> xzsteplenth = Eigen::MatrixXd::Zero(4,1);
+    xzsteplenth(0) = 0.1;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
+    xzsteplenth(1) = 0;//kin->HipPos(0,1)+0.1-kin->ToePos(0,1);
+    xzsteplenth(2) = 0.1;//kin->HipPos(0,2)-kin->ToePos(0,2);
+    xzsteplenth(3) = 0;//kin->HipPos(0,3)-kin->ToePos(0,3);
+    PP->movefoot2(movetime,xzsteplenth);
+}
+
+void LocoWrapper::setoptNLstate(Eigen::Matrix<double, 33, 1> HLopt){
+    
+    opt_HLstate.block(0,0,12,1) = HLopt.block(0,0,12,1);
+    //opt_HLstate(2) = 0.35;
+    opt_HLstate.block(12,0,12,1) = HLopt.block(16,0,12,1);
+    NLstep = HLopt.block(28,0,5,1);
+}
+
+Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double, 3, 1> imu_eul, Eigen::Matrix<double, 3, 1> imu_omega){
+    
+    Eigen::Matrix<double, 12, 1> p_est =Eigen::MatrixXd::Zero(12,1);
+
+    double jointPosIMU[18] = {0};
+    for (size_t i = 0; i < 18; i++)
+    {
+        jointPosIMU[i] = jointPos[i];
+    }
+    jointPosIMU[3] = imu_eul(0);
+    jointPosIMU[4] = imu_eul(1);
+    jointPosIMU[5] = imu_eul(2);
+
+    Eigen::VectorXd jointVelTotalIMU = jointVelTotal;
+    jointVelTotalIMU.block(3,0,3,1) = imu_omega;
+    
+    Eigen::Matrix<double, 3, 4> stance_feet = Eigen::MatrixXd::Zero(3,4);
+    for (size_t i = 0; i < 4; i++)
+    {
+        stance_feet.block(0,i,3,1) = con->ind[i]*kin->toePos.block(0,i,3,1); 
+    }
+    
+    Eigen::Matrix<double, 3, 4> feet0CoM = quad->FootEstimator(jointPosIMU);
+
+    Eigen::Matrix<double, 3, 4> pCoM_raw = Eigen::MatrixXd::Zero(3,4);
+    for (size_t i = 0; i < 4; i++)
+    {
+            pCoM_raw.block(0,i,3,1) = stance_feet.block(0,i,3,1)-con->ind[i]*feet0CoM.block(0,i,3,1); 
+    }
+
+    p_est.block(0,0,3,1) = pCoM_raw.rowwise().sum()/con->cnt;
+    
+    Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPosIMU);
+    Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
+    for(size_t i=2; i<4; i++){
+        
+        pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotalIMU.block(3,0,15,1);
+        
+    }
+    p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
+    
+    return p_est;
+
+}

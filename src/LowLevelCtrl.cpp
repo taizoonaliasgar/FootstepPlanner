@@ -307,7 +307,7 @@ void LowLevelCtrl::cost(LLP *params, const VCInfo *vc, const ConInf *con, size_t
     		cnt+=3;
     	}
     }	
-    std::cout << Fd.transpose() << std::endl;
+    //std::cout << Fd.transpose() << std::endl;
     c_QP.block(0,0,conDim,1) = -Fd*params->dfPen;
 }
 
@@ -530,8 +530,15 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
     // ============================ Cost Function =========================== //
     // ====================================================================== //
 
-    P_QP.block(0,0,conDim,conDim) = params->dfPen*Eigen::MatrixXd::Identity(conDim, conDim);
+    double dFGain = params->dfPen;
+    if(uprighty){
+       dFGain = 10000;
+    }
+
+    P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);
     P_QP.block(conDim,conDim,TOTAL_IN,TOTAL_IN) = params->tauPen*Eigen::MatrixXd::Identity(TOTAL_IN,TOTAL_IN);
+    P_QP(conDim+6,conDim+6) = 0.00000000001*params->tauPen;
+    P_QP(conDim+9,conDim+9) = 0.00000000001*params->tauPen;
     P_QP.block(conDim+TOTAL_IN,conDim+TOTAL_IN,outDim,outDim) = params->auxPen*Eigen::MatrixXd::Identity(outDim,outDim);
     if (useCLF){
         P_QP(numDec-1, numDec-1) = params->clfPen;
@@ -550,13 +557,16 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
     	}
     }	
     //std::cout << Fd.transpose() << std::endl;
-    c_QP.block(0,0,conDim,1) = -Fd*params->dfPen;
+    c_QP.block(0,0,conDim,1) = -Fd*dFGain;
 }
 
 void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf *kin, const VCInfo *vc, const ConInf *con, size_t &outDim, size_t &conDim, size_t &numDec, size_t &useCLF,  
                                         Eigen::Matrix<double,18,1> Hr, Eigen::Matrix<double,12,1> z, Eigen::Matrix<double,12,12> Ki){  
     double mu = params->mu;
     double kpGain = params->kp;
+    if(uprighty){
+        kpGain = 700;
+    }
     double kdGain = params->kd;
 
     /*std::cout<< "mu" << mu << std::endl;
@@ -597,27 +607,64 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
     h_QP.setZero();
 
     int conind = 0;
-    if(con->ind[0]>0){
-        G_QP.block(conind,0,5,3) << 1, -mu/sqrt(2), 0,
+    if(firststeptaken){
+        if(con->ind[0]>0){
+            G_QP.block(conind,0,5,3) << 1, -mu/sqrt(2), 0,
                                     -1, -mu/sqrt(2), 0,
                                     0, -mu/sqrt(2), 1,
                                     0, -mu/sqrt(2), -1,
                                     0,    -1,      0;
         
-        h_QP(conind*5+4) = -1;
-        conind++;
-
-    }
+            h_QP(conind*5+4) = -1;
+            conind++;
+        }
     
-    if(con->ind[1]>0){
-        G_QP.block(conind*5,conind*3,5,3) << 1, mu/sqrt(2), 0,
+        if(con->ind[1]>0){
+            G_QP.block(conind*5,conind*3,5,3) << 1, mu/sqrt(2), 0,
                                             -1, mu/sqrt(2), 0,
                                             0, mu/sqrt(2), 1,
                                             0, mu/sqrt(2), -1,
                                             0,    1,      0;
-        h_QP(conind*5+4) = -1;
-        conind++;
-    } 
+            h_QP(conind*5+4) = -1;
+            conind++;
+            //std::cout << "After first step" << std::endl;
+        }
+
+    }else{
+
+        if(con->ind[0]>0){
+            G_QP.block(conind,0,5,3) << 1, -mu/sqrt(2), 0,
+                                    -1, -mu/sqrt(2), 0,
+                                    0, -mu/sqrt(2), 1,
+                                    0, -mu/sqrt(2), -1,
+                                    0,    -1,      0;
+            // G_QP.block(conind,0,5,3) <<  1, 0, -mu/sqrt(2),
+            //                                 -1, 0, -mu/sqrt(2),
+            //                                 0, 1, -mu/sqrt(2),
+            //                                 0, 1, -mu/sqrt(2),
+            //                                 0,    0,      -1;
+        
+            h_QP(conind*5+4) = -1;
+            conind++;
+        }
+    
+        if(con->ind[1]>0){
+            G_QP.block(conind*5,conind*3,5,3) << 1, 0, -mu/sqrt(2),
+                                                -1, 0, -mu/sqrt(2),
+                                                0, 1, -mu/sqrt(2),
+                                                0, 1, -mu/sqrt(2),
+                                                0,    0,      -1;
+            // G_QP.block(conind*5,conind*3,5,3) << 1, mu/sqrt(2), 0,
+            //                                     -1, mu/sqrt(2), 0,
+            //                                     0, mu/sqrt(2), 1,
+            //                                     0, mu/sqrt(2), -1,
+            //                                     0,    1,      0;                                   
+            h_QP(conind*5+4) = -1;
+            conind++;
+            //std::cout << "Before first step" << std::endl;
+        }
+
+    }
 
     if(con->ind[2]>0){
         G_QP.block(conind*5,conind*3,5,3) << 1, 0, -mu/sqrt(2),

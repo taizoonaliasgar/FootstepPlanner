@@ -37,7 +37,6 @@ LocoWrapperwalk::LocoWrapperwalk(int argc, char *argv[]) : Parameters(argc,argv)
     opt_HLstate(14) = 0.35;
     two_contact = 10;
 
-    
     contact_horizon.block(1,25,1,15) = Eigen::MatrixXd::Zero(1,15);//15
     contact_horizon.block(2,28,1,12) = Eigen::MatrixXd::Zero(1,12);
     contact_horizon.block(0,5,1,15) = Eigen::MatrixXd::Zero(1,15);//15
@@ -105,19 +104,20 @@ void LocoWrapperwalk::calcTau(const double q[18], const double dq[18], const dou
             }            
         }
 
-        
+        //std::cout << "Settin desired state" << std::endl;
         PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
         
         if(RaibFlag){
             VC->updateVirtualConstraintswalkR(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's   
         }else{
+            //std::cout << "Settin VC" << std::endl;
             VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's    
         }
 
         VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
         
         z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         
-
+        //std::cout << "Getting torque" << std::endl;
         LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, HRai, z, Ki);                                     // run low level controller
         //if(locoTick==0){
         //    conEst->forceDom0();
@@ -162,10 +162,22 @@ void LocoWrapperwalk::setcontactconfig(int controlMPC){
     quad->updateSwingMatrices(con->ind,con->cnt); 
 }
 
-Eigen::Matrix<double, 12, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal){
+Eigen::Matrix<double, 12, 1> LocoWrapperwalk::getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double, 3, 1> imu_eul, Eigen::Matrix<double, 3, 1> imu_omega){
     
     Eigen::Matrix<double, 12, 1> p_est =Eigen::MatrixXd::Zero(12,1);
 
+    double jointPosIMU[18] = {0};
+    for (size_t i = 0; i < 18; i++)
+    {
+        jointPosIMU[i] = jointPos[i];
+    }
+    jointPosIMU[3] = imu_eul(0);
+    jointPosIMU[4] = imu_eul(1);
+    jointPosIMU[5] = imu_eul(2);
+
+    Eigen::VectorXd jointVelTotalIMU = jointVelTotal;
+    jointVelTotalIMU.block(3,0,3,1) = imu_omega;
+    
     Eigen::Matrix<double, 3, 4> stance_feet = Eigen::MatrixXd::Zero(3,4);
     for (size_t i = 0; i < 4; i++)
     {
@@ -175,7 +187,7 @@ Eigen::Matrix<double, 12, 1> LocoWrapperwalk::getStateEstimate(double jointPos[1
         //}  
     }
     
-    Eigen::Matrix<double, 3, 4> feet0CoM = quad->FootEstimator(jointPos);
+    Eigen::Matrix<double, 3, 4> feet0CoM = quad->FootEstimator(jointPosIMU);
     //std::cout << "feet0CoM" << "\t" << feet0CoM << std::endl;
 
     Eigen::Matrix<double, 3, 4> pCoM_raw = Eigen::MatrixXd::Zero(3,4);
@@ -189,12 +201,12 @@ Eigen::Matrix<double, 12, 1> LocoWrapperwalk::getStateEstimate(double jointPos[1
 
     p_est.block(0,0,3,1) = pCoM_raw.rowwise().sum()/con->cnt;
     
-    Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPos);
+    Eigen::Matrix<double, 12, 18> JacobianFull = quad->JacobianEstimator(jointPosIMU);
     Eigen::Matrix<double, 3, 1> pdot_Raw = Eigen::MatrixXd::Zero(3,1);
     for(size_t i=2; i<4; i++){
         
         //pdot_Raw.block(3*i,0,3,1) = -con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
-        pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotal.block(3,0,15,1);
+        pdot_Raw -= con->ind[i]*JacobianFull.block(3*i,3,3,15)*jointVelTotalIMU.block(3,0,15,1);
         
     }
     p_est.block(3,0,3,1) = pdot_Raw/(con->ind[2]+con->ind[3]);
