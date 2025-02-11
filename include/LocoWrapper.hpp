@@ -61,9 +61,9 @@ public:
     Eigen::Matrix<double, 12, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double, 3, 1> imu_eul, Eigen::Matrix<double, 3, 1> imu_omega);
 
     //Stitching together
-    void readytowalk(){quad->fullyupright();};//LL->fullyupright();};
+    void readytowalk(){quad->fullyupright();LL->fullyupright();};
     void setfinalCoM2();
-    void startwalking(){readytowalkf = true;LL->fullyupright();};
+    void startwalking(){readytowalkf = true;};//LL->fullyupright();};
 
     // Pointers to structs
     const StateInfo *state;
