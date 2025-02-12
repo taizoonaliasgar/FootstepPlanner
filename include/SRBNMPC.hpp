@@ -25,11 +25,11 @@ const std::string FILE_NAMES_MIT[FILE_CNT_MPC] = {
     // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/desired_state.txt",
     // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/foot_position.txt",
     // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/contact_index.txt"
-    "../datalog/state.txt",
-    "../datalog/inputs.txt",
-    "../datalog/desired_state.txt",
-    "../datalog/foot_position.txt",
-    "../datalog/contact_index.txt"
+    "../data25/state.txt",
+    "../data25/inputs.txt",
+    "../data25/desired_state.txt",
+    "../data25/foot_position.txt",
+    "../data25/contact_index.txt"
 //     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/footposition.txt",
 //    // "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/forceinitial.txt",
 //     "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/steplength.txt",
@@ -120,6 +120,9 @@ public:
     void getVEstimate(Eigen::Matrix<double,3,1> p_est);
     Eigen::Matrix<double,3,1> returnVEstimate(){return v_estimate;};
     Eigen::Matrix<double,3,1> getsatVEstimate(Eigen::Matrix<double,3,1> v_est);
+
+    //Transition
+    casadi::DM motionPlannerN2(Eigen::Matrix<double,16,1> q0,size_t controlTick);
 
 private: 
     std::string filename;

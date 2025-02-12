@@ -1092,3 +1092,125 @@ Eigen::Matrix<double,3,1> SRBNMPC::getsatVEstimate(Eigen::Matrix<double,3,1> v_e
     return v_sat;
 }
 
+
+casadi::DM SRBNMPC::motionPlannerN2(Eigen::Matrix<double,16,1> q0, size_t controlTick){
+    
+    casadi::DM x_des = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2)); 
+    casadi::DM q0_dm = casadi::DM::zeros(16,1);
+    
+    
+    for (int i=0; i<16; i++){
+        q0_dm(i) = q0(i);
+    }
+    
+    x_des(casadi::Slice(0,NFS)) = q0_dm(casadi::Slice(0,NFS));
+    
+    casadi::DM conm1=0;
+    casadi::DM conp1=0;
+    casadi::DM conp1_next=0;
+    // if(controlTick<1){
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = 1;//contact_sequence_dm(0,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = 1;//contact_sequence_dm(1,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = 1;//contact_sequence_dm(2,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = 1;//contact_sequence_dm(3,conp1);
+    // }else{
+    //     conm1 = (controlTick-1)%40;
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = contact_sequence_dm(0,conm1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = contact_sequence_dm(1,conm1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = contact_sequence_dm(2,conm1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = contact_sequence_dm(3,conm1);
+    // }
+
+    if(controlTick%40 == 0){
+
+        // if(controlTick>39){
+        //     if(localvelocity < desVel(0)){
+        //         localvelocity = localvelocity + 0.05;
+        //     }else{
+        //         localvelocity = desVel(0);
+        //     }
+        // }else{
+            localvelocity = 0;
+        // }
+
+    }
+
+    // if(localvelocity>0.5){
+    //     front_off = 0.1+(localvelocity-0.5)/7;
+    //     rear_off = -0.1+(localvelocity-0.5)/4;
+    //     pitch_ref = 0;//3.14/6*(localvelocity-0.5);
+    // }else{
+    //     front_off = 0.1;
+    //     rear_off = -0.05;
+    //     pitch_ref = 0; 
+    // }
+    
+     
+    if((controlTick)%20 == 0){
+        x_dom_init = q0_dm(0);
+        Raibstep = 0*2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
+        //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
+    }
+
+    if(controlTick%20<9){
+        vRaibstep = Raibstep;
+
+    }else{
+        vRaibstep = 0*2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));
+    }
+    casadi::DM x0 = x_dom_init;
+
+    for(size_t i= 0; i< HORIZ; i++){
+        
+        conp1 = 0;//(controlTick+i)%40;
+        
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+        x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
+        x_des((i+1)*NFS+2) = stand_height;                                 
+        x_des((i+1)*NFS+3) = localvelocity, 
+        x_des((i+1)*NFS+4) = desVel(1);
+        x_des((i+1)*NFS+7) = 0;
+
+        //if(controlTick+i>0){
+            conp1_next = 0;//(controlTick+i+1)%40;
+        //}
+        if((controlTick+i)%20 == 0){
+            x0 = x_des(i*NFS);
+        }
+
+        x_des((i+1)*NFS+12) = contact_sequence_dm(0,conp1_next)*contact_sequence_dm(0,conp1)*x_des(i*NFS+12)+
+                                (1-contact_sequence_dm(0,conp1)*contact_sequence_dm(0,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+                                   
+        x_des((i+1)*NFS+13) = contact_sequence_dm(1,conp1_next)*contact_sequence_dm(1,conp1)*x_des(i*NFS+13)+
+                                (1-contact_sequence_dm(1,conp1)*contact_sequence_dm(1,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+        
+        x_des((i+1)*NFS+14) = contact_sequence_dm(2,conp1_next)*contact_sequence_dm(2,conp1)*x_des(i*NFS+14)+
+                                (1-contact_sequence_dm(2,conp1)*contact_sequence_dm(2,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+        
+        x_des((i+1)*NFS+15) = contact_sequence_dm(3,conp1_next)*contact_sequence_dm(3,conp1)*x_des(i*NFS+15)+
+                                (1-contact_sequence_dm(3,conp1)*contact_sequence_dm(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+
+
+        x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm(0,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+13) = (1-contact_sequence_dm(1,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+14) = (1-contact_sequence_dm(2,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+15) = (1-contact_sequence_dm(3,conp1))*vRaibstep;//0.4
+
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+4) = contact_sequence_dm(0,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+5) = contact_sequence_dm(1,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+6) = contact_sequence_dm(2,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+7) = contact_sequence_dm(3,conp1);
+    }
+
+    conp1 = 0;//(controlTick+HORIZ)%40;
+
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)) = contact_sequence_dm(0,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+1) = contact_sequence_dm(1,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+2) = contact_sequence_dm(2,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+3) = contact_sequence_dm(3,conp1);
+    
+    
+    return x_des;
+    
+}
+

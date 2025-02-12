@@ -161,32 +161,38 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         
         }else{
 
-            if( ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3) || ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3)+shifttime2){
-                locoTick = 0;
-                phaseVar = 0;
-                PP->setToeInit(kin);
-                PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
-            }
+            PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
+            VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's    
+            VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+            z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         
+            LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, HRai, z, Ki); 
+            
+            // if( ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3) || ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3)+shifttime2){
+            //     locoTick = 0;
+            //     phaseVar = 0;
+            //     PP->setToeInit(kin);
+            //     PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+            // }
 
-            if(ctrlTick < switchtime*ctrlHz + settlestep*(shifttime2+movetime3)+shifttime2){
-                PP->shiftCoM3(conEst,phaseVar,shifttime2,true);
-                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
-                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
-                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
-            }else{
-                if(settlestep%2==0){
-                    nextContact[0] = 0;
-                    nextContact[1] = 1;
-                }else{
-                    nextContact[0] = 1;
-                    nextContact[1] = 0;
-                }
-                conEst->setDesDomain(nextContact);
-                PP->movefoot3(movetime3);
-                quad->updateSwingMatrices(con->ind,con->cnt);
-                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
-                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
-            }
+            // if(ctrlTick < switchtime*ctrlHz + settlestep*(shifttime2+movetime3)+shifttime2){
+            //     PP->shiftCoM3(conEst,phaseVar,shifttime2,true);
+            //     quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+            //     VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+            //     LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            // }else{
+            //     if(settlestep%2==0){
+            //         nextContact[0] = 0;
+            //         nextContact[1] = 1;
+            //     }else{
+            //         nextContact[0] = 1;
+            //         nextContact[1] = 0;
+            //     }
+            //     conEst->setDesDomain(nextContact);
+            //     PP->movefoot3(movetime3);
+            //     quad->updateSwingMatrices(con->ind,con->cnt);
+            //     VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+            //     LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            // }
 
         }
 
@@ -281,10 +287,16 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
 
 void LocoWrapper::setcontactconfig(int controlMPC){
     
-    for(int i=0;i<4;i++){
-        desired_contact[i]=contact_horizon(i,controlMPC%40); 
+    if(controlMPC<2740){
+        desired_contact[0] = 1;
+        desired_contact[1] = 1;
+        desired_contact[2] = 1;
+        desired_contact[3] = 1;
+    }else{
+        for(int i=0;i<4;i++){
+            desired_contact[i]=contact_horizon(i,controlMPC%40); 
+        }
     }
-    
     conEst->setDesDomain(desired_contact);
     quad->updateSwingMatrices(con->ind,con->cnt); 
 }
