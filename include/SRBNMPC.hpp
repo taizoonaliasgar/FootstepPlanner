@@ -123,6 +123,7 @@ public:
 
     //Transition
     casadi::DM motionPlannerN2(Eigen::Matrix<double,16,1> q0,size_t controlTick);
+    casadi::DM getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP,size_t controlTick);
 
 private: 
     std::string filename;
@@ -247,6 +248,8 @@ private:
     Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
 
     double wall_y =0.2;
+
+    bool first_time_here = true;
     
 };
 

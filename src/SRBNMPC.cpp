@@ -1214,3 +1214,54 @@ casadi::DM SRBNMPC::motionPlannerN2(Eigen::Matrix<double,16,1> q0, size_t contro
     
 }
 
+casadi::DM SRBNMPC::getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP, size_t controlTick){
+        
+    casadi::DM x0 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
+    casadi::DM q0_dm = casadi::DM::zeros(16,1);
+    
+    for (int i=0; i<12; i++){
+        q0_dm(i) = q0(i);
+    }
+
+    x0(casadi::Slice(0,12)) = q0_dm(casadi::Slice(0,12));
+    x0(12) = foothold(0,0);//0.02
+    x0(13) = foothold(0,1);
+    x0(14) = foothold(0,2);
+    x0(15) = foothold(0,3);
+
+    if(first_time_here){
+        
+        for(int i = 0; i<HORIZ; i++){
+            x0(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0(casadi::Slice(0,NFS));
+            
+            x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(i),NFS*(HORIZ+1)+NFI*(i)+12)) = casadi::DM(std::vector<double>(forceQP.data(), forceQP.data() + forceQP.size()));
+            // sum_conseq = contact_sequence_dm(2,i)+contact_sequence_dm(3,i)+contact_sequence_dm(0,i)+contact_sequence_dm(1,i);
+            
+            // for (size_t leg = 0; leg < 4; leg++)
+            // {
+            //     if(leg>1){
+            //         x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1) = contact_sequence_dm(leg,i)*MASS*gravityN(2)/sum_conseq;
+            //     }else{
+            //         x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1) = contact_sequence_dm(leg,i)*MASS*gravityN(2)/sum_conseq;//*mu*10;
+            //         x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-2) = 2*pow(-1,leg)*x0(NFS*(HORIZ+1)+NFI*(i)+3*(leg+1)-1);
+                    
+            //     } 
+            // }
+            
+        }
+        first_time_here = false;
+    }else{
+        //x0(casadi::Slice(12,16)) = previous_sol(casadi::Slice(28,32));
+        
+
+        x0(casadi::Slice(NFS,NFS*(HORIZ))) = previous_sol(casadi::Slice(NFS*2,NFS*(HORIZ+1)));
+        x0(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1))) = previous_sol(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1)));
+
+        x0(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+NFI*(HORIZ-1))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI,NFS*(HORIZ+1)+NFI*(HORIZ)));
+        x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
+
+    }
+    
+    return x0;
+}
+

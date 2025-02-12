@@ -73,12 +73,13 @@ void setupCallback() {
     vis->getCameraMan()->setTopSpeed(5);
 }
 
-void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position){//} casadi::Function solver, int duration_data) {
+void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){//} casadi::Function solver, int duration_data) {
     std::map<std::string, casadi::DM> arg, res;
 
     int controlMPC = std::floor(controlTick/10); 
     //std::cout << "controlMPC:" << controlMPC << std::endl;
-    casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
+    //casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
+    casadi::DM X_prev = loco_plan->getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
     if(controlMPC==2400){
         q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);//0.15,0.15,-0.1,-0.1;
     }else{
@@ -273,6 +274,8 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     int settlingsteps = 4;
     double rearweight = 6;
     double switchtime = 24;
+
+    Eigen::Matrix<double, 12, 1> lastQPforce = Eigen::MatrixXd::Zero(12,1);
     
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// CONTROL
@@ -370,6 +373,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         if(controlTick == switchtime*ctrlHz){
             q_est.block(0,0,3,1) = q0.block(0,0,3,1);
             loco_obj->readytowalk();
+            lastQPforce = loco_obj->getpreviousQPforce();
         }else{
             q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
         }
@@ -409,7 +413,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         hip_position = loco_obj->gethipposition();
         int stancephase = loco_obj->stancecounter();
         if(controlTick%10==0){
-            plannerNMPC(controlTick, loco_obj, loco_plan, solver, q0, foot_position);
+            plannerNMPC(controlTick, loco_obj, loco_plan, solver, q0, foot_position, lastQPforce);
         }
         //loco_obj->setRaisimD(Dr);
         //loco_obj->setRaisimH(Hr);
