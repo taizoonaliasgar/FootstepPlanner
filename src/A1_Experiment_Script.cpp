@@ -80,7 +80,7 @@ void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, 
     //std::cout << "controlMPC:" << controlMPC << std::endl;
     //casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
     casadi::DM X_prev = loco_plan->getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
-    if(controlMPC==2400){
+    if(controlMPC==2740){
         q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);//0.15,0.15,-0.1,-0.1;
     }else{
         q0(12) = double(X_prev(12));
@@ -94,10 +94,10 @@ void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, 
     // }else{
         casadi::DM p = loco_plan->motionPlannerN(q0,controlMPC);
     // }
-    if(controlMPC<2740){
-        p = loco_plan->motionPlannerN2(q0,controlMPC);
-        std::cout << "controlMPC:" << controlMPC << std::endl;
-    }
+    // if(controlMPC<2740){
+    //     p = loco_plan->motionPlannerN2(q0,controlMPC);
+    //     std::cout << "controlMPC:" << controlMPC << std::endl;
+    // }
     loco_plan->setpreviousp(p);
 
     arg["lbx"] = loco_plan->lowerboundx(p, controlMPC);

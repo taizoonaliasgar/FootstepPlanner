@@ -8,3 +8,4 @@ builddata/
 data25/
 rsc/activation.raisim
 *.txt
+extensions.json
