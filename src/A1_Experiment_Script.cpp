@@ -311,7 +311,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }else if(controlTick >= loco_start+shifttime & controlTick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
         
         int stepind = std::floor((controlTick-loco_start-shifttime)/(shifttime+movetime));
-        
+        //loco_obj->tookfirststep();
         if(stepind<maxsteps){
             loco_obj->stepsonwall(stepind);
         
@@ -521,8 +521,14 @@ int main(int argc, char *argv[]) {
     //Rear offset -0.1
     //A1.back()->setGeneralizedCoordinate({0, 0, 0.5, 1,0,0,0,//0.9238795,0,0.3826834,0,//1, 0, 0, 0,
     //                                  -0.7337, 1.0175, -2.035, 0.7337, 1.0175, -2.035, 0.0, 2.4532, -1.1582, 0.0, 2.4532, -1.1582});
+    
     A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1, 0, 0, 0,
                                         0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6});   
+    //Cutting to the transition point 5.10208e-05
+    //A1.back()->setGeneralizedCoordinate({-0.0552767,0,0.496916,0.8257,-0.0079,-0.5640,-0.0080,//-0.0119154,-1.19863,-0.0108896,
+    //                                        -0.535698,0.818817,-2.2517,0.511951,0.790705,-2.24335,-0.00892291,1.93392,-1.36839,0.00366515,1.94833,-1.3735});
+    //A1.back()->setGeneralizedCoordinate({-0.0262742,0.0139459,0.493275,0.8203,-0.1058,-0.5509,-0.1111,//-0.176766,-1.1874,-0.136993,
+    //                                        -0.654018,0.886213,-2.23036,0.542235,0.870764,-2.55789,0.0609142,1.99266,-1.34162,0.059542,2.05143,-1.40771});
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
     A1.back()->setName("A1_Robot");
     
@@ -725,7 +731,7 @@ int main(int argc, char *argv[]) {
     // ============================================================ //
     const std::string name = directory+filename+"_"+cameraview+".mp4";
     vis->setDesiredFPS(fps);
-    long simcounter = 0;
+    long simcounter = 0;//22350;
     static bool added = false;
 
     raisim::Contact contactInstance;
