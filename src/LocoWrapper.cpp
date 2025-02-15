@@ -178,6 +178,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 PP->shiftCoM3(conEst,phaseVar,shifttime2,true);
                 quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
                 VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }else{
                 if(settlestep%2==0){
@@ -191,6 +192,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 PP->movefoot3(movetime3);
                 quad->updateSwingMatrices(con->ind,con->cnt);
                 VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }
 

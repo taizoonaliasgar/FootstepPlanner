@@ -124,7 +124,7 @@ public:
     //Transition
     casadi::DM motionPlannerN2(Eigen::Matrix<double,16,1> q0,size_t controlTick);
     casadi::DM getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP,size_t controlTick);
-
+    casadi::DM motionPlannerN3(Eigen::Matrix<double,16,1> q0,size_t controlTick);
 private: 
     std::string filename;
     std::fstream fid;
@@ -250,6 +250,9 @@ private:
     double wall_y =0.2;
 
     bool first_time_here = true;
+
+    //Transition
+    casadi::DM contact_sequence_dm_T = casadi::DM::ones(4,240);
     
 };
 
