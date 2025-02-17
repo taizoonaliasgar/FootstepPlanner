@@ -252,7 +252,7 @@ private:
     bool first_time_here = true;
 
     //Transition
-    casadi::DM contact_sequence_dm_T = casadi::DM::ones(4,240);
+    casadi::DM contact_sequence_dm_T = casadi::DM::ones(4,360);
     
 };
 
