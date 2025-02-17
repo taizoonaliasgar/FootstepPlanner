@@ -532,7 +532,7 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
 
     double dFGain = params->dfPen;
     if(uprighty){
-       dFGain = 100;
+       dFGain = dFnew;  
     }
 
     P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);

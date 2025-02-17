@@ -65,6 +65,7 @@ public:
     void setfinalCoM2();
     void startwalking(){readytowalkf = true;LL->fullyupright();};
     Eigen::Matrix<double, 12, 1> getpreviousQPforce(){return ll->QP_force;};
+    void readytoreallywalk(){LL->keepwalking();};
 
     // Pointers to structs
     const StateInfo *state;

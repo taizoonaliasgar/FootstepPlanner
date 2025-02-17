@@ -368,6 +368,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         if(controlTick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){
             loco_obj->startwalking();
         }
+
+        if(controlTick==29000 || controlTick==30000){
+            loco_obj->readytoreallywalk();
+        }
         
         Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
         if(controlTick == switchtime*ctrlHz){

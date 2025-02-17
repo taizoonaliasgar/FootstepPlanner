@@ -33,6 +33,7 @@ public:
     void setFlightTorque();
     void afterfirststep(){firststeptaken=true;};
     void fullyupright(){uprighty = true;};
+    void keepwalking(){dFnew = dFnew*100;};
 
 private:
 
@@ -94,6 +95,8 @@ private:
     double flighttau[6+TOTAL_IN] = {0};
     bool firststeptaken = false;
     bool uprighty = false;
+    bool uprighty2 = false;
+    double dFnew = 1;
 
 };
 
