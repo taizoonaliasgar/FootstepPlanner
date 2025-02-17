@@ -1246,9 +1246,9 @@ casadi::DM SRBNMPC::getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen:
             
         }
         
-        //if(controlTick==2740){
+        if(controlTick==2740){
             first_time_here = false;
-        //}
+        }
         
     }else{
         //x0(casadi::Slice(12,16)) = previous_sol(casadi::Slice(28,32));
