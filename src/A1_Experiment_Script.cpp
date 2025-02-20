@@ -681,7 +681,7 @@ int main(int argc, char *argv[]) {
     double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../data25/Feb16/";
+    std::string directory = "../data25/Feb20/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "fullsim";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
