@@ -147,18 +147,19 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = contact_sequence_dm(3,conm1);
     }
 
-    if(controlTick%40 == 0){
+    if(starttrotting){
+        if(controlTick%40 == 0){
 
-        if(controlTick>39){
-            if(localvelocity < desVel(0)){
-                localvelocity = localvelocity + 0.05;
+            if(controlTick>39){
+                if(localvelocity < desVel(0)){
+                    localvelocity = localvelocity + 0.05;
+                }else{
+                    localvelocity = desVel(0);
+                }
             }else{
-                localvelocity = desVel(0);
+                localvelocity = 0;
             }
-        }else{
-            localvelocity = 0;
         }
-
     }
 
     // if(localvelocity>0.5){
