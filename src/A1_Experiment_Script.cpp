@@ -23,6 +23,8 @@
 #include "LocoWrapper.hpp"
 //#include "LocoWrapperwalk.hpp"
 #include "SRBNMPC.hpp"
+#include "A1_Dynamics_full.h"
+
 using namespace std;
 // namespace fs = std::filesystem;
 
@@ -71,6 +73,80 @@ void setupCallback() {
     vis->setContactVisObjectSize(0.03, 0.6);
     // speed of camera motion in freelook mode
     vis->getCameraMan()->setTopSpeed(5);
+}
+
+void kinestimator(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown){
+    
+    //float numContact = (weightedCon[0]+weightedCon[1]+weightedCon[2]+weightedCon[3]);
+
+    float numContact = contact[0]+contact[1]+contact[2]+contact[3];
+	// ================================== //
+	// ========= Kin Estimator ========== //
+	// ================================== //
+
+	// toe pos
+	double fr_toe[3], fl_toe[3], rl_toe[3], rr_toe[3];
+	static double COM[3]= {0,0,0};
+    double Jfr_toe[54], Jfl_toe[54], Jrl_toe[54], Jrr_toe[54];
+	double COM_vel[3] = {0,0,0};
+	
+
+	q[0] = 0; q[1] = 0; q[2] = 0;
+    if(robotdown){
+	    FK_FR_toe(fr_toe, q); FK_FL_toe(fl_toe, q);
+	    FK_RR_toe(rr_toe, q); FK_RL_toe(rl_toe, q);
+        J_FR_toe(Jfr_toe, q); J_FL_toe(Jfl_toe, q);
+	    J_RR_toe(Jrr_toe, q); J_RL_toe(Jrl_toe, q);
+    }else{
+        FK_FR_toe_u(fr_toe, q); FK_FL_toe_u(fl_toe, q);
+	    FK_RR_toe_u(rr_toe, q); FK_RL_toe_u(rl_toe, q);
+        J_FR_toe_u(Jfr_toe, q); J_FL_toe_u(Jfl_toe, q);
+	    J_RR_toe_u(Jrr_toe, q); J_RL_toe_u(Jrl_toe, q);
+    }
+	
+	// update change in com pos
+	static double fr_prev[3] = {fr_toe[0],fr_toe[1],fr_toe[2]};
+	static double fl_prev[3] = {fl_toe[0],fl_toe[1],fl_toe[2]};
+	static double rr_prev[3] = {rr_toe[0],rr_toe[1],rr_toe[2]};
+	static double rl_prev[3] = {rl_toe[0],rl_toe[1],rl_toe[2]};
+	
+    double deltaPos[2] = {0.0};
+    for(int i=0; i<2; ++i){
+        deltaPos[i] += (fr_toe[i]-fr_prev[i])*contact[0];
+        deltaPos[i] += (fl_toe[i]-fl_prev[i])*contact[1];
+        deltaPos[i] += (rr_toe[i]-rr_prev[i])*contact[2];
+        deltaPos[i] += (rl_toe[i]-rl_prev[i])*contact[3];
+        deltaPos[i] /= numContact;
+    }    
+    
+	COM[0] += deltaPos[0];
+	COM[1] += deltaPos[1];
+    COM[2]  = -1.0*(fr_toe[2]*contact[0]+fl_toe[2]*contact[1]+rr_toe[2]*contact[2]+rl_toe[2]*contact[3])/numContact;
+	
+	for(int i=0; i<3; ++i){
+		fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
+		rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
+	}
+	
+	numContact = (contact[0]+contact[1])*robotdown + contact[2]+contact[3];
+	Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+	toWorld(&dq[3],dq_temp,R);
+	for (int i = 3; i < 18; ++i){
+		COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2] + Jrl_toe[3*i+0]*contact[3])*dq[i];
+	 	COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2] + Jrl_toe[3*i+1]*contact[3])*dq[i];
+	 	COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2] + Jrl_toe[3*i+2]*contact[3])*dq[i];
+	}
+	COM_vel[0] /= numContact;
+	COM_vel[1] /= numContact;
+	COM_vel[2] /= numContact;
+	
+	dq_temp = {dq[3],dq[4],dq[5]};
+	toBody(&dq[3],dq_temp,R);
+
+	// Set results
+	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
+	dq[0] = COM_vel[0]; dq[1] = COM_vel[1]; dq[2] = COM_vel[2];
+
 }
 
 void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){//} casadi::Function solver, int duration_data) {
@@ -140,9 +216,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     size_t movetime2 = 0.3*ctrlHz;
     size_t movetime3 = 0.2*ctrlHz;
 
+    double switchtime = 24;
+
     double *tau;
     //double tau[18] = {0};
-    double jpos[18], jvel[18];
+    double jpos[18], jvel[18], jpos_est[18], jvel_est[18];
     
     Eigen::VectorXd jointTorqueFF = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
     Eigen::VectorXd jointPosTotal = Eigen::MatrixXd::Zero(TOTAL_DOF+1,1);
@@ -225,13 +303,19 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     for(size_t i=0; i<3; ++i){
         jpos[i] = jointPosTotal(i);
         jvel[i] = jointVelTotal(i);
+        jpos_est[i] = jointPosTotal(i);
+        jvel_est[i] = jointVelTotal(i);
         jpos[i+3] = eul(i);
         jvel[i+3] = jointVelTotal(i+3);
+        jpos_est[i+3] = eul(i);
+        jvel_est[i+3] = jointVelTotal(i+3);
     }
 
     for(size_t i=6; i<18; ++i){
         jpos[i] = jointPosTotal(i+1);
         jvel[i] = jointVelTotal(i);
+        jpos_est[i] = jointPosTotal(i+1);
+        jvel_est[i] = jointVelTotal(i);
     }
 
     // std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
@@ -249,8 +333,74 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
                                                     //<< q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
 //                                                    << std::endl; 
 
+    // Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
+    // if(controlTick<switchtime*ctrlHz){
+    //     if(controlTick<1){
+    //         q_est(2) = jpos[2];
+    //     }else{
+    //         q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,eul,jointVelTotal.segment(3,3)); 
+    //     }
+    //     q_est.block(6,0,3,1) = eul;
+    //     q_est.block(9,0,3,1) = jointVelTotal.segment(3,3);
+    // }else{
+    //     q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
+    //     q_est.block(6,0,3,1) = imu_eul;
+    //     q_est(9) = imu_w(0);
+    //     q_est(10) = imu_w(1);
+    //     q_est(11) = imu_w(2); 
+    //     for(size_t i=0;i<3;i++){
+    //         for (size_t j = 0; j < 3; j++)
+    //         {
+    //             rotMatrixDouble[3*i+j] = rotIMU(j,i);
+    //         }
+    //     }
+    // }
+        
+    // for(size_t i=0; i<3; ++i){
+    //     jpos[i] = q_est(i);
+    //     jvel[i] = q_est(3+i);
+    //     jpos[3+i] = q_est(6+i);
+    //     jvel[3+i] = q_est(9+i);
+    // }
+    
+    int robotdown = controlTick >= switchtime*ctrlHz ? 1 : 0;
+    std::cout << controlTick << "\t" << robotdown << std::endl;
+    if(!robotdown){
+        for(size_t i=0;i<3;i++){
+            for (size_t j = 0; j < 3; j++){
+                rotMatrixDouble[3*i+j] = rotIMU(j,i);
+            }
+            jpos[3+i] = imu_eul(i);
+            jvel[3+i] = imu_omega(i);
+            jpos_est[3+i] = imu_eul(i);
+            jvel_est[3+i] = imu_omega(i);
+        }
+        rotE = rotIMU;
+    }
+    const int* contactMat = loco_obj->getConDes();
+    
+    // if(controlTick>0){
+    //     kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
+    // }
+
+    // std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
+    //                                     << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+    //                                         << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
+    //                                             << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
+    //                 << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
+    //                                              << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
+    //                                                 << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
+    //                                                 << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
+    //                                                 << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
+    //                                                 << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+    //                                                 << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
+
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
+    // q0.block(0,0,3,1) << jpos_est[0],jpos_est[1],jpos_est[2];//= jointPosTotal.block(0,0,3,1);
+    // q0.block(3,0,3,1) << jvel_est[0],jvel_est[1],jvel_est[2];//= jointVelTotal.block(0,0,3,1);
+    // q0.block(6,0,3,1) << jpos_est[3],jpos_est[4],jpos_est[5];
+    // q0.block(9,0,3,1) << jvel_est[3],jvel_est[4],jvel_est[5];//.block(3,0,3,1);
     q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
     q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
     q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
@@ -273,7 +423,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     int maxsteps = 14;
     int settlingsteps = 4;
     double rearweight = 6;
-    double switchtime = 24;
+    
 
     Eigen::Matrix<double, 12, 1> lastQPforce = Eigen::MatrixXd::Zero(12,1);
     
@@ -377,44 +527,44 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             loco_plan->letsgo();
         }
         
-        Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
+        //Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
         if(controlTick == switchtime*ctrlHz){
-            q_est.block(0,0,3,1) = q0.block(0,0,3,1);
+            //q_est.block(0,0,3,1) = q0.block(0,0,3,1);
             loco_obj->readytowalk();
             lastQPforce = loco_obj->getpreviousQPforce();
-        }else{
-            q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
-        }
+        }//else{
+         //   q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
+        //}
 
         if(controlTick == switchtime*ctrlHz + stepind2*(shifttime2+movetime3)){
             //q_est.block(0,0,3,1) = q0.block(0,0,3,1);
             loco_obj->setfinalCoM2();
         }
 
-        q_est.block(6,0,3,1) = imu_eul;
-        q_est(9) = imu_w(0);
-        q_est(10) = imu_w(1);
-        q_est(11) = imu_w(2);
-        for(size_t i=0;i<3;i++){
-            for (size_t j = 0; j < 3; j++)
-            {
-                rotMatrixDouble[3*i+j] = rotIMU(j,i);
-            }
-        }
+        // q_est.block(6,0,3,1) = imu_eul;
+        // q_est(9) = imu_w(0);
+        // q_est(10) = imu_w(1);
+        // q_est(11) = imu_w(2);
+        // for(size_t i=0;i<3;i++){
+        //     for (size_t j = 0; j < 3; j++)
+        //     {
+        //         rotMatrixDouble[3*i+j] = rotIMU(j,i);
+        //     }
+        // }
 
-        for(size_t i=0; i<3; ++i){
-            //jpos[i] = q_est(i);
-            //jvel[i] = q_est(3+i);
-            jpos[3+i] = q_est(6+i);
-            jvel[3+i] = q_est(9+i);
-        }
+        // for(size_t i=0; i<3; ++i){
+        //     //jpos[i] = q_est(i);
+        //     //jvel[i] = q_est(3+i);
+        //     jpos[3+i] = q_est(6+i);
+        //     jvel[3+i] = q_est(9+i);
+        // }
 
         //Eigen::Matrix<double,16,1> q0;
         //q0.setZero(16,1);
-        q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
-        q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
-        q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
-        q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
+        // q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
+        // q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
+        // q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
+        // q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
 
         loco_obj->updatestate(jpos,jvel,rotMatrixDouble);
         foot_position = loco_obj->getfootposition();
@@ -685,7 +835,7 @@ int main(int argc, char *argv[]) {
     double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../data25/Feb20/";
+    std::string directory = "../data25/Feb21/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "fullsim";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
@@ -809,7 +959,7 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
         // if(abs(jointPosTotal(1))>0.04){
         //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
