@@ -318,20 +318,6 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         jvel_est[i] = jointVelTotal(i);
     }
 
-    // std::cout << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
-    //                 << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
-    //                                              << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
-    //                                                 << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
-    //                                                 << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
-    //                                                 << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
-    //                                                 << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
-    //                                                 << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
-    
-    //std::cout << controlTick << "\t" << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
-    //                                               << imu_eul[0] << "\t" << imu_eul[1] << "\t" << imu_eul[2] << "\t"
-     //                                               << eul(0) << "\t" << eul(1) << "\t" << eul(2) //<< "\t"
-                                                    //<< q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
-//                                                    << std::endl; 
 
     // Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
     // if(controlTick<switchtime*ctrlHz){
@@ -364,8 +350,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     // }
     
     int robotdown = controlTick >= switchtime*ctrlHz ? 1 : 0;
-    std::cout << controlTick << "\t" << robotdown << std::endl;
-    if(!robotdown){
+    if(robotdown>0){
         for(size_t i=0;i<3;i++){
             for (size_t j = 0; j < 3; j++){
                 rotMatrixDouble[3*i+j] = rotIMU(j,i);
@@ -387,24 +372,13 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     //                                     << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
     //                                         << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
     //                                             << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
-    //                 << q_est(0) << "\t" << q_est(1) << "\t" << q_est(2) << "\t" << q_est(3) << "\t" << q_est(4) << "\t" << q_est(5) << "\t"
-    //                                              << trunk_acc(0) << "\t" << trunk_acc(1) << "\t" << trunk_acc(2) << "\t" 
-    //                                                 << acc_wFrame(0) << "\t" << acc_wFrame(1) << "\t" << acc_wFrame(2) << "\t" 
-    //                                                 << acc_bFrame(0) << "\t" << acc_bFrame(1) << "\t" << acc_bFrame(2) << "\t"
-    //                                                 << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" 
-    //                                                 << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
-    //                                                 << q_est(6) << "\t" << q_est(7) << "\t" << q_est(8) << "\t" 
 
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
-    // q0.block(0,0,3,1) << jpos_est[0],jpos_est[1],jpos_est[2];//= jointPosTotal.block(0,0,3,1);
-    // q0.block(3,0,3,1) << jvel_est[0],jvel_est[1],jvel_est[2];//= jointVelTotal.block(0,0,3,1);
-    // q0.block(6,0,3,1) << jpos_est[3],jpos_est[4],jpos_est[5];
-    // q0.block(9,0,3,1) << jvel_est[3],jvel_est[4],jvel_est[5];//.block(3,0,3,1);
-    q0.block(0,0,3,1) << jpos[0],jpos[1],jpos[2];//= jointPosTotal.block(0,0,3,1);
-    q0.block(3,0,3,1) << jvel[0],jvel[1],jvel[2];//= jointVelTotal.block(0,0,3,1);
-    q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
-    q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
+    q0.block(0,0,3,1) << jpos_est[0],jpos_est[1],jpos_est[2];//= jointPosTotal.block(0,0,3,1);
+    q0.block(3,0,3,1) << jvel_est[0],jvel_est[1],jvel_est[2];//= jointVelTotal.block(0,0,3,1);
+    q0.block(6,0,3,1) << jpos_est[3],jpos_est[4],jpos_est[5];
+    q0.block(9,0,3,1) << jvel_est[3],jvel_est[4],jvel_est[5];//.block(3,0,3,1);
     std::map<std::string, casadi::DM> arg, res;
     
     int force[4] = {0};
@@ -416,7 +390,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
 
     float vel_temp[3] = {0,0,0};//{cmd.vel[0],cmd.vel[1],cmd.vel[2]};
     float pose_temp[6] = {0,0,0,0,0,0};
-    float filt_vel_temp[3] = {jvel[0],jvel[1],jvel[2]};
+    float filt_vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
     discrete_butter_f(filt,filt_vel_temp);
     int duration_data =0;
     Eigen::Matrix<double,4,1> nextcon = Eigen::MatrixXd::Ones(4,1);
@@ -438,7 +412,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
     }
     else if(controlTick >= settling & controlTick < loco_start){ // Start standing
-        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STAND,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STAND,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
         tau = loco_obj->getTorque();
 
     }
@@ -455,7 +429,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
 
         loco_obj->setswingContact(nextcon);
-        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
         tau = loco_obj->getTorque();
 
     }else if(controlTick >= loco_start+shifttime & controlTick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
@@ -489,7 +463,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             }
             
             loco_obj->setswingContact(nextcon);
-            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
             tau = loco_obj->getTorque();
         
         
@@ -506,7 +480,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
                 loco_obj->setfinalCoM();
             }
             
-            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
             tau = loco_obj->getTorque();
         }
         
@@ -566,7 +540,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         // q0.block(6,0,3,1) << jpos[3],jpos[4],jpos[5];
         // q0.block(9,0,3,1) << jvel[3],jvel[4],jvel[5];//.block(3,0,3,1);
 
-        loco_obj->updatestate(jpos,jvel,rotMatrixDouble);
+        loco_obj->updatestate(jpos_est,jvel_est,rotMatrixDouble);
         foot_position = loco_obj->getfootposition();
         hip_position = loco_obj->gethipposition();
         int stancephase = loco_obj->stancecounter();
@@ -575,7 +549,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
         //loco_obj->setRaisimD(Dr);
         //loco_obj->setRaisimH(Hr);
-        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,UPWALK,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,UPWALK,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
         
         tau = loco_obj->getTorque();
     }
@@ -959,7 +933,7 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
         // if(abs(jointPosTotal(1))>0.04){
         //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
