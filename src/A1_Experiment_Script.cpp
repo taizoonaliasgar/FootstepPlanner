@@ -112,10 +112,10 @@ void kinestimator(double q[18], double dq[18], const int* contact, Eigen::Matrix
 	
     double deltaPos[2] = {0.0};
     for(int i=0; i<2; ++i){
-        deltaPos[i] += (fr_toe[i]-fr_prev[i])*contact[0];
-        deltaPos[i] += (fl_toe[i]-fl_prev[i])*contact[1];
-        deltaPos[i] += (rr_toe[i]-rr_prev[i])*contact[2];
-        deltaPos[i] += (rl_toe[i]-rl_prev[i])*contact[3];
+        deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
+        deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2];
+        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3];
         deltaPos[i] /= numContact;
     }    
     
@@ -144,7 +144,7 @@ void kinestimator(double q[18], double dq[18], const int* contact, Eigen::Matrix
 	toBody(&dq[3],dq_temp,R);
 
 	// Set results
-	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
+	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2]+0.02;
 	dq[0] = COM_vel[0]; dq[1] = COM_vel[1]; dq[2] = COM_vel[2];
 
 }
@@ -349,8 +349,8 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     //     jvel[3+i] = q_est(9+i);
     // }
     
-    int robotdown = controlTick >= switchtime*ctrlHz ? 1 : 0;
-    if(robotdown>0){
+    int robotdown = controlTick < switchtime*ctrlHz ? 1 : 0;
+    if(!robotdown){
         for(size_t i=0;i<3;i++){
             for (size_t j = 0; j < 3; j++){
                 rotMatrixDouble[3*i+j] = rotIMU(j,i);
@@ -362,17 +362,25 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
         rotE = rotIMU;
     }
+
     const int* contactMat = loco_obj->getConDes();
+    if(controlTick>2499){
+        loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown);
+    }else if(controlTick>0){
+        kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
+    }
+
+    std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
+                                        << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
+                                            << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
+                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
+
+    for (size_t i = 0; i < 18; i++)
+    {
+        jpos_est[i] = jpos[i];
+        jvel_est[i] = jvel[i];
+    }
     
-    // if(controlTick>0){
-    //     kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
-    // }
-
-    // std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
-    //                                     << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
-    //                                         << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
-    //                                             << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
-
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
     q0.block(0,0,3,1) << jpos_est[0],jpos_est[1],jpos_est[2];//= jointPosTotal.block(0,0,3,1);
@@ -933,7 +941,7 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
         // if(abs(jointPosTotal(1))>0.04){
         //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;

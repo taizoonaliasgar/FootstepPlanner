@@ -66,6 +66,8 @@ public:
     void startwalking(){readytowalkf = true;LL->fullyupright();};
     Eigen::Matrix<double, 12, 1> getpreviousQPforce(){return ll->QP_force;};
     void readytoreallywalk(){LL->keepwalking();};
+    void getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown);
+
 
     // Pointers to structs
     const StateInfo *state;
