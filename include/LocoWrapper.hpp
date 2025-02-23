@@ -66,7 +66,7 @@ public:
     void startwalking(){readytowalkf = true;LL->fullyupright();};
     Eigen::Matrix<double, 12, 1> getpreviousQPforce(){return ll->QP_force;};
     void readytoreallywalk(){LL->keepwalking();};
-    void getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown);
+    void getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch);
 
 
     // Pointers to structs
@@ -120,6 +120,11 @@ private:
 
     bool readytowalkf = false;
     double switchtime = 24;
+
+    //Estimator stuff
+    double yzdot_thresh = 0.3;
+    double xdot_thresh = 0.3;
+    int rearfootweight = 4;
     
     
 };

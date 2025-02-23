@@ -428,9 +428,9 @@ Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], 
 }
 
 
-void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown){
+void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch){
     
-    float numContact = contact[0]+contact[1]+contact[2]+contact[3];
+    float numContact = contact[0]+contact[1]+rearfootweight*contact[2]+rearfootweight*contact[3];
 	// ================================== //
 	// ========= Kin Estimator ========== //
 	// ================================== //
@@ -465,8 +465,8 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
     for(int i=0; i<3; ++i){
         deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
         deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
-        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2];
-        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3];
+        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2]*rearfootweight;
+        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3]*rearfootweight;
         deltaPos[i] /= numContact;
     }    
     
@@ -479,22 +479,39 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	// 	rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
 	// }
 	
-	numContact = (contact[0]+contact[1])*robotdown + contact[2]+contact[3];
+	numContact = (contact[0]+contact[1])*robotdown + rearfootweight*contact[2]+rearfootweight*contact[3];
 	Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
-	toWorld(&dq[3],dq_temp,R);
-	for (int i = 3; i < 18; ++i){
-		COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2] + Jrl_toe[3*i+0]*contact[3])*dq[i];
-	 	COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2] + Jrl_toe[3*i+1]*contact[3])*dq[i];
-	 	COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2] + Jrl_toe[3*i+2]*contact[3])*dq[i];
-	}
-	COM_vel[0] /= numContact;
-	COM_vel[1] /= numContact;
-	COM_vel[2] /= numContact;
 	
-	dq_temp = {dq[3],dq[4],dq[5]};
-	toBody(&dq[3],dq_temp,R);
+    // if(dynswitch){
+
+    //     for (int i = 3; i < 18; ++i){
+	// 	    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
+	//  	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearfootweight + Jrl_toe[3*i+1]*contact[3]*rearfootweight)*dq[i];
+	//  	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearfootweight + Jrl_toe[3*i+2]*contact[3]*rearfootweight)*dq[i];
+	//     }
+	//     COM_vel[0] /= numContact;
+	//     COM_vel[1] /= numContact;
+	//     COM_vel[2] /= numContact;
+    // }else{
+
+        //toWorld(&dq[3],dq_temp,R);
+	    for (int i = 3; i < 18; ++i){
+		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
+	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearfootweight + Jrl_toe[3*i+1]*contact[3]*rearfootweight)*dq[i];
+	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearfootweight + Jrl_toe[3*i+2]*contact[3]*rearfootweight)*dq[i];
+	    }
+	    COM_vel[0] /= numContact;
+	    COM_vel[1] /= numContact;
+	    COM_vel[2] /= numContact;
+	
+	    dq_temp = {dq[3],dq[4],dq[5]};
+	    //toBody(&dq[3],dq_temp,R);
+    //}
 
 	// Set results
 	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
-	dq[0] = COM_vel[0]; dq[1] = COM_vel[1]; dq[2] = COM_vel[2];
+	dq[0] = COM_vel[0] > xdot_thresh ? xdot_thresh : (COM_vel[0] < -xdot_thresh ? -xdot_thresh : COM_vel[0]); 
+    dq[1] = COM_vel[1] > yzdot_thresh ? yzdot_thresh : (COM_vel[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel[1]);
+    dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
+    //dq[2] = COM_vel[2];
 }

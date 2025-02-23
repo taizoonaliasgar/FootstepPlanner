@@ -360,12 +360,16 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             jpos_est[3+i] = imu_eul(i);
             jvel_est[3+i] = imu_omega(i);
         }
-        rotE = rotIMU;
+        rotE = rotIMU;//Eigen::MatrixXd::Identity(3,3);
     }
 
     const int* contactMat = loco_obj->getConDes();
     if(controlTick>2499){
-        loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown);
+        if(controlTick < switchtime*ctrlHz){
+            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false);
+        }else{
+            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true);
+        }
     }else if(controlTick>0){
         kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
     }
@@ -375,11 +379,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
                                             << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
                                                 << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
 
-    for (size_t i = 0; i < 18; i++)
-    {
-        jpos_est[i] = jpos[i];
-        jvel_est[i] = jvel[i];
-    }
+    // for (size_t i = 0; i < 18; i++)
+    // {
+    //     jpos_est[i] = jpos[i];
+    //     jvel_est[i] = jvel[i];
+    // }
     
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
