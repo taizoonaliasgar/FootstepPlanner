@@ -302,6 +302,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         for(size_t i=0;i<9;i++){
             rotMatrixDouble[i] = rotMat_prev[i];
         }
+        std::cout << "========================" << std::endl;
     }else{
         eul_prev[0] = eul(0);
         eul_prev[1] = eul(1);
