@@ -124,7 +124,7 @@ private:
     //Estimator stuff
     double yzdot_thresh = 0.3;
     double xdot_thresh = 0.3;
-    int rearfootweight = 4;
+    int rearfootweight = 2;
     
     
 };
