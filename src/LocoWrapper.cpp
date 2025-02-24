@@ -428,7 +428,7 @@ Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], 
 }
 
 
-void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch){
+void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch, size_t ctrlTick){
     
     float numContact = contact[0]+contact[1]+rearfootweight*contact[2]+rearfootweight*contact[3];
 	// ================================== //
@@ -515,8 +515,14 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 
 	// Set results
 	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
-	dq[0] = COM_vel[0] > xdot_thresh ? xdot_thresh : (COM_vel[0] < -xdot_thresh ? -xdot_thresh : COM_vel[0]); 
-    dq[1] = COM_vel[1] > yzdot_thresh ? yzdot_thresh : (COM_vel[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel[1]);
-    dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
-    //dq[2] = COM_vel[2];
+    if(ctrlTick<27000){
+	    dq[0] = COM_vel[0] > xdot_thresh ? xdot_thresh : (COM_vel[0] < -xdot_thresh ? -xdot_thresh : COM_vel[0]); 
+        dq[1] = COM_vel[1] > yzdot_thresh ? yzdot_thresh : (COM_vel[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel[1]);
+        dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
+        //dq[2] = COM_vel[2];
+    }else{
+        dq[0] = COM_vel[0];
+        dq[1] = COM_vel[1];
+        dq[2] = COM_vel[2];
+    }
 }

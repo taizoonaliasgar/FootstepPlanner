@@ -382,9 +382,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     const int* contactMat = loco_obj->getConDes();
     if(controlTick>2499){
         if(controlTick < switchtime*ctrlHz){
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false);
+            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false,controlTick);
         }else{
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true);
+            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true,controlTick);
         }
     }else if(controlTick>0){
         kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
@@ -400,11 +400,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
          << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << "\n";
     
             
-    for (size_t i = 0; i < 18; i++)
-    {
-        jpos_est[i] = jpos[i];
-        jvel_est[i] = jvel[i];
-    }
+    // for (size_t i = 0; i < 18; i++)
+    // {
+    //     jpos_est[i] = jpos[i];
+    //     jvel_est[i] = jvel[i];
+    // }
     
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
@@ -842,7 +842,7 @@ int main(int argc, char *argv[]) {
     double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../data25/Feb21/";
+    std::string directory = "../data25/Feb24/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "fullsim";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
@@ -901,7 +901,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator41.csv");
+    std::ofstream file_est("../data25/estimator44.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
