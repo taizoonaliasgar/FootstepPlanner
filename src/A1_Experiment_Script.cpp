@@ -227,12 +227,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     Eigen::VectorXd jointVelTotal = Eigen::MatrixXd::Zero(TOTAL_DOF,1);    
         
     raisim::Mat<3,3> rotMat;
+    double rotMatrixDouble[9] = {1,0,0,0,1,0,0,0,1};
     Eigen::Matrix<double, 3, 1> eul;
     Eigen::Matrix<double, 4, 1> quat;
 
-    Eigen::Matrix<double, 3, 1> imu_eul = Eigen::MatrixXd::Zero(3,1);
-    Eigen::Matrix<double, 4, 1> imu_quat = Eigen::MatrixXd::Zero(4,1);
-    Eigen::Matrix<double, 3, 1> imu_omega = Eigen::MatrixXd::Zero(3,1);
 
     //For Taizoon High level
     Eigen::Matrix<double, 12, 1> QP_Force;
@@ -240,6 +238,12 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     Eigen::Matrix<double, 3, 4> foot_position;
     Eigen::Matrix<double, 3, 4> hip_position;
     Eigen::Matrix<double, 33, 1> opt_HLMPC_state;
+
+    Eigen::Matrix<double, 3, 1>  eul_state = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double, 3, 1>  omega_state = Eigen::MatrixXd::Zero(3,1);
+
+    static double eul_prev[3] = {0,0,0};
+    static double rotMat_prev[9] = {1,0,0,0,1,0,0,0,1};
     
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// UPDATE STATE
@@ -247,43 +251,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     A1.back()->getState(jointPosTotal, jointVelTotal);
     A1.back()->getBaseOrientation(rotMat);
 
-    static double eul_prev[3] = {0,0,0};
-    static double rotMat_prev[9] = {1,0,0,0,1,0,0,0,1};
-     
-    auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
-    raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
-    Eigen::Matrix<double,3,1> acc_bFrame = Eigen::MatrixXd::Zero(3,1);
-    acc_bFrame(0) = linearAcceleration(0);
-    acc_bFrame(1) = linearAcceleration(1);
-    acc_bFrame(2) = linearAcceleration(2);
-
-    auto imu_o = imu->getOrientation();   // Quaternion
-    auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
-    
-    // std::cout << quat_base[0] << "\t" << quat_base[1] << "\t" << quat_base[2] << "\t" << quat_base[3] << "\t" <<
-    //                 imu_o[0] << "\t"    << imu_o[1]     << "\t" << imu_o[2]     << "\t"  << imu_o[3] << std::endl;
-
-    imu_quat(0) = imu_o[0];
-    imu_quat(1) = imu_o[1];
-    imu_quat(2) = imu_o[2];
-    imu_quat(3) = imu_o[3];
-
-    imu_omega(0) = imu_w[0];
-    imu_omega(1) = imu_w[1];
-    imu_omega(2) = imu_w[2];
-
-    quat_to_XYZ(imu_quat,imu_eul);
-
-    Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
-    quat_to_R(imu_quat,rotIMU);
-
     raisim::MatDyn D = A1.back()->getMassMatrix();
     raisim::VecDyn H = A1.back()->getNonlinearities({0,0,-9.81});
-
     Eigen::Matrix<double,18,18> Dr;
     Eigen::Matrix<double,18,1> Hr;
-    
-
     for(int i=0;i<18;i++){
         for(int j=0;j<18;j++){
             Dr(i,j) = D(i,j);
@@ -291,21 +262,50 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         Hr(i)=H(i,1);
     }
     
-    double rotMatrixDouble[9];
+    int robotdown = controlTick < switchtime*ctrlHz ? 1 : 0;
     
-    quat = jointPosTotal.block(3,0,4,1);
-    quat_to_XYZ(quat,eul);
-    if(std::isnan(eul(0)) || std::isnan(eul(1)) || std::isnan(eul(2))){
-        eul(0) = eul_prev[0];
-        eul(1) = eul_prev[1];
-        eul(2) = eul_prev[2];
+    if(!robotdown){
+
+        auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
+        auto imu_o = imu->getOrientation();   // Quaternion
+        auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+        quat(0) = imu_o[0];
+        quat(1) = imu_o[1];
+        quat(2) = imu_o[2];
+        quat(3) = imu_o[3];
+
+        omega_state(0) = imu_w[0];
+        omega_state(1) = imu_w[1];
+        omega_state(2) = imu_w[2];
+
+        quat_to_XYZ(quat,eul_state);
+        Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
+        quat_to_R(quat,rotIMU);
+        for(size_t i=0;i<3;i++){
+            for (size_t j = 0; j < 3; j++){
+                rotMat[3*i+j] = rotIMU(j,i);
+            }
+        }
+            
+    }else{
+    
+        quat = jointPosTotal.block(3,0,4,1);
+        quat_to_XYZ(quat,eul_state);
+    }
+
+
+    if(std::isnan(eul_state(0)) || std::isnan(eul_state(1)) || std::isnan(eul_state(2))){
+        eul_state(0) = eul_prev[0];
+        eul_state(1) = eul_prev[1];
+        eul_state(2) = eul_prev[2];
         for(size_t i=0;i<9;i++){
             rotMatrixDouble[i] = rotMat_prev[i];
         }
+        std::cout << "=====================================" << std::endl;
     }else{
-        eul_prev[0] = eul(0);
-        eul_prev[1] = eul(1);
-        eul_prev[2] = eul(2);
+        eul_prev[0] = eul_state(0);
+        eul_prev[1] = eul_state(1);
+        eul_prev[2] = eul_state(2);
         for(size_t i=0;i<9;i++){
             rotMatrixDouble[i] = rotMat[i];
             rotMat_prev[i] = rotMat[i];
@@ -313,17 +313,20 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }
     
     Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
-    jointVelTotal.segment(3,3) = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
+    
+    if(robotdown){
+        omega_state = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
+    }
 
     for(size_t i=0; i<3; ++i){
         jpos[i] = jointPosTotal(i);
         jvel[i] = jointVelTotal(i);
         jpos_est[i] = jointPosTotal(i);
         jvel_est[i] = jointVelTotal(i);
-        jpos[i+3] = eul(i);
-        jvel[i+3] = jointVelTotal(i+3);
-        jpos_est[i+3] = eul(i);
-        jvel_est[i+3] = jointVelTotal(i+3);
+        jpos[i+3] = eul_state(i);
+        jvel[i+3] = omega_state(i);
+        jpos_est[i+3] = eul_state(i);
+        jvel_est[i+3] = omega_state(i);
     }
 
     for(size_t i=6; i<18; ++i){
@@ -334,57 +337,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }
 
 
-    // Eigen::Matrix<double,12,1> q_est = Eigen::MatrixXd::Zero(12,1);
-    // if(controlTick<switchtime*ctrlHz){
-    //     if(controlTick<1){
-    //         q_est(2) = jpos[2];
-    //     }else{
-    //         q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,eul,jointVelTotal.segment(3,3)); 
-    //     }
-    //     q_est.block(6,0,3,1) = eul;
-    //     q_est.block(9,0,3,1) = jointVelTotal.segment(3,3);
-    // }else{
-    //     q_est = loco_obj->getStateEstimate(jpos,jointVelTotal,imu_eul,imu_omega);
-    //     q_est.block(6,0,3,1) = imu_eul;
-    //     q_est(9) = imu_w(0);
-    //     q_est(10) = imu_w(1);
-    //     q_est(11) = imu_w(2); 
-    //     for(size_t i=0;i<3;i++){
-    //         for (size_t j = 0; j < 3; j++)
-    //         {
-    //             rotMatrixDouble[3*i+j] = rotIMU(j,i);
-    //         }
-    //     }
-    // }
-        
-    // for(size_t i=0; i<3; ++i){
-    //     jpos[i] = q_est(i);
-    //     jvel[i] = q_est(3+i);
-    //     jpos[3+i] = q_est(6+i);
-    //     jvel[3+i] = q_est(9+i);
-    // }
-    
-    int robotdown = controlTick < switchtime*ctrlHz ? 1 : 0;
-    if(!robotdown){
-        for(size_t i=0;i<3;i++){
-            for (size_t j = 0; j < 3; j++){
-                rotMatrixDouble[3*i+j] = rotIMU(j,i);
-            }
-            jpos[3+i] = imu_eul(i);
-            jvel[3+i] = imu_omega(i);
-            jpos_est[3+i] = imu_eul(i);
-            jvel_est[3+i] = imu_omega(i);
-        }
-        rotE = rotIMU;//Eigen::MatrixXd::Identity(3,3);
-    }
-
     const int* contactMat = loco_obj->getConDes();
     if(controlTick>2499){
-        if(controlTick < switchtime*ctrlHz){
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false);
-        }else{
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true);
-        }
+        loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown);
     }else if(controlTick>0){
         kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
     }
@@ -392,14 +347,14 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
                                         << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
                                             << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
-                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << "\t"
-                                                    << imu_eul(0) << "\t" << imu_eul(1) << "\t" << imu_eul(2) << "\t" << imu_omega(0) << "\t" << imu_omega(1) << "\t" << imu_omega(2) << std::endl;
+                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] <<  std::endl;//"\t"
+                                                   // << imu_eul(0) << "\t" << imu_eul(1) << "\t" << imu_eul(2) << "\t" << imu_omega(0) << "\t" << imu_omega(1) << "\t" << imu_omega(2) << std::endl;
 
-    // for (size_t i = 0; i < 18; i++)
-    // {
-    //     jpos_est[i] = jpos[i];
-    //     jvel_est[i] = jvel[i];
-    // }
+    for (size_t i = 0; i < 18; i++)
+    {
+        jpos_est[i] = jpos[i];
+        jvel_est[i] = jvel[i];
+    }
     
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);

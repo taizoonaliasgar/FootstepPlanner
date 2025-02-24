@@ -428,7 +428,7 @@ Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], 
 }
 
 
-void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch){
+void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown){
     
     float numContact = contact[0]+contact[1]+rearfootweight*contact[2]+rearfootweight*contact[3];
 	// ================================== //
@@ -480,14 +480,19 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	// }
 	
 	numContact = (contact[0]+contact[1])*robotdown + rearfootweight*contact[2]+rearfootweight*contact[3];
+    // numContact = (contact[0]+contact[1]) + rearfootweight*contact[2]+rearfootweight*contact[3];
 	Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
 	
-    if(dynswitch){
+    if(!robotdown){
 
         for (int i = 3; i < 18; ++i){
 		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
 	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearfootweight + Jrl_toe[3*i+1]*contact[3]*rearfootweight)*dq[i];
 	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearfootweight + Jrl_toe[3*i+2]*contact[3]*rearfootweight)*dq[i];
+            // COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0] + Jfl_toe[3*i+0]*contact[1] + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
+	 	    // COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0] + Jfl_toe[3*i+1]*contact[1] + Jrr_toe[3*i+1]*contact[2]*rearfootweight + Jrl_toe[3*i+1]*contact[3]*rearfootweight)*dq[i];
+	 	    // COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0] + Jfl_toe[3*i+2]*contact[1] + Jrr_toe[3*i+2]*contact[2]*rearfootweight + Jrl_toe[3*i+2]*contact[3]*rearfootweight)*dq[i];
+
 	    }
 	    COM_vel[0] /= numContact;
 	    COM_vel[1] /= numContact;
