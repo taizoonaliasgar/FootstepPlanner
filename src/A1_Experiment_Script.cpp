@@ -200,7 +200,7 @@ void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, 
             
 }
 
-void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick, raisim::Contact contactInstance) {
+void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, size_t controlTick, raisim::Contact contactInstance, std::ofstream &file_est){
     /////////////////////////////////////////////////////////////////////
     //////////////////////////// INITIALIZE
     /////////////////////////////////////////////////////////////////////
@@ -390,17 +390,21 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
     }
 
-    std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
-                                        << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
-                                            << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
-                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << "\t"
-                                                    << imu_eul(0) << "\t" << imu_eul(1) << "\t" << imu_eul(2) << "\t" << imu_omega(0) << "\t" << imu_omega(1) << "\t" << imu_omega(2) << std::endl;
-
-    // for (size_t i = 0; i < 18; i++)
-    // {
-    //     jpos_est[i] = jpos[i];
-    //     jvel_est[i] = jvel[i];
-    // }
+    file_est << controlTick << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
+         << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
+         << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
+         << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
+         << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << "\n";
+    
+            
+    for (size_t i = 0; i < 18; i++)
+    {
+        jpos_est[i] = jpos[i];
+        jvel_est[i] = jvel[i];
+    }
     
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
@@ -897,6 +901,8 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
+    std::ofstream file_est("../data25/estimator41.csv");
+
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
         size_t dist_start = 40000*ctrlHz;               // Start the disturbance (if any)
@@ -912,7 +918,7 @@ int main(int argc, char *argv[]) {
         // weightVis2->offset = {pos[0]-0.245/2,pos[1]-.078/2,pos[2]-0.015};
         // // std::cout<<pos[0]<<"\t"<<pos[1]<<"\t"<<pos[2]<<std::endl;
 
-        controller(A1,loco_obj1,loco_plan,solver,simcounter,contactInstance);
+        controller(A1,loco_obj1,loco_plan,solver,simcounter,contactInstance,file_est);
         world.integrate();        
         
         if (simcounter%15 == 0)
@@ -962,7 +968,7 @@ int main(int argc, char *argv[]) {
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         }*/
-        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
 
         // if(abs(jointPosTotal(1))>0.04){
         //     std::cout << simcounter << "\t" << jointPosTotal(0) << "\t" << jointPosTotal(1) << "\t" << jointPosTotal(2) << "\t" << jointPosTotal(15) << "\t" << jointPosTotal(18) << "\t" << -1 << std::endl;
@@ -981,6 +987,7 @@ int main(int argc, char *argv[]) {
         simcounter++;
         
     }
+    file_est.close();
 
     // End recording if still recording
     if (vis->isRecording())
