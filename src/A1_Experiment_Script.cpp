@@ -246,6 +246,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     /////////////////////////////////////////////////////////////////////
     A1.back()->getState(jointPosTotal, jointVelTotal);
     A1.back()->getBaseOrientation(rotMat);
+
+    static double eul_prev[3] = {0,0,0};
+    static double rotMat_prev[9] = {1,0,0,0,1,0,0,0,1};
      
     auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
     raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
@@ -289,17 +292,29 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }
     
     double rotMatrixDouble[9];
-    for(size_t i=0;i<9;i++){
-        rotMatrixDouble[i] = rotMat[i];
-    }
     
+    quat = jointPosTotal.block(3,0,4,1);
+    quat_to_XYZ(quat,eul);
+    if(std::isnan(eul(0)) || std::isnan(eul(1)) || std::isnan(eul(2))){
+        eul(0) = eul_prev[0];
+        eul(1) = eul_prev[1];
+        eul(2) = eul_prev[2];
+        for(size_t i=0;i<9;i++){
+            rotMatrixDouble[i] = rotMat_prev[i];
+        }
+    }else{
+        eul_prev[0] = eul(0);
+        eul_prev[1] = eul(1);
+        eul_prev[2] = eul(2);
+        for(size_t i=0;i<9;i++){
+            rotMatrixDouble[i] = rotMat[i];
+            rotMat_prev[i] = rotMat[i];
+        }
+    }
     
     Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
     jointVelTotal.segment(3,3) = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
 
-    quat = jointPosTotal.block(3,0,4,1);
-    quat_to_XYZ(quat,eul);
-    
     for(size_t i=0; i<3; ++i){
         jpos[i] = jointPosTotal(i);
         jvel[i] = jointVelTotal(i);
@@ -377,7 +392,8 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     std::cout << controlTick << "\t" << jpos[0] << "\t" << jpos[1] << "\t" << jpos[2] << "\t" << jvel[0] << "\t" << jvel[1] << "\t" << jvel[2] << "\t"
                                         << jpos[3] << "\t" << jpos[4] << "\t" << jpos[5] << "\t" << jvel[3] << "\t" << jvel[4] << "\t" << jvel[5] << "\t"
                                             << jpos_est[0] << "\t" << jpos_est[1] << "\t" << jpos_est[2] << "\t" << jvel_est[0] << "\t" << jvel_est[1] << "\t" << jvel_est[2] << "\t"
-                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << std::endl;
+                                                << jpos_est[3] << "\t" << jpos_est[4] << "\t" << jpos_est[5] << "\t" << jvel_est[3] << "\t" << jvel_est[4] << "\t" << jvel_est[5] << "\t"
+                                                    << imu_eul(0) << "\t" << imu_eul(1) << "\t" << imu_eul(2) << "\t" << imu_omega(0) << "\t" << imu_omega(1) << "\t" << imu_omega(2) << std::endl;
 
     // for (size_t i = 0; i < 18; i++)
     // {
