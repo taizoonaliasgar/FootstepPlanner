@@ -125,6 +125,8 @@ private:
     double yzdot_thresh = 0.3;
     double xdot_thresh = 0.3;
     int rearfootweight = 4;
+    double yzdot_thresh2 = 0.8;
+    double xdot_thresh2 = 0.5;
     
     
 };

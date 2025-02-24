@@ -521,8 +521,8 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
         dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
         //dq[2] = COM_vel[2];
     }else{
-        dq[0] = COM_vel[0];
-        dq[1] = COM_vel[1];
-        dq[2] = COM_vel[2];
+        dq[0] = COM_vel[0] > xdot_thresh2 ? xdot_thresh2 : (COM_vel[0] < -xdot_thresh2 ? -xdot_thresh2 : COM_vel[0]); 
+        dq[1] = COM_vel[1] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[1] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[1]);
+        dq[2] = COM_vel[2] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[2] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[2]); 
     }
 }
