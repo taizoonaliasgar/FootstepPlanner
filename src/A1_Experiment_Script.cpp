@@ -391,9 +391,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }
 
     float vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
-    //if(controlTick>=31000){
-        discrete_butter_f(filt,vel_temp);
-    //}
+    // if(controlTick>=31000){
+    //     discrete_butter_f(filt,vel_temp);
+    // }
     file_est << controlTick << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
          << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
          << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
@@ -404,11 +404,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
          << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
          << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] << "\n";
             
-    if(controlTick>=31000){
-        jvel_est[0] = vel_temp[0];
-        jvel_est[1] = vel_temp[1];
-        jvel_est[2] = 0*vel_temp[2];
-    }
+    // if(controlTick>=31000){
+    //     jvel_est[0] = vel_temp[0];
+    //     jvel_est[1] = vel_temp[1];
+    //     jvel_est[2] = vel_temp[2];
+    // }
     
     // for (size_t i = 0; i < 18; i++)
     // {
