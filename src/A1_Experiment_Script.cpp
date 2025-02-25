@@ -829,11 +829,11 @@ int main(int argc, char *argv[]) {
     casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", lib_name, opts);
 
-    // float a[3] = {1.00000000, -1.99555712, 0.99556697};
-    // float b[3] = {0.00000246, 0.00000492, 0.00000246};
-    float a[3] = {1.0, -1.14298050253990, 0.41280159809619};
-    float b[3] = {0.06745527388907, 0.13491054777814, 0.06745527388907};
-    populate_filter_f(filt, a, b, 3, 2);
+    float a[3] = {1.00000000, -1.99555712, 0.99556697};
+    float b[3] = {0.00000246, 0.00000492, 0.00000246};
+    // float a[3] = {1.0, -1.14298050253990, 0.41280159809619};
+    // float b[3] = {0.06745527388907, 0.13491054777814, 0.06745527388907};
+    populate_filter_f(filt, a, b, 3, 3);
 
 
     // ============================================================ //
@@ -911,7 +911,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator56.csv");
+    std::ofstream file_est("../data25/estimator57.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
