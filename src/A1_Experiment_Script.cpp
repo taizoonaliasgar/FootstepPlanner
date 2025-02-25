@@ -391,9 +391,9 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     }
 
     float vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
-    if(controlTick>=31000){
+    //if(controlTick>=31000){
         discrete_butter_f(filt,vel_temp);
-    }
+    //}
     file_est << controlTick << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
          << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
          << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
@@ -407,7 +407,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
     if(controlTick>=31000){
         jvel_est[0] = vel_temp[0];
         jvel_est[1] = vel_temp[1];
-        jvel_est[2] = vel_temp[2];
+        jvel_est[2] = 0*vel_temp[2];
     }
     
     // for (size_t i = 0; i < 18; i++)
@@ -911,7 +911,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator58.csv");
+    std::ofstream file_est("../data25/estimator59.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
