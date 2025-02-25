@@ -400,11 +400,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
          << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << "\n";
     
             
-    // for (size_t i = 0; i < 18; i++)
-    // {
-    //     jpos_est[i] = jpos[i];
-    //     jvel_est[i] = jvel[i];
-    // }
+    for (size_t i = 0; i < 18; i++)
+    {
+        jpos_est[i] = jpos[i];
+        jvel_est[i] = jvel[i];
+    }
     
     Eigen::Matrix<double,16,1> q0;
     q0.setZero(16,1);
@@ -901,7 +901,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator47.csv");
+    std::ofstream file_est("../data25/estimator48.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 

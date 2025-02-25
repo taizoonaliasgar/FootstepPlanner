@@ -485,9 +485,9 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	
     if(dynswitch){
 
-        if(ctrlTick>=27400){
-            toWorld(&dq[3],dq_temp,R);
-        }
+        // if(ctrlTick>=27400){
+        //     toWorld(&dq[3],dq_temp,R);
+        // }
 
         for (int i = 3; i < 18; ++i){
 		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
@@ -502,10 +502,10 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	    COM_vel[1] /= numContact;
 	    COM_vel[2] /= numContact;
 
-        if(ctrlTick>=27400){
-            dq_temp = {dq[3],dq[4],dq[5]};
-	        toBody(&dq[3],dq_temp,R);
-        }
+        // if(ctrlTick>=27400){
+        //     dq_temp = {dq[3],dq[4],dq[5]};
+	    //     toBody(&dq[3],dq_temp,R);
+        // }
     }else{
 
         toWorld(&dq[3],dq_temp,R);
