@@ -390,6 +390,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
     }
 
+    float vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
+    if(controlTick>=31000){
+        discrete_butter_f(filt,vel_temp);
+    }
     file_est << controlTick << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
          << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
          << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
@@ -397,9 +401,15 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
          << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
          << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
          << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
-         << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << "\n";
-    
+         << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
+         << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] << "\n";
             
+    if(controlTick>=31000){
+        jvel_est[0] = vel_temp[0];
+        jvel_est[1] = vel_temp[1];
+        jvel_est[2] = vel_temp[2];
+    }
+    
     // for (size_t i = 0; i < 18; i++)
     // {
     //     jpos_est[i] = jpos[i];
@@ -421,10 +431,10 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         force[conInd/3-1] = con.getNormal().e().norm();
     }
 
-    float vel_temp[3] = {0,0,0};//{cmd.vel[0],cmd.vel[1],cmd.vel[2]};
-    float pose_temp[6] = {0,0,0,0,0,0};
-    float filt_vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
-    discrete_butter_f(filt,filt_vel_temp);
+    // float vel_temp[3] = {0,0,0};//{cmd.vel[0],cmd.vel[1],cmd.vel[2]};
+    // float pose_temp[6] = {0,0,0,0,0,0};
+    // float filt_vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
+    // discrete_butter_f(filt,filt_vel_temp);
     int duration_data =0;
     Eigen::Matrix<double,4,1> nextcon = Eigen::MatrixXd::Ones(4,1);
     int maxsteps = 14;
@@ -526,11 +536,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             loco_obj->startwalking();
         }
 
-        if(controlTick==32000 || controlTick==34000){
+        if(controlTick==30000 || controlTick==31000){
             loco_obj->readytoreallywalk();
         }
 
-        if(controlTick==36000){
+        if(controlTick==32000){
             loco_plan->letsgo();
         }
         
@@ -901,7 +911,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator53.csv");
+    std::ofstream file_est("../data25/estimator54.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
