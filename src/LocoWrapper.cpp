@@ -430,7 +430,10 @@ Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], 
 
 void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch, size_t ctrlTick){
     
-    float numContact = contact[0]+contact[1]+rearfootweight*contact[2]+rearfootweight*contact[3];
+    float numContact = (contact[0]+contact[1])+rearfootweight*contact[2]+rearfootweight*contact[3];
+    if(ctrlTick>27399){
+        numContact = (contact[0]+contact[1])*robotdown+rearfootweight*contact[2]+rearfootweight*contact[3];
+    }
 	// ================================== //
 	// ========= Kin Estimator ========== //
 	// ================================== //
@@ -461,10 +464,12 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	double rr_prev[3] = {kin->toePos(0,2),kin->toePos(1,2),kin->toePos(2,2)};//{rr_toe[0],rr_toe[1],rr_toe[2]};
 	double rl_prev[3] = {kin->toePos(0,3),kin->toePos(1,3),kin->toePos(2,3)};//{rl_toe[0],rl_toe[1],rl_toe[2]};
 	
-    double deltaPos[3] = {0.0};
+    double deltaPos[3] = {0.0,0.0,0.0};
     for(int i=0; i<3; ++i){
-        deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
-        deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+        if(ctrlTick<27400){
+            deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
+            deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+        }
         deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2]*rearfootweight;
         deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3]*rearfootweight;
         deltaPos[i] /= numContact;
@@ -485,10 +490,6 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	
     if(dynswitch){
 
-        // if(ctrlTick>=27400){
-        //     toWorld(&dq[3],dq_temp,R);
-        // }
-
         for (int i = 3; i < 18; ++i){
 		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearfootweight + Jrl_toe[3*i+0]*contact[3]*rearfootweight)*dq[i];
 	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearfootweight + Jrl_toe[3*i+1]*contact[3]*rearfootweight)*dq[i];
@@ -502,10 +503,6 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	    COM_vel[1] /= numContact;
 	    COM_vel[2] /= numContact;
 
-        // if(ctrlTick>=27400){
-        //     dq_temp = {dq[3],dq[4],dq[5]};
-	    //     toBody(&dq[3],dq_temp,R);
-        // }
     }else{
 
         toWorld(&dq[3],dq_temp,R);
