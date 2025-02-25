@@ -431,9 +431,9 @@ Eigen::Matrix<double, 12, 1> LocoWrapper::getStateEstimate(double jointPos[18], 
 void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch, size_t ctrlTick){
     
     float numContact = (contact[0]+contact[1])+rearfootweight*contact[2]+rearfootweight*contact[3];
-    if(ctrlTick>27399){
-        numContact = (contact[0]+contact[1])*robotdown+rearfootweight*contact[2]+rearfootweight*contact[3];
-    }
+    // if(ctrlTick>27399){
+        // numContact = (contact[0]+contact[1])*robotdown+rearfootweight*contact[2]+rearfootweight*contact[3];
+    // }
 	// ================================== //
 	// ========= Kin Estimator ========== //
 	// ================================== //
@@ -466,10 +466,10 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 	
     double deltaPos[3] = {0.0,0.0,0.0};
     for(int i=0; i<3; ++i){
-        if(ctrlTick<27400){
+        // if(ctrlTick<27400){
             deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
             deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
-        }
+        // }
         deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2]*rearfootweight;
         deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3]*rearfootweight;
         deltaPos[i] /= numContact;

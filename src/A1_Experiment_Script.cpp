@@ -901,7 +901,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator50.csv");
+    std::ofstream file_est("../data25/estimator51.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 
