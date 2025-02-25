@@ -526,11 +526,11 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             loco_obj->startwalking();
         }
 
-        if(controlTick==29000 || controlTick==30000){
+        if(controlTick==32000 || controlTick==34000){
             loco_obj->readytoreallywalk();
         }
 
-        if(controlTick==32000){
+        if(controlTick==36000){
             loco_plan->letsgo();
         }
         
@@ -901,7 +901,7 @@ int main(int argc, char *argv[]) {
 
     raisim::Contact contactInstance;
 
-    std::ofstream file_est("../data25/estimator51.csv");
+    std::ofstream file_est("../data25/estimator52.csv");
 
     while (!vis->getRoot()->endRenderingQueued() && simcounter <= simlength){
 

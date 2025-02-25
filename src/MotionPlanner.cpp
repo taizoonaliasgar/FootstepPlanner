@@ -414,9 +414,15 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
     }else if(gait == UPWALK){
         traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + opt_HLstate.block(3,0,3,1)*dt;
         traj.comDes(2) = 0.5;//params->standHeight;
-        traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
-        traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
-        traj.comDes.block(9,0,3,1) = opt_HLstate.block(9,0,3,1);
+        if(ctrlTick>=30000){
+            traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
+            traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
+            traj.comDes.block(9,0,3,1) = opt_HLstate.block(9,0,3,1);
+        }else{
+            traj.comDes.block(3,0,3,1) = Eigen::MatrixXd::Zero(3,1);//opt_HLstate.block(3,0,3,1);
+            traj.comDes.block(6,0,3,1) = Eigen::MatrixXd::Zero(3,1);//opt_HLstate.block(6,0,3,1);
+            traj.comDes.block(9,0,3,1) = Eigen::MatrixXd::Zero(3,1);//opt_HLstate.block(9,0,3,1);
+        }
     
     }else if(gait == STANDUP){
         //shiftCoM(state->q(0), state->q(1), state->q(2),0.0);
