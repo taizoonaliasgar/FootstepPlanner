@@ -16,12 +16,7 @@
 #include <filesystem>
 #include <fstream>
 
-//HDSRL header
-//#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/LocoWrapperfly.hpp"
-//#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/locomotion_planner.h"
-//#include "/home/taizoon/raisimEnv/raisimWorkspace/flying_trot/include/LocoWrapperwalk.hpp"
 #include "LocoWrapper.hpp"
-//#include "LocoWrapperwalk.hpp"
 #include "SRBNMPC.hpp"
 #include "A1_Dynamics_full.h"
 
