@@ -126,6 +126,14 @@ public:
     casadi::DM getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP,size_t controlTick);
     casadi::DM motionPlannerN3(Eigen::Matrix<double,16,1> q0,size_t controlTick);
     void letsgo(){starttrotting = true;};
+
+    //Hardware stuff
+    void planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce);
+    Eigen::Matrix<double,12,1> returncomDes(){return comDes;};
+    Eigen::Matrix<double,17,1> returnfDes(){return fDes;};
+    int returnSolveTime(){return NMPCsolvetime;};
+    Eigen::Matrix<double,4,1> returnConInd(size_t controlTick);
+
 private: 
     std::string filename;
     std::fstream fid;
@@ -255,6 +263,15 @@ private:
     //Transition
     casadi::DM contact_sequence_dm_T = casadi::DM::ones(4,360);
     bool starttrotting = false;
+
+    //Hardware
+    std::string lib_name_exp = "/home/taizoon/raisimEnvT/rWorkspace/footstep_planner/build/take2_w0p2.so";
+    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
+
+    Eigen::Matrix<double,12,1> comDes = Eigen::MatrixXd::Zero(12,1);
+    Eigen::Matrix<double,17,1> fDes = Eigen::MatrixXd::Zero(17,1);
+    int NMPCsolvetime = 0;
     
 };
 

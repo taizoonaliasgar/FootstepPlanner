@@ -226,7 +226,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
     }
     else if(controlTick >= settling & controlTick < loco_start){ // Start standing
-        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STAND,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,STAND,controlTick,loco_start);//,shifttime,movetime,shifttime2,0,0);
         tau = loco_obj->getTorque();
 
     }
@@ -243,7 +243,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
 
         loco_obj->setswingContact(nextcon);
-        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+        loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,0,0);
         tau = loco_obj->getTorque();
 
     }else if(controlTick >= loco_start+shifttime){// & controlTick < loco_start + shifttime){ // Start locomotion
@@ -292,7 +292,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             // }
 
             loco_obj->setswingContact(nextcon);
-            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,0,0);
             tau = loco_obj->getTorque();
         
         
@@ -315,7 +315,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
                 //std::cout << "controlTick:" << "\t" << controlTick << "\t" << "stepind" << "\t" << stepind << std::endl; 
             }
             
-            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,0,0);
+            loco_obj->calcTau2(jpos,jvel,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,0,0);
             tau = loco_obj->getTorque();
         }
 

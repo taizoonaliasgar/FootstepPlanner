@@ -34,7 +34,7 @@ public:
     void updatePoseType(size_t poseType_){PP->setPoseType(poseType_);};
 
     //Taizoon functions to make upright
-    void calcTau2(const double q[18], const double dq[18], const double R[9], const int force[4], size_t gait, size_t ctrlTick, size_t duration, size_t shifttime, size_t movetime, size_t shifttime2, size_t movetime2, size_t movetime3);
+    void calcTau2(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick,size_t solveduration);
     void setcontactconfig(int controlMPC);
     void plottingfoothd(const VCInfo *vc, const ContactInfo *con);
     //Eigen::Matrix<double, 3, 4> getfootposition(){return kin->toePos;};
@@ -68,6 +68,11 @@ public:
     void readytoreallywalk(){LL->keepwalking();};
     void getStateEstimatefull(double q[18], double dq[18], const int* contact, Eigen::Matrix<double,3,3> R, int robotdown, bool dynswitch,size_t ctrlTick);
 
+    //Hardware
+    void ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
+                                    Eigen::Matrix<double,4,1> HLContactIndex, Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
+    void setcontactconfigExp(Eigen::Matrix<double,4,1> HLContactIndex);
+    void setoptNLstateExp(Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
 
     // Pointers to structs
     const StateInfo *state;
@@ -128,6 +133,26 @@ private:
     double yzdot_thresh2 = 0.8;
     double xdot_thresh2 = 0.5;
     
+    //Hardware params
+    size_t settling_e = 0.2*ctrlHz;                   // Settling down
+    size_t duration_e = 1.8*ctrlHz;                   // Stand up 
+    size_t loco_start_e = settling_e + duration_e;        // Start the locomotion pattern
+
+    size_t shifttime = 0.75*ctrlHz;
+    size_t movetime = 0.3*ctrlHz;
+    size_t shifttime2 = 1.0*ctrlHz;
+    size_t movetime2 = 0.3*ctrlHz;
+    size_t movetime3 = 0.2*ctrlHz;
+    //size_t switchtime = 24;
+
+    Eigen::Matrix<double,4,1> nextcon_e = Eigen::MatrixXd::Ones(4,1);
+    int maxsteps = 14;
+    int settlingsteps = 4;
+    double rearweight = 6;
+    int stepind_e = 0;
+    int stepind2_e = 0;
+    double *tau_LL;
+    const int force_LL[4] = {0,0,0,0};
     
 };
 

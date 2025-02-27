@@ -455,7 +455,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
     }
     else if(controlTick >= settling & controlTick < loco_start){ // Start standing
-        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STAND,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,STAND,controlTick,loco_start);//,shifttime,movetime,shifttime2,movetime2,movetime3);
         tau = loco_obj->getTorque();
 
     }
@@ -472,7 +472,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
 
         loco_obj->setswingContact(nextcon);
-        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,movetime2,movetime3);
         tau = loco_obj->getTorque();
 
     }else if(controlTick >= loco_start+shifttime & controlTick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
@@ -506,7 +506,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
             }
             
             loco_obj->setswingContact(nextcon);
-            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,movetime2,movetime3);
             tau = loco_obj->getTorque();
         
         
@@ -523,7 +523,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
                 loco_obj->setfinalCoM();
             }
             
-            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,STANDUP,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+            loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,controlTick,loco_start);//,shifttime,movetime,shifttime2,movetime2,movetime3);
             tau = loco_obj->getTorque();
         }
         
@@ -592,7 +592,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
         }
         //loco_obj->setRaisimD(Dr);
         //loco_obj->setRaisimH(Hr);
-        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,force,UPWALK,controlTick,loco_start,shifttime,movetime,shifttime2,movetime2,movetime3);
+        loco_obj->calcTau2(jpos_est,jvel_est,rotMatrixDouble,UPWALK,controlTick,loco_start);//,shifttime,movetime,shifttime2,movetime2,movetime3);
         
         tau = loco_obj->getTorque();
     }

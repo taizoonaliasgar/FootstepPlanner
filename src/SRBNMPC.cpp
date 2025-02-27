@@ -1362,3 +1362,65 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
     return x_des;
     
 }
+
+
+void SRBNMPC::planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
+    std::map<std::string, casadi::DM> arg, res;
+
+    int controlMPC = std::floor(controlTick/10); 
+    
+    casadi::DM X_prev = getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);
+    if(controlMPC==2740){
+        q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);
+    }else{
+        q0(12) = double(X_prev(12));
+        q0(13) = double(X_prev(13));
+        q0(14) = double(X_prev(14));
+        q0(15) = double(X_prev(15));
+    }
+            
+    casadi::DM p = motionPlannerN(q0,controlMPC);
+    
+    setpreviousp(p);
+
+    arg["lbx"] = lowerboundx(p, controlMPC);
+    arg["ubx"] = upperboundx(p);
+    arg["lbg"] = lowerboundg();
+    arg["ubg"] = upperboundg();
+    arg["x0"] = X_prev;
+    arg["p"] = p;
+            
+    auto start = std::chrono::high_resolution_clock::now();
+    res = solver_exp(arg);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    NMPCsolvetime = static_cast<int>(duration.count());
+    
+
+    setprevioussol(res.at("x"));
+            
+    std::vector<double> v = previous_sol.get_elements();
+    
+    std::vector<double> optstate(v.begin() + NFS, v.begin() + 2*NFS-4);
+    std::vector<double> optforce(v.begin() + NFS*(HORIZ+1), v.begin() + NFS*(HORIZ+1) + NFI);
+    
+    comDes = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
+    fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
+    fDes(16) = static_cast<double>(vRaibstep(0));
+            
+    //loco_obj->setoptNLstate(opt_HLMPC_state);
+    //loco_obj->setcontactconfig(controlMPC);
+    //mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
+}
+
+Eigen::Matrix<double,4,1> SRBNMPC::returnConInd(size_t controlTick){
+    int controlMPC = std::floor(controlTick/10);
+    Eigen::Matrix<double,4,1> conInd = Eigen::Matrix<double,4,1>::Zero();
+    int conmark = controlMPC%40;
+    conInd(0) = static_cast<double>(contact_sequence_dm(0,conmark));
+    conInd(1) = static_cast<double>(contact_sequence_dm(1,conmark));
+    conInd(2) = static_cast<double>(contact_sequence_dm(2,conmark));
+    conInd(3) = static_cast<double>(contact_sequence_dm(3,conmark));
+    return conInd;
+}
+
