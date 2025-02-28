@@ -53,7 +53,7 @@ void LowLevelCtrl::calcTorque(const StateInfo *state, const DynInf *dyn, const K
     // ====================================================================== //
     // =============================== Setup ================================ //
     // ====================================================================== //
-    size_t useCLF = params->useCLF;
+    size_t useCLF = 0;//params->useCLF;
     size_t conDim = 3*con->cnt;
     size_t outDim = 6+3*(4-con->cnt);
     size_t numDec = conDim+TOTAL_IN+outDim+useCLF;
@@ -179,7 +179,7 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
     // ====================================================================== //
     // =============================== Setup ================================ //
     // ====================================================================== //
-    size_t useCLF = params->useCLF;
+    size_t useCLF = 0;//params->useCLF;
     size_t conDim = 3*con->cnt;
     size_t outDim = 6+3*(4-con->cnt);
     size_t numDec = conDim+TOTAL_IN+outDim+useCLF;
@@ -344,7 +344,7 @@ void LowLevelCtrl::constraints(LLP *params, const DynInf *dyn, const KinInf *kin
             (kin->Jc)*(dyn->Dinv)*(kin->Jc.transpose()), (kin->Jc)*(dyn->Dinv)*(dyn->B), Eigen::MatrixXd::Zero(conDim,outDim),
             (vc->H0)*(dyn->Dinv)*(kin->Jc.transpose()), (vc->H0)*(dyn->Dinv)*(dyn->B), Eigen::MatrixXd::Identity(outDim,outDim);
     b_QP.block(0,0,conDim+outDim,1) << (kin->Jc)*(dyn->Dinv)*(dyn->H) - (kin->dJc),
-                                     (-KP*(vc->y)-KD*(vc->dy)) + (vc->H0)*(dyn->Dinv)*(dyn->H) - (vc->dH0);
+                                     (-KP.block(0,0,outDim,outDim)*(vc->y)-KD.block(0,0,outDim,outDim)*(vc->dy)) + (vc->H0)*(dyn->Dinv)*(dyn->H) - (vc->dH0);
 
     // ====================================================================== //
     // ======================= Inequality Constraints ======================= //
