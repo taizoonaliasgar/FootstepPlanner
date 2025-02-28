@@ -791,7 +791,7 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = false;             // Record?
+    bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
