@@ -70,8 +70,8 @@ public:
 
     //Hardware
     void ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
-                                    Eigen::Matrix<double,4,1> HLContactIndex, Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
-    void setcontactconfigExp(Eigen::Matrix<double,4,1> HLContactIndex);
+                                    int HLContactIndex[4], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
+    void setcontactconfigExp(int HLContactIndex[4]);
     void setoptNLstateExp(Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
 
     // Pointers to structs
@@ -124,7 +124,7 @@ private:
     Eigen::Matrix<double,18,1> HRai = Eigen::MatrixXd::Zero(18,1);
 
     bool readytowalkf = false;
-    double switchtime = 24;
+    //double switchtime = 24;
 
     //Estimator stuff
     double yzdot_thresh = 0.3;
@@ -143,7 +143,7 @@ private:
     size_t shifttime2 = 1.0*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
     size_t movetime3 = 0.2*ctrlHz;
-    //size_t switchtime = 24;
+    size_t switchtime = 24;
 
     Eigen::Matrix<double,4,1> nextcon_e = Eigen::MatrixXd::Ones(4,1);
     int maxsteps = 14;

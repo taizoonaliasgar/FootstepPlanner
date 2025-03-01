@@ -518,87 +518,93 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 }
 
 
-// void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
-//                                     Eigen::Matrix<double,4,1> HLContactIndex, Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
+void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
+                                int HLContactIndex[4], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
 
-//     setoptNLstateExp(comDes,fDes);
-//     if(control_Tick < loco_start_e+shifttime){
-//         nextcon_e(0) = 0;
+    setoptNLstateExp(comDes,fDes);
+    if(control_Tick < loco_start_e+shifttime){
+        nextcon_e(0) = 0;
         
-//         if(control_Tick==loco_start_e){
-//             Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);
-//             wfoot(0)=1;wfoot(1)=1;
-//             getshiftedCoM(wfoot);setshiftedCoM();
-//         }
-//         setswingContact(nextcon_e);
-//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
+        if(control_Tick==loco_start_e){
+            Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);
+            wfoot(0)=1;wfoot(1)=1;
+            getshiftedCoM(wfoot);setshiftedCoM();
+        }
+        setswingContact(nextcon_e);
+        calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
 
-//     }else if(control_Tick >= loco_start_e + shifttime & control_Tick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
+    }else if(control_Tick >= loco_start_e + shifttime & control_Tick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
     
-//         stepind_e = std::floor((control_Tick-loco_start_e-shifttime)/(shifttime+movetime));
+        stepind_e = std::floor((control_Tick-loco_start_e-shifttime)/(shifttime+movetime));
     
-//         if(stepind_e<maxsteps){
-//             stepsonwall(stepind_e);
+        if(stepind_e<maxsteps){
+            stepsonwall(stepind_e);
     
-//             if(stepind_e==1){tookfirststep();}
+            if(stepind_e==1){tookfirststep();}
     
-//             if(stepind_e%2==0){
-//                 nextcon_e(0) = 0;nextcon_e(1) = 1;
-//                 if(control_Tick == loco_start_e +shifttime + stepind_e*(shifttime+movetime)){incstep();}       
-//             }else{
-//                 nextcon_e(0) = 1;nextcon_e(1) = 0;
-//             }
+            if(stepind_e%2==0){
+                nextcon_e(0) = 0;nextcon_e(1) = 1;
+                if(control_Tick == loco_start_e +shifttime + stepind_e*(shifttime+movetime)){incstep();}       
+            }else{
+                nextcon_e(0) = 1;nextcon_e(1) = 0;
+            }
      
-//             if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
-//                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
-//                 wfoot(0)=1;wfoot(1)=1;  
-//                 getshiftedCoM(wfoot);setshiftedCoM();
-//             }
-//             setswingContact(nextcon_e);
+            if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
+                Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
+                wfoot(0)=1;wfoot(1)=1;  
+                getshiftedCoM(wfoot);setshiftedCoM();
+            }
+            setswingContact(nextcon_e);
      
-//         }else{
+        }else{
 
-//             stepind2_e = std::floor((control_Tick-loco_start_e-shifttime-(maxsteps)*(movetime + shifttime))/(shifttime2+movetime2));
-//             settlesteps(stepind2_e);
-//             if(stepind2_e==settlingsteps){gotfinalstate();}
+            stepind2_e = std::floor((control_Tick-loco_start_e-shifttime-(maxsteps)*(movetime + shifttime))/(shifttime2+movetime2));
+            settlesteps(stepind2_e);
+            if(stepind2_e==settlingsteps){gotfinalstate();}
 
-//             if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)){
-//                 stopclimbing();
-//                 stepsonwall(maxsteps);
-//                 setfinalCoM();
-//             } 
-//         }
-//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
+            if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)){
+                stopclimbing();
+                stepsonwall(maxsteps);
+                setfinalCoM();
+            } 
+        }
+        calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
         
-//     }else{
+    }else{
 
-//         stepind2_e = std::floor((control_Tick-switchtime*ctrlHz)/(shifttime2+movetime3));
-//         settlesteps(stepind2_e);
+        stepind2_e = std::floor((control_Tick-switchtime*ctrlHz)/(shifttime2+movetime3));
+        settlesteps(stepind2_e);
 
-//         switch (control_Tick) {
-//             case switchtime*ctrlHz: readytowalk(); break;
-//             case switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3): setfinalCoM2(); break;
-//             case switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2: startwalking(); break; // This executes
-//             case 30000: readytoreallywalk(); break;
-//             case 31000: readytoreallywalk(); break;
-//             case 32000: letsgo(); break;
-//         }
+        // switch (control_Tick) {
+        //     case switchtime*ctrlHz: readytowalk(); break;
+        //     case switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3): setfinalCoM2(); break;
+        //     case switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2: startwalking(); break; // This executes
+        //     case 30000: readytoreallywalk(); break;
+        //     case 31000: readytoreallywalk(); break;
+        //     case 32000: letsgo(); break;
+        // }
 
-//         //updatestate(jpos_est,jvel_est,rotMatrixDouble);
-//         if(readytowalkf){setcontactconfigExp(HLContactIndex);}
-//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,UPWALK,control_Tick,solveduration);
+        if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
+        else if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
+        else if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        else if(control_Tick == 30000){readytoreallywalk();}//break;}
+        else if(control_Tick == 31000){readytoreallywalk();}//break;}
 
-//     }
+        //updatestate(jpos_est,jvel_est,rotMatrixDouble);
+        if(readytowalkf){setcontactconfigExp(HLContactIndex);}
+        calcTau2(jpos_est,jvel_est,rotMatrixDouble,UPWALK,control_Tick,solveduration);
+
+    }
     
 
-// }
+}
 
-void LocoWrapper::setcontactconfigExp(Eigen::Matrix<double,4,1> HLContactIndex){
+void LocoWrapper::setcontactconfigExp(int HLContactIndex[4]){
     
-    desired_contact[0] = HLContactIndex(0);
-    desired_contact[1] = HLContactIndex(1);
-    desired_contact[2] = HLContactIndex(2);
-    desired_contact[3] = HLContactIndex(3);
+    desired_contact[0] = HLContactIndex[0];
+    desired_contact[1] = HLContactIndex[1];
+    desired_contact[2] = HLContactIndex[2];
+    desired_contact[3] = HLContactIndex[3];
    
     conEst->setDesDomain(desired_contact);
     quad->updateSwingMatrices(con->ind,con->cnt); 

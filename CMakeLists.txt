@@ -53,6 +53,9 @@ if (Eigen3_FOUND)
 endif ()
 
 #HDSRL portion
+set(UT_INC ${CMAKE_CURRENT_SOURCE_DIR}/unitree_legged_sdk/include)
+set(UT_LINK ${CMAKE_CURRENT_SOURCE_DIR}/unitree_legged_sdk/lib)
+set(EXTRA_LIBS -pthread ${UT_LINK}/libunitree_legged_sdk_amd64.so)
 
 include_directories(PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
@@ -301,3 +304,11 @@ target_include_directories(fullExpSim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimO
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 target_compile_options(fullExpSim PRIVATE -std=c++17)
+
+add_executable(MT_Sim src/A1_Sim_MT.cpp)
+target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+target_compile_definitions(MT_Sim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+#target_include_directories(MT_Sim PRIVATE ${UT_INC})
+target_compile_options(MT_Sim PRIVATE -std=c++17)

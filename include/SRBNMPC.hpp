@@ -128,11 +128,11 @@ public:
     void letsgo(){starttrotting = true;};
 
     //Hardware stuff
-    void planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce);
+    void planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce);
     Eigen::Matrix<double,12,1> returncomDes(){return comDes;};
     Eigen::Matrix<double,17,1> returnfDes(){return fDes;};
     int returnSolveTime(){return NMPCsolvetime;};
-    Eigen::Matrix<double,4,1> returnConInd(size_t controlTick);
+    int* returnConInd(size_t controlTick);
 
 private: 
     std::string filename;
@@ -269,6 +269,8 @@ private:
     casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
 
+    std::map<std::string, casadi::DM> argHW, resHW;
+    
     Eigen::Matrix<double,12,1> comDes = Eigen::MatrixXd::Zero(12,1);
     Eigen::Matrix<double,17,1> fDes = Eigen::MatrixXd::Zero(17,1);
     int NMPCsolvetime = 0;

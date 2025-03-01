@@ -1364,9 +1364,10 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 }
 
 
-void SRBNMPC::planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
-    std::map<std::string, casadi::DM> arg, res;
-
+void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
+    
+    Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
+    if(controlTick == 32000){letsgo();}
     int controlMPC = std::floor(controlTick/10); 
     
     casadi::DM X_prev = getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);
@@ -1383,21 +1384,21 @@ void SRBNMPC::planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eige
     
     setpreviousp(p);
 
-    arg["lbx"] = lowerboundx(p, controlMPC);
-    arg["ubx"] = upperboundx(p);
-    arg["lbg"] = lowerboundg();
-    arg["ubg"] = upperboundg();
-    arg["x0"] = X_prev;
-    arg["p"] = p;
+    argHW["lbx"] = lowerboundx(p, controlMPC);
+    argHW["ubx"] = upperboundx(p);
+    argHW["lbg"] = lowerboundg();
+    argHW["ubg"] = upperboundg();
+    argHW["x0"] = X_prev;
+    argHW["p"] = p;
             
     auto start = std::chrono::high_resolution_clock::now();
-    res = solver_exp(arg);
+    resHW = solver_exp(argHW);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     NMPCsolvetime = static_cast<int>(duration.count());
     
 
-    setprevioussol(res.at("x"));
+    setprevioussol(resHW.at("x"));
             
     std::vector<double> v = previous_sol.get_elements();
     
@@ -1408,19 +1409,18 @@ void SRBNMPC::planner_MT(size_t controlTick, Eigen::Matrix<double,16,1> q0, Eige
     fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
     fDes(16) = static_cast<double>(vRaibstep(0));
             
-    //loco_obj->setoptNLstate(opt_HLMPC_state);
-    //loco_obj->setcontactconfig(controlMPC);
-    //mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
+    mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
 }
 
-Eigen::Matrix<double,4,1> SRBNMPC::returnConInd(size_t controlTick){
+int* SRBNMPC::returnConInd(size_t controlTick){
     int controlMPC = std::floor(controlTick/10);
-    Eigen::Matrix<double,4,1> conInd = Eigen::Matrix<double,4,1>::Zero();
+    static int conInd[4] = {0,0,0,0};
+    
     int conmark = controlMPC%40;
-    conInd(0) = static_cast<double>(contact_sequence_dm(0,conmark));
-    conInd(1) = static_cast<double>(contact_sequence_dm(1,conmark));
-    conInd(2) = static_cast<double>(contact_sequence_dm(2,conmark));
-    conInd(3) = static_cast<double>(contact_sequence_dm(3,conmark));
+    conInd[0] = static_cast<double>(contact_sequence_dm(0,conmark));
+    conInd[1] = static_cast<double>(contact_sequence_dm(1,conmark));
+    conInd[2] = static_cast<double>(contact_sequence_dm(2,conmark));
+    conInd[3] = static_cast<double>(contact_sequence_dm(3,conmark));
     return conInd;
 }
 

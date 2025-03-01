@@ -1,0 +1,731 @@
+//
+// Authror: Basit M. Imran.
+// Date : 2024-04-17
+// Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
+//
+
+// #include "unitree_legged_sdk/unitree_legged_sdk.h"
+// #include "unitree_legged_sdk/unitree_joystick.h"
+#include "raisim/OgreVis.hpp"
+//#include "randyImguiPanel.hpp"
+#include "raisimBasicImguiPanel.hpp"
+#include "raisimKeyboardCallback.hpp"
+#include "raisim/RaisimServer.hpp"
+
+#include "helper.hpp"
+#include "Filters.h"
+
+#include "timer.h"
+
+#include <fstream>
+#include <iostream>
+#include <filesystem>
+//HDSRL header
+#include "LocoWrapper.hpp"
+#include "SRBNMPC.hpp"
+#include "A1_Dynamics_full.h"
+
+#include "shared_structs_ex2.hpp"
+#include "Transforms.hpp"
+//#include "OtherUtils.hpp"
+//#include <yaml-cpp/yaml.h>
+#include "stdio.h"
+
+
+//using namespace UNITREE_LEGGED_SDK;
+
+sharedData HLData;
+sharedData LLData;
+sharedData SimData;
+
+class ExternalComm
+{
+public:
+	ExternalComm(){
+		
+        double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
+        double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
+        populate_filter_d(jointfilter,ad,bd,3,12);
+
+        // 0.75 Hz
+        float af[3] = {1.00000000,-1.99333570,0.99335783};
+        float bf[3] = {0.00000553,0.00001107,0.00000553};
+        populate_filter_f(remotefilter, af, bf, 3, 2);
+
+        // 2 Hz 
+        float aa[3] = {1.00000000,-1.98222893,0.98238545};
+        float ba[3] = {0.00003913,0.00007826,0.00003913};
+        populate_filter_f(angfilter, aa, ba, 3, 2);
+
+        // StandDuration = 10000;
+        // SettlingTime = 8000;
+
+        /********************************************RASIM INIT********************************************** */
+        // const int NUMBER_OF_SIMS = 1;
+        // const float threshold = 0.4;
+        // bool shared_data_backed_up = 0;
+        //raisim::OgreVis *vis = raisim::OgreVis::get();			
+    }	
+
+	virtual ~ExternalComm(){
+		clear_filter_d(jointfilter);
+		clear_filter_f(remotefilter);
+		clear_filter_f(angfilter);
+
+		
+        delete vis;
+        delete ground;
+        // delete list;
+            auto test = A1.back();
+            A1.pop_back();
+            delete test;
+        }
+
+    //support functions
+	void setupCallback();
+	void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
+    void setupRaisim();
+
+    // main thread execution functions
+	void Calc();
+	void HighLevel();
+	void SimExec();  
+
+    std::unique_ptr<LocoWrapper> loco_obj;
+	std::unique_ptr<SRBNMPC> nmpc_obj;
+	
+	FiltStruct_d* jointfilter  = (FilterStructure_d*)malloc(sizeof(FilterStructure_d));
+	FiltStruct_f* angfilter    = (FilterStructure_f*)malloc(sizeof(FilterStructure_f));
+	FiltStruct_f* remotefilter = (FilterStructure_f*)malloc(sizeof(FilterStructure_f));
+
+    float LLdt = 0.00100001f;
+    float HLdt = 0.0100001f;
+    long simcounter = 0;
+    size_t settling = 0.2*ctrlHz;                   // Settling down
+    size_t duration = 1.8*ctrlHz;                   // Stand up 
+    size_t loco_start = settling + duration;        // Start the locomotion pattern
+    double switchtime = 24;
+
+    //Eigen::VectorXd jointTorqueFF = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
+    Eigen::VectorXd jointPosTotal = Eigen::MatrixXd::Zero(TOTAL_DOF+1,1); // +1 is for 4th Component of Quaternion 
+    Eigen::VectorXd jointVelTotal = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
+    raisim::Mat<3,3> rotMat;
+
+    //Raisim stuff
+    bool setup_raisim = true;
+    raisim::World world;
+    raisim::OgreVis *vis = raisim::OgreVis::get();
+    raisim::HeightMap *ground;
+    std::string cameraview = "side";
+    bool panX = true;                // Pan view with robot during walking (X direction)
+    bool panY = false;                // Pan view with robot during walking (Y direction)
+    bool record = true;            // Record?
+    double fps = 30;            
+    std::string directory = "../data25/Feb28/";
+    std::string filename = "MTSim";
+    std::string name = directory+filename+"_"+".mp4";
+    
+    double startTime = 0*ctrlHz;    // Recording start time
+    double simlength = 50*ctrlHz;
+
+    //Estimator
+    int rearweight_est = 4;
+    double yzdot_thresh = 0.3;
+    double xdot_thresh = 0.3;
+    double yzdot_thresh2 = 0.8;
+    double xdot_thresh2 = 0.5;
+
+    //Estimator
+    void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
+    void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
+    //A1
+    std::vector<raisim::ArticulatedSystem*> A1;
+};
+
+
+    
+
+
+
+void ExternalComm::setupRaisim(){  
+	
+    raisim::World::setActivationKey(raisim::loadResource("activation.raisim"));
+    world.setTimeStep(simfreq_raisim);
+
+    /// these method must be called before initApp
+    vis->setWorld(&world);
+    vis->setWindowSize(1792, 1200); // Should be evenly divisible by 16!!
+    vis->setImguiSetupCallback(imguiSetupCallback); // These 2 lines make the interactable gui visible
+    vis->setImguiRenderCallback(imguiRenderCallBack);
+    vis->setKeyboardCallback(raisimKeyboardCallback);
+    vis->setSetUpCallback(std::bind(&ExternalComm::setupCallback, this));
+    vis->setAntiAliasing(2);
+
+    /// starts visualizer thread
+    vis->initApp();
+    /// create raisim objects
+    raisim::TerrainProperties terrainProperties;
+    terrainProperties.frequency = 0.0;
+    terrainProperties.zScale = 0.0;
+    terrainProperties.xSize = 300.0;
+    terrainProperties.ySize = 300.0;
+    terrainProperties.xSamples = 50;
+    terrainProperties.ySamples = 50;
+    terrainProperties.fractalOctaves = 0;
+    terrainProperties.fractalLacunarity = 0.0;
+    terrainProperties.fractalGain = 0.0;
+
+    //raisim::HeightMap 
+    ground = world.addHeightMap(0.0, 0.0, terrainProperties);
+    vis->createGraphicalObject(ground, "terrain", "checkerboard_blue");
+    world.setDefaultMaterial(0.8, 0.0, 0.0); //surface friction could be 0.8 or 1.0
+    vis->addVisualObject("extForceArrow", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP);
+
+    // Foot force visualization arrows
+    vis->addVisualObject("GRF1", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP);
+    vis->addVisualObject("GRF2", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP);
+    vis->addVisualObject("GRF3", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP);
+    vis->addVisualObject("GRF4", "arrowMesh", "red", {0.0, 0.0, 0.0}, false, raisim::OgreVis::RAISIM_OBJECT_GROUP);
+
+    auto& list = vis->getVisualObjectList();
+    // std::vector<raisim::ArticulatedSystem*> A1;
+    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));   // with NMPC and LL 
+    vis->createGraphicalObject(A1.back(), "A1");
+    A1.back()->setName("A1_Robot");
+    A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1 , 0, 0, 0,0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6});
+    A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
+
+    raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
+    raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
+
+    box_right->setPosition(0,-0.32,0.4);
+    box_left->setPosition(0,0.32,0.4);
+
+    //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
+    vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
+    
+    A1.back()->getCollisionBody("FR_foot/0").setMaterial("wood");
+    A1.back()->getCollisionBody("FL_foot/0").setMaterial("wood");
+
+    world.setMaterialPairProp("wood", "rubber", 0.8, 0, 0);
+
+    raisim::gui::showContacts = false;
+    raisim::gui::showForces = false;
+    raisim::gui::showCollision = false;
+    raisim::gui::showBodies = true;        
+
+    // ============================================================ //
+    // ========================= VIEW SETUP ======================= //
+    // ============================================================ //
+    if(cameraview == "iso"){
+        vis->getCameraMan()->getCamera()->setPosition(-1, -3, 0.5);
+        vis->getCameraMan()->getCamera()->yaw(Ogre::Radian(4.5*Pi/6-Pi/2));
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(Pi/2));
+    }else if(cameraview == "isoside"){
+        vis->getCameraMan()->getCamera()->setPosition(1.1, -2, 0.5);
+        vis->getCameraMan()->getCamera()->yaw(Ogre::Radian(4*Pi/6-Pi/2));
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(Pi/2));
+    }else if(cameraview == "side"){
+        vis->getCameraMan()->getCamera()->setPosition(0, -2, 0.5);
+        vis->getCameraMan()->getCamera()->yaw(Ogre::Radian(0));
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(Pi/2));
+    }else if(cameraview == "front"){
+        vis->getCameraMan()->getCamera()->setPosition(2, 0, 0.5);
+        vis->getCameraMan()->getCamera()->yaw(Ogre::Radian(Pi/2));
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(Pi/2));
+    }else if(cameraview == "top"){
+        vis->getCameraMan()->getCamera()->setPosition(2, -1, 6);
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(0));
+    }else{
+        vis->getCameraMan()->getCamera()->setPosition(1, -3, 2.5);
+        vis->getCameraMan()->getCamera()->pitch(Ogre::Radian(1.0));
+    }
+    unsigned long mask = 0;
+    if(raisim::gui::showBodies) mask |= raisim::OgreVis::RAISIM_OBJECT_GROUP;
+    if(raisim::gui::showCollision) mask |= raisim::OgreVis::RAISIM_COLLISION_BODY_GROUP;
+    if(raisim::gui::showContacts) mask |= raisim::OgreVis::RAISIM_CONTACT_POINT_GROUP;
+    if(raisim::gui::showForces) mask |= raisim::OgreVis::RAISIM_CONTACT_FORCE_GROUP;
+    vis->setVisibilityMask(mask);
+    vis->setDesiredFPS(fps);
+    static bool added = false; 
+
+}
+
+void ExternalComm::setupCallback() {
+
+    /// light
+    vis->getLight()->setDiffuseColour(1, 1, 1);
+    vis->getLight()->setCastShadows(false);
+    Ogre::Vector3 lightdir(-3,3,-0.5); // Light shines on ROBOTS top/front/right side
+    // Ogre::Vector3 lightdir(-3,-3,-0.5); // Light shines on ROBOTS top/front/left side
+    lightdir.normalise();
+    vis->getLightNode()->setDirection({lightdir});
+    vis->setCameraSpeed(300);
+
+    vis->addResourceDirectory(raisim::loadResource("material"));
+    vis->loadMaterialFile("myMaterials.material");
+
+    vis->addResourceDirectory(vis->getResourceDir() + "/material/skybox/violentdays");
+    vis->loadMaterialFile("violentdays.material");
+
+    /// shdow setting
+    vis->getSceneManager()->setShadowTechnique(Ogre::SHADOWTYPE_TEXTURE_ADDITIVE);
+    vis->getSceneManager()->setShadowTextureSettings(2048, 3);
+
+    /// scale related settings!! Please adapt it depending on your map size
+    // beyond this distance, shadow disappears
+    vis->getSceneManager()->setShadowFarDistance(10);
+    // size of contact points and contact forces
+    vis->setContactVisObjectSize(0.03, 0.6);
+    // speed of camera motion in freelook mode
+    vis->getCameraMan()->setTopSpeed(5);
+}
+
+
+
+void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts) {
+    // Ensure the vectors are of the correct size
+    if (GRF.size() < 12 || feet_vec.size() < 12 || contacts.size() < 4) {
+        std::cerr << "Error: Input vectors are of incorrect size." << std::endl;
+        return;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        raisim::Vec<3> dir;
+        for (int j = 0; j < 3; ++j) {
+            dir[j] = GRF[3 * i + j];
+        }
+
+        // Normalize the direction vector if it is not a zero vector
+        double norm = dir.norm();
+        if (norm > 1e-6) {  // Check if the vector is non-zero to avoid division by zero
+            dir /= norm;
+        } else {
+            dir.setZero();
+        }
+
+        // Convert direction vector to a rotation matrix that aligns the z-axis with the direction vector
+        raisim::Mat<3, 3> rot;
+        if (contacts[i] == 1 && norm > 1e-6) {
+            raisim::zaxisToRotMat(dir, rot);
+        } else {
+            rot.setIdentity();  // Set rotation to identity if no contact or zero norm
+
+        }
+
+        // Visual object key
+        std::string objKey = "GRF" + std::to_string(i + 1);
+        (*list)[objKey].offset = {feet_vec[3 * i], feet_vec[3 * i + 1], feet_vec[3 * i + 2]};
+        (*list)[objKey].scale = {0.2, 0.2, 0.005 * norm};  // Scaling based on the norm of the GRF vector
+
+        // Set the rotation matrix
+        (*list)[objKey].rotationOffset = rot;
+
+    }
+}
+
+void ExternalComm::HighLevel(){
+
+    //std::cout << "Inhighlevel" << std::endl;
+
+    updateData(GET_DATA, HL_DATA, &HLData);
+    if(HLData.control_Tick%10==0){ // Settle down
+        nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
+        HLData.comDes= nmpc_obj->returncomDes();
+        HLData.fDes= nmpc_obj->returnfDes();
+        HLData.solvetime = nmpc_obj->returnSolveTime();
+        int* indcon = nmpc_obj->returnConInd(HLData.control_Tick);
+        HLData.ind[0] = indcon[0];
+        HLData.ind[1] = indcon[1];
+        HLData.ind[2] = indcon[2];
+        HLData.ind[3] = indcon[3];
+
+        updateData(SET_DATA, HL_DATA, &HLData);
+    }
+    //std::cout << "Exitinghighlevel" << std::endl;
+        
+}
+
+void ExternalComm::Calc(){
+
+    //std::cout << "Inlowlevel" << std::endl;
+
+    updateData(GET_DATA, LL_DATA, &LLData);
+
+    if(LLData.control_Tick < settling){ // Settle down
+        //double temp[18] = {0};
+        //tau = temp;
+        loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
+    }else if(LLData.control_Tick >= settling & LLData.control_Tick < loco_start){ // Start standing
+
+        loco_obj->calcTau2(LLData.q,LLData.dq,LLData.rotMatrixDouble,STAND,LLData.control_Tick,LLData.solvetime);  
+    }else{
+
+        loco_obj->ExpWrapper(LLData.q,LLData.dq,LLData.rotMatrixDouble,LLData.control_Tick,LLData.solvetime,LLData.ind,LLData.comDes,LLData.fDes);
+    }
+    LLData.tau = Eigen::Map<Eigen::VectorXd>(loco_obj->getTorque(),18);
+    LLData.tau.block(0,0,6,1).setZero();
+    LLData.toePos = loco_obj->getfootposition();
+    LLData.QPforce = loco_obj->getpreviousQPforce();
+
+    updateData(SET_DATA, LL_DATA, &LLData);
+    //std::cout << "Exitinglowlevel" << std::endl;
+    
+}
+
+
+
+void ExternalComm::kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R){
+    
+    float numContact = contact[0]+contact[1]+contact[2]+contact[3];
+	// ================================== //
+	// ========= Kin Estimator ========== //
+	// ================================== //
+
+	// toe pos
+	double fr_toe[3], fl_toe[3], rl_toe[3], rr_toe[3];
+	static double COM[3]= {0,0,0.12};
+    double Jfr_toe[54], Jfl_toe[54], Jrl_toe[54], Jrr_toe[54];
+	double COM_vel[3] = {0,0,0};
+	
+	q[0] = 0; q[1] = 0; q[2] = 0;
+    
+    FK_FR_toe(fr_toe, q); FK_FL_toe(fl_toe, q);
+    FK_RR_toe(rr_toe, q); FK_RL_toe(rl_toe, q);
+    J_FR_toe(Jfr_toe, q); J_FL_toe(Jfl_toe, q);
+    J_RR_toe(Jrr_toe, q); J_RL_toe(Jrl_toe, q);
+    
+	// update change in com pos
+	static double fr_prev[3] = {fr_toe[0],fr_toe[1],fr_toe[2]};
+	static double fl_prev[3] = {fl_toe[0],fl_toe[1],fl_toe[2]};
+	static double rr_prev[3] = {rr_toe[0],rr_toe[1],rr_toe[2]};
+	static double rl_prev[3] = {rl_toe[0],rl_toe[1],rl_toe[2]};
+	
+    double deltaPos[2] = {0.0};
+    for(int i=0; i<2; ++i){
+        deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
+        deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2];
+        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3];
+        deltaPos[i] /= numContact;
+    }    
+    
+	COM[0] += deltaPos[0];
+	COM[1] += deltaPos[1];
+    COM[2]  = -1.0*(fr_toe[2]*contact[0]+fl_toe[2]*contact[1]+rr_toe[2]*contact[2]+rl_toe[2]*contact[3])/numContact;
+	
+	for(int i=0; i<3; ++i){
+		fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
+		rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
+	}
+	
+	numContact = (contact[0]+contact[1]) + contact[2]+contact[3];
+	Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+	toWorld(&dq[3],dq_temp,R);
+	for (int i = 3; i < 18; ++i){
+		COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0] + Jfl_toe[3*i+0]*contact[1] + Jrr_toe[3*i+0]*contact[2] + Jrl_toe[3*i+0]*contact[3])*dq[i];
+	 	COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0] + Jfl_toe[3*i+1]*contact[1] + Jrr_toe[3*i+1]*contact[2] + Jrl_toe[3*i+1]*contact[3])*dq[i];
+	 	COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0] + Jfl_toe[3*i+2]*contact[1] + Jrr_toe[3*i+2]*contact[2] + Jrl_toe[3*i+2]*contact[3])*dq[i];
+	}
+	COM_vel[0] /= numContact;
+	COM_vel[1] /= numContact;
+	COM_vel[2] /= numContact;
+	
+	dq_temp = {dq[3],dq[4],dq[5]};
+	toBody(&dq[3],dq_temp,R);
+
+	// Set results
+	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2]+0.02;
+	dq[0] = COM_vel[0]; dq[1] = COM_vel[1]; dq[2] = COM_vel[2];
+
+}
+
+void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick){
+    
+    float numContact = (contact[0]+contact[1])+rearweight_est*(contact[2]+contact[3]);
+    // if(ctrlTick>27399){
+        // numContact = (contact[0]+contact[1])*robotdown+rearfootweight*contact[2]+rearfootweight*contact[3];
+    // }
+	// ================================== //
+	// ========= Kin Estimator ========== //
+	// ================================== //
+
+	// toe pos
+	double fr_toe[3], fl_toe[3], rl_toe[3], rr_toe[3];
+	static double COM[3]= {0,0,0};
+    double Jfr_toe[54], Jfl_toe[54], Jrl_toe[54], Jrr_toe[54];
+	double COM_vel[3] = {0,0,0};
+	
+
+	q[0] = 0; q[1] = 0; q[2] = 0;
+    if(robotdown){
+	    FK_FR_toe(fr_toe, q); FK_FL_toe(fl_toe, q);
+	    FK_RR_toe(rr_toe, q); FK_RL_toe(rl_toe, q);
+        J_FR_toe(Jfr_toe, q); J_FL_toe(Jfl_toe, q);
+	    J_RR_toe(Jrr_toe, q); J_RL_toe(Jrl_toe, q);
+    }else{
+        FK_FR_toe_u(fr_toe, q); FK_FL_toe_u(fl_toe, q);
+	    FK_RR_toe_u(rr_toe, q); FK_RL_toe_u(rl_toe, q);
+        J_FR_toe_u(Jfr_toe, q); J_FL_toe_u(Jfl_toe, q);
+	    J_RR_toe_u(Jrr_toe, q); J_RL_toe_u(Jrl_toe, q);
+    }
+	
+	// update change in com pos
+	double fr_prev[3] = {toes(0,0),toes(1,0),toes(2,0)};//{fr_toe[0],fr_toe[1],fr_toe[2]};
+	double fl_prev[3] = {toes(0,1),toes(1,1),toes(2,1)};//{fl_toe[0],fl_toe[1],fl_toe[2]};
+	double rr_prev[3] = {toes(0,2),toes(1,2),toes(2,2)};//{rr_toe[0],rr_toe[1],rr_toe[2]};
+	double rl_prev[3] = {toes(0,3),toes(1,3),toes(2,3)};//{rl_toe[0],rl_toe[1],rl_toe[2]};
+	
+    double deltaPos[3] = {0.0,0.0,0.0};
+    for(int i=0; i<3; ++i){
+        // if(ctrlTick<27400){
+            deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
+            deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+        // }
+        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2]*rearweight_est;
+        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3]*rearweight_est;
+        deltaPos[i] /= numContact;
+    }    
+    
+	COM[0] = deltaPos[0];
+	COM[1] = deltaPos[1];
+    COM[2] = deltaPos[2];//-1.0*(fr_toe[2]*contact[0]+fl_toe[2]*contact[1]+rr_toe[2]*contact[2]+rl_toe[2]*contact[3])/numContact;
+	
+	// for(int i=0; i<3; ++i){
+	// 	fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
+	// 	rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
+	// }
+	
+	numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
+	
+    if(!robotdown){
+
+        for (int i = 3; i < 18; ++i){
+		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearweight_est + Jrl_toe[3*i+0]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearweight_est + Jrl_toe[3*i+1]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearweight_est + Jrl_toe[3*i+2]*contact[3]*rearweight_est)*dq[i];
+        }
+	    COM_vel[0] /= numContact;
+	    COM_vel[1] /= numContact;
+	    COM_vel[2] /= numContact;
+
+    }else{
+        Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+        toWorld(&dq[3],dq_temp,R);
+	    for (int i = 3; i < 18; ++i){
+		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearweight_est + Jrl_toe[3*i+0]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearweight_est + Jrl_toe[3*i+1]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearweight_est + Jrl_toe[3*i+2]*contact[3]*rearweight_est)*dq[i];
+	    }
+	    COM_vel[0] /= numContact;
+	    COM_vel[1] /= numContact;
+	    COM_vel[2] /= numContact;
+	
+	    dq_temp = {dq[3],dq[4],dq[5]};
+	    toBody(&dq[3],dq_temp,R);
+    }
+
+	// Set results
+	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
+    if(ctrlTick<27000){
+	    dq[0] = COM_vel[0] > xdot_thresh ? xdot_thresh : (COM_vel[0] < -xdot_thresh ? -xdot_thresh : COM_vel[0]); 
+        dq[1] = COM_vel[1] > yzdot_thresh ? yzdot_thresh : (COM_vel[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel[1]);
+        dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
+        //dq[2] = COM_vel[2];
+    }else{
+        dq[0] = COM_vel[0] > xdot_thresh2 ? xdot_thresh2 : (COM_vel[0] < -xdot_thresh2 ? -xdot_thresh2 : COM_vel[0]); 
+        dq[1] = COM_vel[1] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[1] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[1]);
+        dq[2] = COM_vel[2] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[2] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[2]); 
+    }
+}
+
+
+
+void ExternalComm::SimExec(){
+ 
+    //std::cout << "InSimExec" << std::endl;
+    if (setup_raisim){
+        setupRaisim();
+        setup_raisim = false;
+    }
+    updateData(GET_DATA, SIM_DATA, &SimData);
+    if(!vis->getRoot()->endRenderingQueued() && simcounter < simlength){
+        
+        A1.back()->setGeneralizedForce(SimData.tau);
+        world.integrate();        
+        
+        if (simcounter%15 == 0)
+            vis->renderOneFrame();
+        
+        if (!vis->isRecording() & record & simcounter>=startTime)
+            vis->startRecordingVideo(name);
+        
+        auto currentPos = vis->getCameraMan()->getCamera()->getPosition();
+        //if (raisim::gui::panViewX){
+            Eigen::VectorXd jointPosTotal(18 + 1);
+            Eigen::VectorXd jointVelTotal(18);
+            jointPosTotal.setZero();
+            jointVelTotal.setZero();
+            A1.back()->getState(jointPosTotal, jointVelTotal);
+            if (cameraview=="front"){
+                currentPos[0] = jointPosTotal(0)+2;
+                vis->getCameraMan()->getCamera()->setPosition(currentPos);
+            } else if(cameraview=="side"){
+                currentPos[0] = jointPosTotal(0);
+                vis->getCameraMan()->getCamera()->setPosition(currentPos);
+            } else if(cameraview=="iso"){
+                currentPos[0] = jointPosTotal(0)+2;
+                vis->getCameraMan()->getCamera()->setPosition(currentPos);
+            } else if(cameraview=="isoside"){
+                currentPos[0] = jointPosTotal(0)+1.1;
+                vis->getCameraMan()->getCamera()->setPosition(currentPos);
+            }
+        
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        simcounter++; 
+    }
+	else if (simcounter > simlength-1){
+        if (vis->isRecording()){vis->stopRecordingVideoAndSave();}
+        vis->closeApp();
+    }
+
+    //////////////////////////////////
+    //      STATE ESTIMATION        //
+    //////////////////////////////////
+
+    double jpos[18],jpos_est[18], jvel[18],jvel_est[18];
+    double rotMatrixDouble[9] = {1,0,0,0,1,0,0,0,1};
+
+    Eigen::Matrix<double, 3, 1> eul = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double, 4, 1> quat = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double, 3, 1>  eul_state = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double, 3, 1>  omega_state = Eigen::MatrixXd::Zero(3,1);
+
+    A1.back()->getState(jointPosTotal, jointVelTotal);
+    A1.back()->getBaseOrientation(rotMat);
+
+    int robotdown = simcounter < switchtime*ctrlHz ? 1 : 0;
+    
+    if(!robotdown){
+        auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
+        auto imu_o = imu->getOrientation();   // Quaternion
+        auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+        quat(0) = imu_o[0];
+        quat(1) = imu_o[1];
+        quat(2) = imu_o[2];
+        quat(3) = imu_o[3];
+
+        omega_state(0) = imu_w[0];
+        omega_state(1) = imu_w[1];
+        omega_state(2) = imu_w[2];
+
+        quat_to_XYZ(quat,eul_state);
+        Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
+        quat_to_R(quat,rotIMU);
+        for(size_t i=0;i<3;i++){
+            for (size_t j = 0; j < 3; j++){
+                rotMat[3*i+j] = rotIMU(j,i);
+            }
+        }        
+    }else{
+        quat = jointPosTotal.block(3,0,4,1);
+        quat_to_XYZ(quat,eul_state);
+    }
+
+    for(size_t i=0;i<9;i++){
+        rotMatrixDouble[i] = rotMat[i];
+    }
+    
+    Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMatrixDouble, 3, 3);
+    
+    if(robotdown){
+        omega_state = rotE.transpose()*jointVelTotal.segment(3,3); // convert to body frame, like robot measurements
+    }
+    
+    for(size_t i=0; i<3; ++i){
+        jpos[i] = jointPosTotal(i);
+        jvel[i] = jointVelTotal(i);
+        jpos_est[i] = jointPosTotal(i);
+        jvel_est[i] = jointVelTotal(i);
+        jpos[i+3] = eul_state(i);
+        jvel[i+3] = omega_state(i);
+        jpos_est[i+3] = eul_state(i);
+        jvel_est[i+3] = omega_state(i);
+    }
+
+    for(size_t i=6; i<18; ++i){
+        jpos[i] = jointPosTotal(i+1);
+        jvel[i] = jointVelTotal(i);
+        jpos_est[i] = jointPosTotal(i+1);
+        jvel_est[i] = jointVelTotal(i);
+    }
+    
+    
+    if(simcounter>2499){
+        getStateEstimatefullll(jpos_est,jvel_est,SimData.ind,rotE,SimData.toePos,robotdown,simcounter);
+        
+    }else if(simcounter>0){
+        kinestimatorrr(jpos_est,jvel_est,SimData.ind,rotE);
+    }
+   
+    memcpy(SimData.q,jpos_est,18*sizeof(double));
+    memcpy(SimData.dq,jvel_est,18*sizeof(double));
+	memcpy(SimData.rotMatrixDouble,rotMatrixDouble,9*sizeof(double));
+    SimData.control_Tick = simcounter;
+
+	// Set Updated data for MPC/LL
+	updateData(SET_DATA, SIM_DATA, &SimData);  
+
+    //std::cout << "ExitingSimExec" << std::endl;
+
+
+}
+
+
+int main(int argc, char *argv[]) {
+
+    ExternalComm extComm;
+    // std::cout << std::fixed << std::showpoint;
+    extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
+	extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
+
+    // Eigen::Matrix<double,2,1>Pstart{0.0,0.0};
+    // Agent ID 0
+	// extComm.loco_obj->setAgentID(0);
+    // extComm.loco_obj->setPstart(Pstart);
+    // extComm.nmpc_obj->init();
+	// extComm.nmpc_obj->setAgentID(0);    //MPC_Agent1 = new MPC_dist();
+    // extComm.nmpc_obj->setPstart(Pstart);
+    
+
+    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+	
+	// loop_sim.start();
+	// sleep(1.0);
+	// loop_mpc.start();
+	// sleep(1.0);
+	// loop_calc.start();
+
+    // while (true)
+    // {
+    //     sleep(0.1);
+    // }
+    
+
+    while (true)
+	{
+			
+        // sleep(0.1);
+        extComm.SimExec();
+        extComm.HighLevel();
+        extComm.Calc();
+        // sim_setup = false;
+
+	} 
+
+    
+    return 0;
+}
+
