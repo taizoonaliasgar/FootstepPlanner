@@ -459,45 +459,45 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	// ================================== //
 
 	// toe pos
-	double fr_toe[3], fl_toe[3], rl_toe[3], rr_toe[3];
-	static double COM[3]= {0,0,0};
-    double Jfr_toe[54], Jfl_toe[54], Jrl_toe[54], Jrr_toe[54];
-	double COM_vel[3] = {0,0,0};
+	double fr_toe_e[3], fl_toe_e[3], rl_toe_e[3], rr_toe_e[3];
+	double COM_e[3]= {0,0,0};
+    double Jfr_toe_e[54], Jfl_toe_e[54], Jrl_toe_e[54], Jrr_toe_e[54];
+	double COM_vel_e[3] = {0,0,0};
 	
 
 	q[0] = 0; q[1] = 0; q[2] = 0;
     if(robotdown){
-	    FK_FR_toe(fr_toe, q); FK_FL_toe(fl_toe, q);
-	    FK_RR_toe(rr_toe, q); FK_RL_toe(rl_toe, q);
-        J_FR_toe(Jfr_toe, q); J_FL_toe(Jfl_toe, q);
-	    J_RR_toe(Jrr_toe, q); J_RL_toe(Jrl_toe, q);
+	    FK_FR_toe(fr_toe_e, q); FK_FL_toe(fl_toe_e, q);
+	    FK_RR_toe(rr_toe_e, q); FK_RL_toe(rl_toe_e, q);
+        J_FR_toe(Jfr_toe_e, q); J_FL_toe(Jfl_toe_e, q);
+	    J_RR_toe(Jrr_toe_e, q); J_RL_toe(Jrl_toe_e, q);
     }else{
-        FK_FR_toe_u(fr_toe, q); FK_FL_toe_u(fl_toe, q);
-	    FK_RR_toe_u(rr_toe, q); FK_RL_toe_u(rl_toe, q);
-        J_FR_toe_u(Jfr_toe, q); J_FL_toe_u(Jfl_toe, q);
-	    J_RR_toe_u(Jrr_toe, q); J_RL_toe_u(Jrl_toe, q);
+        FK_FR_toe_u(fr_toe_e, q); FK_FL_toe_u(fl_toe_e, q);
+	    FK_RR_toe_u(rr_toe_e, q); FK_RL_toe_u(rl_toe_e, q);
+        J_FR_toe_u(Jfr_toe_e, q); J_FL_toe_u(Jfl_toe_e, q);
+	    J_RR_toe_u(Jrr_toe_e, q); J_RL_toe_u(Jrl_toe_e, q);
     }
 	
 	// update change in com pos
-	double fr_prev[3] = {toes(0,0),toes(1,0),toes(2,0)};//{fr_toe[0],fr_toe[1],fr_toe[2]};
-	double fl_prev[3] = {toes(0,1),toes(1,1),toes(2,1)};//{fl_toe[0],fl_toe[1],fl_toe[2]};
-	double rr_prev[3] = {toes(0,2),toes(1,2),toes(2,2)};//{rr_toe[0],rr_toe[1],rr_toe[2]};
-	double rl_prev[3] = {toes(0,3),toes(1,3),toes(2,3)};//{rl_toe[0],rl_toe[1],rl_toe[2]};
+	double fr_prev_e[3] = {toes(0,0),toes(1,0),toes(2,0)};//{fr_toe[0],fr_toe[1],fr_toe[2]};
+	double fl_prev_e[3] = {toes(0,1),toes(1,1),toes(2,1)};//{fl_toe[0],fl_toe[1],fl_toe[2]};
+	double rr_prev_e[3] = {toes(0,2),toes(1,2),toes(2,2)};//{rr_toe[0],rr_toe[1],rr_toe[2]};
+	double rl_prev_e[3] = {toes(0,3),toes(1,3),toes(2,3)};//{rl_toe[0],rl_toe[1],rl_toe[2]};
 	
     double deltaPos[3] = {0.0,0.0,0.0};
     for(int i=0; i<3; ++i){
         // if(ctrlTick<27400){
-            deltaPos[i] -= (fr_toe[i]-fr_prev[i])*contact[0];
-            deltaPos[i] -= (fl_toe[i]-fl_prev[i])*contact[1];
+            deltaPos[i] -= (fr_toe_e[i]-fr_prev_e[i])*contact[0];
+            deltaPos[i] -= (fl_toe_e[i]-fl_prev_e[i])*contact[1];
         // }
-        deltaPos[i] -= (rr_toe[i]-rr_prev[i])*contact[2]*rearweight_est;
-        deltaPos[i] -= (rl_toe[i]-rl_prev[i])*contact[3]*rearweight_est;
+        deltaPos[i] -= (rr_toe_e[i]-rr_prev_e[i])*contact[2]*rearweight_est;
+        deltaPos[i] -= (rl_toe_e[i]-rl_prev_e[i])*contact[3]*rearweight_est;
         deltaPos[i] /= numContact;
     }    
     
-	COM[0] = deltaPos[0];
-	COM[1] = deltaPos[1];
-    COM[2] = deltaPos[2];//-1.0*(fr_toe[2]*contact[0]+fl_toe[2]*contact[1]+rr_toe[2]*contact[2]+rl_toe[2]*contact[3])/numContact;
+	COM_e[0] = deltaPos[0];
+	COM_e[1] = deltaPos[1];
+    COM_e[2] = deltaPos[2];//-1.0*(fr_toe[2]*contact[0]+fl_toe[2]*contact[1]+rr_toe[2]*contact[2]+rl_toe[2]*contact[3])/numContact;
 	
 	// for(int i=0; i<3; ++i){
 	// 	fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
@@ -509,41 +509,41 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
     if(!robotdown){
 
         for (int i = 3; i < 18; ++i){
-		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearweight_est + Jrl_toe[3*i+0]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearweight_est + Jrl_toe[3*i+1]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearweight_est + Jrl_toe[3*i+2]*contact[3]*rearweight_est)*dq[i];
+		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown + Jfl_toe_e[3*i+0]*contact[1]*robotdown + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[1] -= (Jfr_toe_e[3*i+1]*contact[0]*robotdown + Jfl_toe_e[3*i+1]*contact[1]*robotdown + Jrr_toe_e[3*i+1]*contact[2]*rearweight_est + Jrl_toe_e[3*i+1]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[2] -= (Jfr_toe_e[3*i+2]*contact[0]*robotdown + Jfl_toe_e[3*i+2]*contact[1]*robotdown + Jrr_toe_e[3*i+2]*contact[2]*rearweight_est + Jrl_toe_e[3*i+2]*contact[3]*rearweight_est)*dq[i];
         }
-	    COM_vel[0] /= numContact;
-	    COM_vel[1] /= numContact;
-	    COM_vel[2] /= numContact;
+	    COM_vel_e[0] /= numContact;
+	    COM_vel_e[1] /= numContact;
+	    COM_vel_e[2] /= numContact;
 
     }else{
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
         toWorld(&dq[3],dq_temp,R);
 	    for (int i = 3; i < 18; ++i){
-		    COM_vel[0] -= (Jfr_toe[3*i+0]*contact[0]*robotdown + Jfl_toe[3*i+0]*contact[1]*robotdown + Jrr_toe[3*i+0]*contact[2]*rearweight_est + Jrl_toe[3*i+0]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel[1] -= (Jfr_toe[3*i+1]*contact[0]*robotdown + Jfl_toe[3*i+1]*contact[1]*robotdown + Jrr_toe[3*i+1]*contact[2]*rearweight_est + Jrl_toe[3*i+1]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel[2] -= (Jfr_toe[3*i+2]*contact[0]*robotdown + Jfl_toe[3*i+2]*contact[1]*robotdown + Jrr_toe[3*i+2]*contact[2]*rearweight_est + Jrl_toe[3*i+2]*contact[3]*rearweight_est)*dq[i];
+		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown + Jfl_toe_e[3*i+0]*contact[1]*robotdown + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[1] -= (Jfr_toe_e[3*i+1]*contact[0]*robotdown + Jfl_toe_e[3*i+1]*contact[1]*robotdown + Jrr_toe_e[3*i+1]*contact[2]*rearweight_est + Jrl_toe_e[3*i+1]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[2] -= (Jfr_toe_e[3*i+2]*contact[0]*robotdown + Jfl_toe_e[3*i+2]*contact[1]*robotdown + Jrr_toe_e[3*i+2]*contact[2]*rearweight_est + Jrl_toe_e[3*i+2]*contact[3]*rearweight_est)*dq[i];
 	    }
-	    COM_vel[0] /= numContact;
-	    COM_vel[1] /= numContact;
-	    COM_vel[2] /= numContact;
+	    COM_vel_e[0] /= numContact;
+	    COM_vel_e[1] /= numContact;
+	    COM_vel_e[2] /= numContact;
 	
 	    dq_temp = {dq[3],dq[4],dq[5]};
 	    toBody(&dq[3],dq_temp,R);
     }
 
 	// Set results
-	q[0] = COM[0]; q[1] = COM[1]; q[2] = COM[2];
+	q[0] = COM_e[0]; q[1] = COM_e[1]; q[2] = COM_e[2];
     if(ctrlTick<27000){
-	    dq[0] = COM_vel[0] > xdot_thresh ? xdot_thresh : (COM_vel[0] < -xdot_thresh ? -xdot_thresh : COM_vel[0]); 
-        dq[1] = COM_vel[1] > yzdot_thresh ? yzdot_thresh : (COM_vel[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel[1]);
-        dq[2] = COM_vel[2] > yzdot_thresh ? yzdot_thresh : (COM_vel[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel[2]); 
+	    dq[0] = COM_vel_e[0] > xdot_thresh ? xdot_thresh : (COM_vel_e[0] < -xdot_thresh ? -xdot_thresh : COM_vel_e[0]); 
+        dq[1] = COM_vel_e[1] > yzdot_thresh ? yzdot_thresh : (COM_vel_e[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel_e[1]);
+        dq[2] = COM_vel_e[2] > yzdot_thresh ? yzdot_thresh : (COM_vel_e[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel_e[2]); 
         //dq[2] = COM_vel[2];
     }else{
-        dq[0] = COM_vel[0] > xdot_thresh2 ? xdot_thresh2 : (COM_vel[0] < -xdot_thresh2 ? -xdot_thresh2 : COM_vel[0]); 
-        dq[1] = COM_vel[1] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[1] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[1]);
-        dq[2] = COM_vel[2] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel[2] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel[2]); 
+        dq[0] = COM_vel_e[0] > xdot_thresh2 ? xdot_thresh2 : (COM_vel_e[0] < -xdot_thresh2 ? -xdot_thresh2 : COM_vel_e[0]); 
+        dq[1] = COM_vel_e[1] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel_e[1] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel_e[1]);
+        dq[2] = COM_vel_e[2] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel_e[2] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel_e[2]); 
     }
 }
 
@@ -685,8 +685,8 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
         << "\n";
    
-    memcpy(SimData.q,jpos,18*sizeof(double));
-    memcpy(SimData.dq,jvel,18*sizeof(double));
+    memcpy(SimData.q,jpos_est,18*sizeof(double));
+    memcpy(SimData.dq,jvel_est,18*sizeof(double));
 	memcpy(SimData.rotMatrixDouble,rotMatrixDouble,9*sizeof(double));
     SimData.control_Tick = simcounter;
 
@@ -733,7 +733,7 @@ int main(int argc, char *argv[]) {
     //     sleep(0.1);
     // }
     
-    std::ofstream file_est("../data25/estimatorMT9.csv");
+    std::ofstream file_est("../data25/estimatorMT12.csv");
     while (true)
 	{
 			

@@ -75,6 +75,7 @@ void updateData(int setget, int highlow, sharedData *newData){
 			data.QPforce = newData->QPforce;
 			data.toePos = newData->toePos;
 			data.toe_prev = newData->toe_prev;
+			memcpy(data.ind_LL,newData->ind_LL,4*sizeof(int));
 		}
 	}else{
 		
