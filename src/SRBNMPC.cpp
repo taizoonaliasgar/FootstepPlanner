@@ -1370,6 +1370,13 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     if(controlTick == 32000){letsgo();}
     int controlMPC = std::floor(controlTick/10); 
     
+    for(int i = 0; i<3; i++){
+        q0(i) = q[i];
+        q0(i+3) = dq[i];
+        q0(i+6) = q[i+3];
+        q0(i+9) = dq[i+3];
+    }
+    
     casadi::DM X_prev = getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);
     if(controlMPC==2740){
         q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);

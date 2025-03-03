@@ -40,6 +40,9 @@ struct sharedData
 	Eigen::Matrix<double, 3, 4> toePos = Eigen::MatrixXd::Zero(3,4);
 
 	int solvetime = 0;
+
+	int ind_LL[4] = {1,1,1,1};
+	Eigen::Matrix<double, 3, 4> toe_prev = Eigen::MatrixXd::Zero(3,4);
 	
 };
 
@@ -71,12 +74,15 @@ void updateData(int setget, int highlow, sharedData *newData){
 			data.tau = newData->tau;
 			data.QPforce = newData->QPforce;
 			data.toePos = newData->toePos;
+			data.toe_prev = newData->toe_prev;
 		}
 	}else{
 		
 		if(highlow==SIM_DATA){ // get data for high level
 			newData->tau = data.tau;
-			memcpy(newData->ind,data.ind,4*sizeof(int));
+			memcpy(newData->ind_LL,data.ind_LL,4*sizeof(int));
+			newData->toePos = data.toePos;
+			newData->toe_prev = data.toe_prev;
 		
 		}else if(highlow==HL_DATA){ // get data for low level
 			memcpy(newData->q,data.q,18*sizeof(double)); 

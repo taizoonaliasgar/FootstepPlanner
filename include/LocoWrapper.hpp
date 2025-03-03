@@ -73,6 +73,8 @@ public:
                                     int HLContactIndex[4], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
     void setcontactconfigExp(int HLContactIndex[4]);
     void setoptNLstateExp(Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
+    Eigen::Matrix<double, 3, 4> gettoe_prev(){return toe_prev;};
+    void settoe_prev(){toe_prev = kin->toePos;};
 
     // Pointers to structs
     const StateInfo *state;
@@ -153,6 +155,7 @@ private:
     int stepind2_e = 0;
     double *tau_LL;
     const int force_LL[4] = {0,0,0,0};
+    Eigen::Matrix<double, 3, 4> toe_prev = Eigen::MatrixXd::Zero(3,4);
     
 };
 

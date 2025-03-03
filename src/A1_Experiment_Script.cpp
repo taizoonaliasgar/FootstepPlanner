@@ -324,15 +324,15 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
 
 
     const int* contactMat = loco_obj->getConDes();
-    if(controlTick>2499){
-        if(controlTick < switchtime*ctrlHz){
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false,controlTick);
-        }else{
-            loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true,controlTick);
-        }
-    }else if(controlTick>0){
-        kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
-    }
+    // if(controlTick>2499){
+    //     if(controlTick < switchtime*ctrlHz){
+    //         loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,false,controlTick);
+    //     }else{
+    //         loco_obj->getStateEstimatefull(jpos_est,jvel_est,contactMat,rotE,robotdown,true,controlTick);
+    //     }
+    // }else if(controlTick>0){
+    //     kinestimator(jpos_est,jvel_est,contactMat,rotE,robotdown);
+    // }
 
     float vel_temp[3] = {jvel_est[0],jvel_est[1],jvel_est[2]};
     // if(controlTick>=31000){

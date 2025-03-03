@@ -41,7 +41,7 @@ sharedData SimData;
 class ExternalComm
 {
 public:
-	ExternalComm(){
+    ExternalComm(){
 		
         double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
         double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
@@ -89,7 +89,7 @@ public:
     // main thread execution functions
 	void Calc();
 	void HighLevel();
-	void SimExec();  
+	void SimExec(std::ofstream &file_est);  
 
     std::unique_ptr<LocoWrapper> loco_obj;
 	std::unique_ptr<SRBNMPC> nmpc_obj;
@@ -140,6 +140,7 @@ public:
     void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
     //A1
     std::vector<raisim::ArticulatedSystem*> A1;
+
 };
 
 
@@ -366,9 +367,16 @@ void ExternalComm::Calc(){
     LLData.tau = Eigen::Map<Eigen::VectorXd>(loco_obj->getTorque(),18);
     LLData.tau.block(0,0,6,1).setZero();
     LLData.toePos = loco_obj->getfootposition();
+    LLData.toe_prev = loco_obj->gettoe_prev();
     LLData.QPforce = loco_obj->getpreviousQPforce();
+    const int* ind_LL = loco_obj->getConDes();
+    LLData.ind_LL[0] = ind_LL[0];
+    LLData.ind_LL[1] = ind_LL[1];
+    LLData.ind_LL[2] = ind_LL[2];
+    LLData.ind_LL[3] = ind_LL[3];
 
     updateData(SET_DATA, LL_DATA, &LLData);
+    loco_obj->settoe_prev();
     //std::cout << "Exitinglowlevel" << std::endl;
     
 }
@@ -384,7 +392,7 @@ void ExternalComm::kinestimatorrr(double q[18], double dq[18], int contact[4], E
 
 	// toe pos
 	double fr_toe[3], fl_toe[3], rl_toe[3], rr_toe[3];
-	static double COM[3]= {0,0,0.12};
+	static double COM[3]= {0,0,0};
     double Jfr_toe[54], Jfl_toe[54], Jrl_toe[54], Jrr_toe[54];
 	double COM_vel[3] = {0,0,0};
 	
@@ -541,7 +549,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 
 
-void ExternalComm::SimExec(){
+void ExternalComm::SimExec(std::ofstream &file_est){
  
     //std::cout << "InSimExec" << std::endl;
     if (setup_raisim){
@@ -581,8 +589,6 @@ void ExternalComm::SimExec(){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
-        simcounter++; 
     }
 	else if (simcounter > simlength-1){
         if (vis->isRecording()){vis->stopRecordingVideoAndSave();}
@@ -662,21 +668,35 @@ void ExternalComm::SimExec(){
     
     
     if(simcounter>2499){
-        getStateEstimatefullll(jpos_est,jvel_est,SimData.ind,rotE,SimData.toePos,robotdown,simcounter);
+        getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter);
         
     }else if(simcounter>0){
-        kinestimatorrr(jpos_est,jvel_est,SimData.ind,rotE);
+        kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);
     }
+
+    file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
+        // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
+        //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
+        //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
+        //  << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
+        //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
+        << "\n";
    
-    memcpy(SimData.q,jpos_est,18*sizeof(double));
-    memcpy(SimData.dq,jvel_est,18*sizeof(double));
+    memcpy(SimData.q,jpos,18*sizeof(double));
+    memcpy(SimData.dq,jvel,18*sizeof(double));
 	memcpy(SimData.rotMatrixDouble,rotMatrixDouble,9*sizeof(double));
     SimData.control_Tick = simcounter;
 
 	// Set Updated data for MPC/LL
 	updateData(SET_DATA, SIM_DATA, &SimData);  
 
+    std::cout << "simcounter" << "\t" << simcounter << std::endl;
+    simcounter++; 
     //std::cout << "ExitingSimExec" << std::endl;
+
 
 
 }
@@ -713,17 +733,19 @@ int main(int argc, char *argv[]) {
     //     sleep(0.1);
     // }
     
-
+    std::ofstream file_est("../data25/estimatorMT9.csv");
     while (true)
 	{
 			
         // sleep(0.1);
-        extComm.SimExec();
+        extComm.SimExec(file_est);
         extComm.HighLevel();
         extComm.Calc();
         // sim_setup = false;
 
 	} 
+
+    file_est.close();
 
     
     return 0;
