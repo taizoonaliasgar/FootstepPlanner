@@ -62,8 +62,8 @@ void updateData(int setget, int highlow, sharedData *newData){
 			
 		
 		}else if(highlow==HL_DATA){ // set low level data
-			Eigen::Matrix<double, 17, 1> fDes_temp = data.fDes;
-			Eigen::Matrix<double, 12, 1> comDes_temp = data.comDes;
+			Eigen::Matrix<double, 17, 1> fDes_temp = newData->fDes;
+			Eigen::Matrix<double, 12, 1> comDes_temp = newData->comDes;
 			memcpy(&data,newData,sizeof(sharedData));
 			data.fDes = fDes_temp;
 			data.comDes = comDes_temp;
@@ -93,8 +93,8 @@ void updateData(int setget, int highlow, sharedData *newData){
 			newData->toePos = data.toePos;
 		
 		}else{
-			Eigen::Matrix<double, 17, 1> fDes_temp = newData->fDes;
-			Eigen::Matrix<double, 12, 1> comDes_temp = newData->comDes;
+			Eigen::Matrix<double, 17, 1> fDes_temp = data.fDes;
+			Eigen::Matrix<double, 12, 1> comDes_temp = data.comDes;
 			memcpy(newData,&data,sizeof(sharedData));
 			newData->fDes = fDes_temp;
 			newData->comDes = comDes_temp;

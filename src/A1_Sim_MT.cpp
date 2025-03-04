@@ -589,6 +589,9 @@ void ExternalComm::SimExec(std::ofstream &file_est){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        simcounter++; 
+        
     }
 	else if (simcounter > simlength-1){
         if (vis->isRecording()){vis->stopRecordingVideoAndSave();}
@@ -692,13 +695,8 @@ void ExternalComm::SimExec(std::ofstream &file_est){
 
 	// Set Updated data for MPC/LL
 	updateData(SET_DATA, SIM_DATA, &SimData);  
-
-    std::cout << "simcounter" << "\t" << simcounter << std::endl;
-    simcounter++; 
+    
     //std::cout << "ExitingSimExec" << std::endl;
-
-
-
 }
 
 
@@ -733,7 +731,7 @@ int main(int argc, char *argv[]) {
     //     sleep(0.1);
     // }
     
-    std::ofstream file_est("../data25/estimatorMT12.csv");
+    std::ofstream file_est("../data25/estimatorMT13.csv");
     while (true)
 	{
 			
