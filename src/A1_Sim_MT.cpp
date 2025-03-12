@@ -118,10 +118,10 @@ public:
     raisim::HeightMap *ground;
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
-    bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;            // Record?
+    bool panY = false;               // Pan view with robot during walking (Y direction)
+    bool record = true;              // Record?
     double fps = 30;            
-    std::string directory = "../data25/Feb28/";
+    std::string directory = "../data25/Mar12/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     

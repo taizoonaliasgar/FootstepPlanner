@@ -3,8 +3,9 @@ project(footstep_planner)
 
 
 set(CMAKE_BUILD_TYPE RELEASE)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_COMPILER "/usr/bin/g++-11")
 
 set(CMAKE_CXX_FLAGS "-O3")
 set(USE_QPSWIFT TRUE) 
@@ -15,12 +16,12 @@ add_definitions(-DUSE_QPSWIFT=1)
 set(LL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/LL_integrator)
 set(ROBOT_DIR "A1_New_wFoot")
 
-find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/lib/cmake/raisim")
-find_package(raisimOgre CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/share/raisimOgre/cmake")
+# find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/lib/cmake/raisim")
+# find_package(raisimOgre CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/share/raisimOgre/cmake")
 
-# find_package(raisim CONFIG HINTS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/cmake/raisim")
-# find_package(OGRE CONFIG REQUIRED PATHS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/OGRE/cmake")
-# find_package(raisimOgre CONFIG HINTS  "/home/trec/WorkRaj/raisim_legged/raisim_build/share/raisimOgre/cmake")  
+find_package(raisim CONFIG HINTS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/cmake/raisim")
+find_package(OGRE CONFIG REQUIRED PATHS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/OGRE/cmake")
+find_package(raisimOgre CONFIG HINTS  "/home/trec/WorkRaj/raisim_legged/raisim_build/share/raisimOgre/cmake")  
 
 include_directories(PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include)
 find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})

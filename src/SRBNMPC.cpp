@@ -101,12 +101,12 @@ void SRBNMPC::generator(){
     // file name
     std::string file_name = "take2_w0p2";//"take2_1";
     // code predix
-    std::string prefix_code = std::filesystem::current_path().string() + "/";
+    std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
     // Generate C code for the NLP functions
     solver.generate_dependencies(file_name + ".c");
 
-    std::string prefix_lib = std::filesystem::current_path().string() + "/";
+    std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
     // compile c code to a shared library
     std::string compile_command = "gcc -fPIC -shared -O3 " + 
         prefix_code + file_name + ".c -o " +
