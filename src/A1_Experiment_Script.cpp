@@ -654,8 +654,8 @@ int main(int argc, char *argv[]) {
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.32,0.4);
-    box_left->setPosition(0,0.32,0.4);
+    box_right->setPosition(0,-0.35,0.4);
+    box_left->setPosition(0,0.35,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -762,8 +762,8 @@ int main(int argc, char *argv[]) {
     //LocoWrapperwalk* loco_obj2 = new LocoWrapperwalk(argc,argv);
     //loco_obj1->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    //loco_plan->generator();
-    std::string file_name = "take2_w0p2";//"take2_1";
+    loco_plan->generator();
+    std::string file_name = "take2_w0p23";//"take2_1";
     
     std::string prefix_code = std::filesystem::current_path().string() + "/";
     std::string prefix_lib = std::filesystem::current_path().string() + "/";
