@@ -99,7 +99,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "take2_w0p2";//"take2_1";
+    std::string file_name = "take2_w0p2H12";//"take2_1";
     // code predix
     std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -1365,7 +1365,7 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 
 
 void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
-    
+    auto start = std::chrono::high_resolution_clock::now();
     Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     if(controlTick == 32000){letsgo();}
     int controlMPC = std::floor(controlTick/10); 
@@ -1397,14 +1397,18 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     argHW["ubg"] = upperboundg();
     argHW["x0"] = X_prev;
     argHW["p"] = p;
-            
-    auto start = std::chrono::high_resolution_clock::now();
-    resHW = solver_exp(argHW);
-    auto end = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();       
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    NMPCsolvetime = static_cast<int>(duration.count());
-    
+    std::cout << "Pre solver time: " << duration.count() << std::endl;
 
+    auto start2 = std::chrono::high_resolution_clock::now();
+    resHW = solver_exp(argHW);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    // NMPCsolvetime = static_cast<int>(duration.count());
+    std::cout << "Solver time: " << duration2.count() << std::endl;
+    
+    auto start3 = std::chrono::high_resolution_clock::now();
     setprevioussol(resHW.at("x"));
             
     std::vector<double> v = previous_sol.get_elements();
@@ -1415,8 +1419,11 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     comDes = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
     fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
     fDes(16) = static_cast<double>(vRaibstep(0));
-            
-    mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
+    auto end3 = std::chrono::high_resolution_clock::now();
+    auto duration3 = std::chrono::duration_cast<std::chrono::milliseconds>(end3 - start3);
+    std::cout << "Post Solver time: " << duration3.count() << std::endl;
+
+    //mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
 }
 
 int* SRBNMPC::returnConInd(size_t controlTick){

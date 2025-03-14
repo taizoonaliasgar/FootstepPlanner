@@ -265,8 +265,8 @@ private:
     bool starttrotting = false;
 
     //Hardware
-    std::string lib_name_exp = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/take2_w0p2.so";//"/home/taizoon/raisimEnvT/rWorkspace/footstep_planner/build/take2_w0p2.so";
-    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    std::string lib_name_exp = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/take2_w0p2H12.so";//"/home/taizoon/raisimEnvT/rWorkspace/footstep_planner/build/take2_w0p2.so";
+    casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
 
     std::map<std::string, casadi::DM> argHW, resHW;

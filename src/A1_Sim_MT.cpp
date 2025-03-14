@@ -4,8 +4,8 @@
 // Copyright (c) Hybrid Dynamic Systems and Robot Locomotion Lab, Virginia Tech
 //
 
-// #include "unitree_legged_sdk/unitree_legged_sdk.h"
-// #include "unitree_legged_sdk/unitree_joystick.h"
+#include "unitree_legged_sdk/unitree_legged_sdk.h"
+#include "unitree_legged_sdk/unitree_joystick.h"
 #include "raisim/OgreVis.hpp"
 //#include "randyImguiPanel.hpp"
 #include "raisimBasicImguiPanel.hpp"
@@ -32,7 +32,7 @@
 #include "stdio.h"
 
 
-//using namespace UNITREE_LEGGED_SDK;
+using namespace UNITREE_LEGGED_SDK;
 
 sharedData HLData;
 sharedData LLData;
@@ -89,7 +89,7 @@ public:
     // main thread execution functions
 	void Calc();
 	void HighLevel();
-	void SimExec(std::ofstream &file_est);  
+	void SimExec();//std::ofstream &file_est);  
 
     std::unique_ptr<LocoWrapper> loco_obj;
 	std::unique_ptr<SRBNMPC> nmpc_obj;
@@ -119,14 +119,14 @@ public:
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;               // Pan view with robot during walking (Y direction)
-    bool record = true;              // Record?
+    bool record = false;//true;              // Record?
     double fps = 30;            
     std::string directory = "../data25/Mar12/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 30*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -328,10 +328,17 @@ void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, c
 void ExternalComm::HighLevel(){
 
     //std::cout << "Inhighlevel" << std::endl;
-
+    auto start = std::chrono::high_resolution_clock::now();
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick%10==0){ // Settle down
+//    if(HLData.control_Tick%10 == 0 && HLData.control_Tick>26500)
+   if(HLData.control_Tick>25000)
+    { // Settle down
+        //std::cout << "Inhighlevel" << "\t" <<  "Sim:" << SimData.control_Tick << "\t" << "HL:" << HLData.control_Tick << "\t" << "LL:" <<  LLData.control_Tick << std::endl;
+        //auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
+        // auto end = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        // std::cout << "HighLevel Time: " << duration.count() << " ms" << std::endl;
         HLData.comDes= nmpc_obj->returncomDes();
         HLData.fDes= nmpc_obj->returnfDes();
         HLData.solvetime = nmpc_obj->returnSolveTime();
@@ -343,15 +350,19 @@ void ExternalComm::HighLevel(){
 
         updateData(SET_DATA, HL_DATA, &HLData);
     }
-    //std::cout << "Exitinghighlevel" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "HighLevel Time: " << duration.count() << " us" << std::endl;
+
         
 }
 
 void ExternalComm::Calc(){
 
-    //std::cout << "Inlowlevel" << std::endl;
-
+    
+    auto start = std::chrono::high_resolution_clock::now();
     updateData(GET_DATA, LL_DATA, &LLData);
+    //if(LLData.control_Tick > 26500){std::cout << "Inlowlevel" << "\t" <<  "Sim:" << SimData.control_Tick << "\t" << "HL:" << HLData.control_Tick << "\t" << "LL:" <<  LLData.control_Tick << std::endl;}
 
     if(LLData.control_Tick < settling){ // Settle down
         //double temp[18] = {0};
@@ -376,7 +387,10 @@ void ExternalComm::Calc(){
     LLData.ind_LL[3] = ind_LL[3];
 
     updateData(SET_DATA, LL_DATA, &LLData);
-    loco_obj->settoe_prev();
+    //loco_obj->settoe_prev();
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "LowLevel Time: " << duration.count() << " us" << std::endl;
     //std::cout << "Exitinglowlevel" << std::endl;
     
 }
@@ -549,8 +563,8 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 
 
-void ExternalComm::SimExec(std::ofstream &file_est){
- 
+void ExternalComm::SimExec(){
+    auto start = std::chrono::high_resolution_clock::now();
     //std::cout << "InSimExec" << std::endl;
     if (setup_raisim){
         setupRaisim();
@@ -562,7 +576,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         A1.back()->setGeneralizedForce(SimData.tau);
         world.integrate();        
         
-        if (simcounter%15 == 0)
+        if (simcounter%30 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
@@ -589,7 +603,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
         simcounter++; 
         
     }
@@ -677,16 +691,16 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);
     }
 
-    file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
-         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
-         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
-         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
-        // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
-        //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
-        //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
-        //  << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
-        //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
-        << "\n";
+    // file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+    //      << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+    //      << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+    //      << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
+    //     // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
+    //     //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
+    //     //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
+    //     //  << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
+    //     //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
+    //     << "\n";
    
     memcpy(SimData.q,jpos_est,18*sizeof(double));
     memcpy(SimData.dq,jvel_est,18*sizeof(double));
@@ -695,6 +709,10 @@ void ExternalComm::SimExec(std::ofstream &file_est){
 
 	// Set Updated data for MPC/LL
 	updateData(SET_DATA, SIM_DATA, &SimData);  
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "Sim Time: " << duration.count() << " us" << "\t" << simcounter << std::endl;
     
     //std::cout << "ExitingSimExec" << std::endl;
 }
@@ -716,34 +734,34 @@ int main(int argc, char *argv[]) {
     // extComm.nmpc_obj->setPstart(Pstart);
     
 
-    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
 	
-	// loop_sim.start();
-	// sleep(1.0);
-	// loop_mpc.start();
-	// sleep(1.0);
-	// loop_calc.start();
+	loop_sim.start();
+	sleep(1.0);//.0);
+	loop_mpc.start();
+	sleep(1.0);
+	loop_calc.start();
 
-    // while (true)
-    // {
-    //     sleep(0.1);
-    // }
-    
-    std::ofstream file_est("../data25/estimatorMT13.csv");
     while (true)
-	{
+    {
+        sleep(0.1);
+    }
+    
+   // std::ofstream file_est("../data25/estimatorMT13.csv");
+    // while (true)
+	// {
 			
-        // sleep(0.1);
-        extComm.SimExec(file_est);
-        extComm.HighLevel();
-        extComm.Calc();
-        // sim_setup = false;
+    //     // sleep(0.1);
+    //     extComm.SimExec();//(file_est);
+    //     extComm.HighLevel();
+    //     extComm.Calc();
+    //     // sim_setup = false;
 
-	} 
+	// } 
 
-    file_est.close();
+    //file_est.close();
 
     
     return 0;

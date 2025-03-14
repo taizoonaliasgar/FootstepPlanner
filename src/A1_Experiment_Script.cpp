@@ -146,7 +146,7 @@ void kinestimator(double q[18], double dq[18], const int* contact, Eigen::Matrix
 
 void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, casadi::Function solver, Eigen::Matrix<double,16,1> q0, Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){//} casadi::Function solver, int duration_data) {
     std::map<std::string, casadi::DM> arg, res;
-
+    auto start = std::chrono::high_resolution_clock::now();
     int controlMPC = std::floor(controlTick/10); 
     //std::cout << "controlMPC:" << controlMPC << std::endl;
     //casadi::DM X_prev = loco_plan->getprevioussol_ll(q0,foot_position,controlMPC);//casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1); 
@@ -177,20 +177,28 @@ void plannerNMPC(size_t controlTick, LocoWrapper *loco_obj, SRBNMPC* loco_plan, 
     arg["ubg"] =  loco_plan->upperboundg();
     arg["x0"] = X_prev;
     arg["p"] = p;
-            
-    auto start = std::chrono::high_resolution_clock::now();
-    res = solver(arg);
-    auto end = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();       
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    int duration_data = static_cast<int>(duration.count());
-    //std::cout << "NMPC Solve Time: " << duration_data << "ms" << std::endl;
+    std::cout << "Pre solver time: " << duration.count() << std::endl;
 
+    auto start2 = std::chrono::high_resolution_clock::now();
+    res = solver(arg);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    int duration_data = static_cast<int>(duration2.count());
+    std::cout << "Solver time: " << duration2.count() << std::endl;
+    //std::cout << "NMPC Solve Time: " << duration_data << "ms" << std::endl;
+    auto start3 = std::chrono::high_resolution_clock::now();
     loco_plan->setprevioussol(res.at("x"));
             
     Eigen::Matrix<double, 33, 1> opt_HLMPC_state = loco_plan->getNMPCsol2(controlMPC);
             
     loco_obj->setoptNLstate(opt_HLMPC_state);
     loco_obj->setcontactconfig(controlMPC);
+
+    auto end3 = std::chrono::high_resolution_clock::now();
+    auto duration3 = std::chrono::duration_cast<std::chrono::milliseconds>(end3 - start3);
+    std::cout << "Post Solver time: " << duration3.count() << std::endl;
     loco_plan->mpcdataLog(q0, opt_HLMPC_state.block(16,0,12,1), controlMPC, Eigen::Matrix<double, 12, 1>::Zero());
             
 }
@@ -762,8 +770,8 @@ int main(int argc, char *argv[]) {
     //LocoWrapperwalk* loco_obj2 = new LocoWrapperwalk(argc,argv);
     //loco_obj1->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    loco_plan->generator();
-    std::string file_name = "take2_w0p2";//"take2_1";
+    //loco_plan->generator();
+    std::string file_name = "take2_w0p2H12";//"take2_1";
     
     std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
     std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
@@ -791,12 +799,12 @@ int main(int argc, char *argv[]) {
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;             // Record?
+    bool record = false;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
     double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
-    std::string directory = "../data25/Feb28/";
+    std::string directory = "../data25/Mar12/";
     // std::string filename = "Payload_Inplace";
     std::string filename = "fullsim";//"JacVCL_OWCL_rt55_3";
     // std::string filename = "inplace_sim";
@@ -875,7 +883,7 @@ int main(int argc, char *argv[]) {
         controller(A1,loco_obj1,loco_plan,solver,simcounter,contactInstance,file_est);
         world.integrate();        
         
-        if (simcounter%15 == 0)
+        if (simcounter%60 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)

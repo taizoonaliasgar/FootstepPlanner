@@ -53,6 +53,10 @@ if (Eigen3_FOUND)
     message("  Eigen Version: ${Eigen3_VERSION}")
 endif ()
 
+find_package(Boost REQUIRED COMPONENTS timer system thread)
+find_library(LCM lcm HINTS /usr/local/lib)
+find_package(yaml-cpp REQUIRED)
+
 #HDSRL portion
 set(UT_INC ${CMAKE_CURRENT_SOURCE_DIR}/unitree_legged_sdk/include)
 set(UT_LINK ${CMAKE_CURRENT_SOURCE_DIR}/unitree_legged_sdk/lib)
@@ -307,9 +311,9 @@ target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CM
 target_compile_options(fullExpSim PRIVATE -std=c++17)
 
 add_executable(MT_Sim src/A1_Sim_MT.cpp)
-target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt ${EXTRA_LIBS} ${LCM} ${Boost_LIBRARIES})# osqp::osqpstatic)
 target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(MT_Sim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-#target_include_directories(MT_Sim PRIVATE ${UT_INC})
+target_include_directories(MT_Sim PRIVATE ${UT_INC})
 target_compile_options(MT_Sim PRIVATE -std=c++17)

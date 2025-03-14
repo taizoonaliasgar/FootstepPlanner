@@ -51,7 +51,7 @@ sharedData data;
 void updateData(int setget, int highlow, sharedData *newData){
 	// set=1,  get=0
 	// high=1, low=0
-	// boost::lock_guard<boost::mutex> guard(mtx);
+	boost::lock_guard<boost::mutex> guard(mtx);
 	if(setget==SET_DATA){
 		
 		if(highlow==SIM_DATA){ // set high level data
@@ -62,11 +62,11 @@ void updateData(int setget, int highlow, sharedData *newData){
 			
 		
 		}else if(highlow==HL_DATA){ // set low level data
-			Eigen::Matrix<double, 17, 1> fDes_temp = newData->fDes;
-			Eigen::Matrix<double, 12, 1> comDes_temp = newData->comDes;
-			memcpy(&data,newData,sizeof(sharedData));
-			data.fDes = fDes_temp;
-			data.comDes = comDes_temp;
+			//Eigen::Matrix<double, 17, 1> fDes_temp = newData->fDes;
+			//Eigen::Matrix<double, 12, 1> comDes_temp = newData->comDes;
+			//memcpy(&data,newData,sizeof(sharedData));
+			data.fDes =  newData->fDes;;//fDes_temp;
+			data.comDes = newData->comDes;;//comDes_temp;
 			memcpy(data.ind,newData->ind,4*sizeof(int));
 			data.solvetime = newData->solvetime;
 		
@@ -93,11 +93,11 @@ void updateData(int setget, int highlow, sharedData *newData){
 			newData->toePos = data.toePos;
 		
 		}else{
-			Eigen::Matrix<double, 17, 1> fDes_temp = data.fDes;
-			Eigen::Matrix<double, 12, 1> comDes_temp = data.comDes;
-			memcpy(newData,&data,sizeof(sharedData));
-			newData->fDes = fDes_temp;
-			newData->comDes = comDes_temp;
+			// Eigen::Matrix<double, 17, 1> fDes_temp = data.fDes;
+			// Eigen::Matrix<double, 12, 1> comDes_temp = data.comDes;
+			//memcpy(newData,&data,sizeof(sharedData));
+			newData->fDes = data.fDes;//fDes_temp;
+			newData->comDes = data.comDes;//comDes_temp;
 			
 			memcpy(newData->q,data.q,18*sizeof(double));
 			memcpy(newData->dq,data.dq,18*sizeof(double));
