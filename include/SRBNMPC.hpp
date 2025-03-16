@@ -134,6 +134,9 @@ public:
     int returnSolveTime(){return NMPCsolvetime;};
     int* returnConInd(size_t controlTick);
 
+    //Saving MT time
+    void statebounds_MT(casadi::DM p);
+
 private: 
     std::string filename;
     std::fstream fid;
@@ -275,9 +278,15 @@ private:
     Eigen::Matrix<double,17,1> fDes = Eigen::MatrixXd::Zero(17,1);
     int NMPCsolvetime = 0;
 
+    //Saving time in Multithreading
     casadi::DM lbg2 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM ubg2 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
-    
+    casadi::DM X_prev_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
+    casadi::DM p_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2));
+    Eigen::Matrix<double,16,1> q0_MT = Eigen::Matrix<double,16,1>::Zero();
+    int controlMPC_MT = 0;
+    casadi::DM lbx_MT = -casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
+    casadi::DM ubx_MT = casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     
 };
 

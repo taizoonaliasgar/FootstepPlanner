@@ -328,9 +328,10 @@ void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, c
 void ExternalComm::HighLevel(){
 
     //std::cout << "Inhighlevel" << std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
+    
     updateData(GET_DATA, HL_DATA, &HLData);
     if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
+        auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
         HLData.fDes= nmpc_obj->returnfDes();
@@ -342,11 +343,13 @@ void ExternalComm::HighLevel(){
         HLData.ind[3] = indcon[3];
 
         updateData(SET_DATA, HL_DATA, &HLData);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
     //std::cout << "Exitinghighlevel" << std::endl;
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "HighLevel Time: " << duration.count() << " us" << std::endl;
+    
+    
         
 }
 

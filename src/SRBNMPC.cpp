@@ -85,7 +85,13 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     argHW["lbg"] = lbg2;
     argHW["ubg"] = ubg2;
 
+    for(int k=0 ; k<HORIZ ; k++){
+    
+        lbx_MT(NFS*(HORIZ+1)+NFI*k+1) = 0;
+        lbx_MT(NFS*(HORIZ+1)+NFI*(k)+8) = 0;
+        lbx_MT(NFS*(HORIZ+1)+NFI*(k)+11) = 0;
 
+    }
     
 }
 
@@ -1256,21 +1262,21 @@ casadi::DM SRBNMPC::getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen:
     x0(14) = foothold(0,2);
     x0(15) = foothold(0,3);
 
-    if(first_time_here){
+    // if(first_time_here){
         
-        for(int i = 0; i<HORIZ; i++){
+    //     for(int i = 0; i<HORIZ; i++){
 
-            x0(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0(casadi::Slice(0,NFS));
+    //         x0(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0(casadi::Slice(0,NFS));
             
-            x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(i),NFS*(HORIZ+1)+NFI*(i)+12)) = casadi::DM(std::vector<double>(forceQP.data(), forceQP.data() + forceQP.size()));
+    //         x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(i),NFS*(HORIZ+1)+NFI*(i)+12)) = casadi::DM(std::vector<double>(forceQP.data(), forceQP.data() + forceQP.size()));
             
-        }
+    //     }
         
-        if(controlTick==2740){
-            first_time_here = false;
-        }
+    //     if(controlTick==2740){
+    //         first_time_here = false;
+    //     }
         
-    }else{
+    // }else{
         //x0(casadi::Slice(12,16)) = previous_sol(casadi::Slice(28,32));
         
 
@@ -1280,7 +1286,7 @@ casadi::DM SRBNMPC::getprevioussol_fullsim(Eigen::Matrix<double,16,1> q0, Eigen:
         x0(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+NFI*(HORIZ-1))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI,NFS*(HORIZ+1)+NFI*(HORIZ)));
         x0(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
 
-    }
+    //}
     
     return x0;
 }
@@ -1384,47 +1390,46 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 
 
 void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
-    
-    Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
+    auto start = std::chrono::high_resolution_clock::now();
+    //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     if(controlTick == 32000){letsgo();}
-    int controlMPC = std::floor(controlTick/10); 
+    controlMPC_MT = std::floor(controlTick/10); 
     
     for(int i = 0; i<3; i++){
-        q0(i) = q[i];
-        q0(i+3) = dq[i];
-        q0(i+6) = q[i+3];
-        q0(i+9) = dq[i+3];
+        q0_MT(i) = q[i];
+        q0_MT(i+3) = dq[i];
+        q0_MT(i+6) = q[i+3];
+        q0_MT(i+9) = dq[i+3];
     }
     
-    casadi::DM X_prev = getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);
+    X_prev_MT = getprevioussol_fullsim(q0_MT,foot_position,lastQPforce,controlMPC_MT);
     //if(controlMPC==2740){
     //    q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);
     //}else{
-        q0(12) = double(X_prev(12));
-        q0(13) = double(X_prev(13));
-        q0(14) = double(X_prev(14));
-        q0(15) = double(X_prev(15));
+        q0_MT(12) = double(X_prev_MT(12));
+        q0_MT(13) = double(X_prev_MT(13));
+        q0_MT(14) = double(X_prev_MT(14));
+        q0_MT(15) = double(X_prev_MT(15));
     //}
             
-    casadi::DM p = motionPlannerN(q0,controlMPC);
+    p_MT = motionPlannerN(q0_MT,controlMPC_MT);
     
-    setpreviousp(p);
+    //setpreviousp(p);
+    statebounds_MT(p_MT);
 
-    argHW["lbx"] = lowerboundx(p, controlMPC);
-    argHW["ubx"] = upperboundx(p);
+    argHW["lbx"] = lbx_MT;//(p_MT, controlMPC_MT);
+    argHW["ubx"] = ubx_MT;//upperboundx(p_MT);
     //argHW["lbg"] = lowerboundg();
     //argHW["ubg"] = upperboundg();
-    argHW["x0"] = X_prev;
-    argHW["p"] = p;
+    argHW["x0"] = X_prev_MT;
+    argHW["p"] = p_MT;
             
-    auto start = std::chrono::high_resolution_clock::now();
+    auto end1 = std::chrono::high_resolution_clock::now();
     resHW = solver_exp(argHW);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end2 - end1);
     NMPCsolvetime = static_cast<int>(duration.count());
-    std::cout << "Solve Time: " << NMPCsolvetime << " us"  << "\t" << controlTick << std::endl;
     
-
     setprevioussol(resHW.at("x"));
             
     std::vector<double> v = previous_sol.get_elements();
@@ -1435,8 +1440,15 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     comDes = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
     fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
     fDes(16) = static_cast<double>(vRaibstep(0));
+    auto end3 = std::chrono::high_resolution_clock::now();
+
+    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start);
+    auto duration3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - end2);
+    std::cout << duration1.count() << "\t" << controlTick << std::endl;
+    std::cout << NMPCsolvetime << std::endl;
+    std::cout << duration3.count() << std::endl;
             
-    mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
+    //mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
 }
 
 int* SRBNMPC::returnConInd(size_t controlTick){
@@ -1450,4 +1462,45 @@ int* SRBNMPC::returnConInd(size_t controlTick){
     conInd[3] = static_cast<double>(contact_sequence_dm(3,conmark));
     return conInd;
 }
+
+
+void SRBNMPC::statebounds_MT(casadi::DM p){
+    
+    casadi::DM contact_index = casadi::DM::zeros(4,1); 
+
+    for(int k=0 ; k<HORIZ ; k++){
+
+        contact_index = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+2)));
+
+        lbx_MT(NFS*(k+1)+12) = p(0)-2*abs(Raibstep);
+        lbx_MT(NFS*(k+1)+13) = p(0)-2*abs(Raibstep);
+        lbx_MT(NFS*(k+1)+14) = p(0)-2*abs(Raibstep)+rear_off;
+        lbx_MT(NFS*(k+1)+15) = p(0)-2*abs(Raibstep)+rear_off;
+        
+        lbx_MT(NFS*(HORIZ+1)+NFI*(k)+4) = -contact_index(1)*fzmaxf;
+        
+        lbx_MT(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(-RaibMult*abs(vRaibstep));
+        lbx_MT(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(-RaibMult*abs(vRaibstep));
+        lbx_MT(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
+        lbx_MT(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
+
+
+        ubx_MT(NFS*(k+1)+12) = p(0)+2*abs(Raibstep)+front_off;
+        ubx_MT(NFS*(k+1)+13) = p(0)+2*abs(Raibstep)+front_off;
+        ubx_MT(NFS*(k+1)+14) = p(0)+2*abs(Raibstep);
+        ubx_MT(NFS*(k+1)+15) = p(0)+2*abs(Raibstep);
+        
+        ubx_MT(NFS*(HORIZ+1)+NFI*(k)+1) = contact_index(0)*fzmaxf;
+        ubx_MT(NFS*(HORIZ+1)+NFI*(k)+4) = 0;
+        ubx_MT(NFS*(HORIZ+1)+NFI*(k)+8) = contact_index(2)*fzmaxr;
+        ubx_MT(NFS*(HORIZ+1)+NFI*(k)+11) = contact_index(3)*fzmaxr;
+
+        ubx_MT(NFS*(HORIZ+1)+NFI*k+12) = (1-contact_index(0))*(RaibMult*abs(vRaibstep));
+        ubx_MT(NFS*(HORIZ+1)+NFI*k+13) = (1-contact_index(1))*(RaibMult*abs(vRaibstep));
+        ubx_MT(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(RaibMult*abs(vRaibstep));
+        ubx_MT(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(RaibMult*abs(vRaibstep));
+    }
+
+}
+
 
