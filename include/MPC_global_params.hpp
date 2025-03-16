@@ -12,7 +12,7 @@
 
 #define NRS 12
 #define NRI 12
-#define HORIZ 20
+#define HORIZ 12
 #define TINI 10
 
 #define MPC_Hz 100

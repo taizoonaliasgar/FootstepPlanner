@@ -762,8 +762,8 @@ int main(int argc, char *argv[]) {
     //LocoWrapperwalk* loco_obj2 = new LocoWrapperwalk(argc,argv);
     //loco_obj1->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
-    //loco_plan->generator();
-    std::string file_name = "take2_w0p2";//"take2_1";
+    loco_plan->generator();
+    std::string file_name = "take2_w0p2N12";//"take2_1";
     
     std::string prefix_code = std::filesystem::current_path().string() + "/";
     std::string prefix_lib = std::filesystem::current_path().string() + "/";

@@ -124,7 +124,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "take2_w0p2";//"take2_1";
+    std::string file_name = "take2_w0p2N12";//"take2_1";
     // code predix
     std::string prefix_code = std::filesystem::current_path().string() + "/";
 
@@ -1401,8 +1401,10 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
+    auto end01 = std::chrono::high_resolution_clock::now();
     
     X_prev_MT = getprevioussol_fullsim(q0_MT,foot_position,lastQPforce,controlMPC_MT);
+    auto end02 = std::chrono::high_resolution_clock::now();
     //if(controlMPC==2740){
     //    q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);
     //}else{
@@ -1411,12 +1413,12 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(14) = double(X_prev_MT(14));
         q0_MT(15) = double(X_prev_MT(15));
     //}
-            
+    auto end03 = std::chrono::high_resolution_clock::now();
     p_MT = motionPlannerN(q0_MT,controlMPC_MT);
-    
+    auto end04 = std::chrono::high_resolution_clock::now();
     //setpreviousp(p);
     statebounds_MT(p_MT);
-
+    auto end05 = std::chrono::high_resolution_clock::now();
     argHW["lbx"] = lbx_MT;//(p_MT, controlMPC_MT);
     argHW["ubx"] = ubx_MT;//upperboundx(p_MT);
     //argHW["lbg"] = lowerboundg();
@@ -1444,6 +1446,19 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
 
     auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start);
     auto duration3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - end2);
+    auto duration01 = std::chrono::duration_cast<std::chrono::microseconds>(end01 - start);
+    auto duration02 = std::chrono::duration_cast<std::chrono::microseconds>(end02 - end01);
+    auto duration03 = std::chrono::duration_cast<std::chrono::microseconds>(end03 - end02);
+    auto duration04 = std::chrono::duration_cast<std::chrono::microseconds>(end04 - end03);
+    auto duration05 = std::chrono::duration_cast<std::chrono::microseconds>(end05 - end04);
+    auto duration06 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - end05);
+    std::cout << duration01.count() << "\t" << "Duration01" << std::endl;
+    std::cout << duration02.count() << "\t" << "Duration02" << std::endl;
+    std::cout << duration03.count() << "\t" << "Duration03" << std::endl;
+    std::cout << duration04.count() << "\t" << "Duration04" << std::endl;
+    std::cout << duration05.count() << "\t" << "Duration05" << std::endl;
+    std::cout << duration06.count() << "\t" << "Duration06" << std::endl;
+    
     std::cout << duration1.count() << "\t" << controlTick << std::endl;
     std::cout << NMPCsolvetime << std::endl;
     std::cout << duration3.count() << std::endl;
