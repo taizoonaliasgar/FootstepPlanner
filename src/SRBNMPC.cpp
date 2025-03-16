@@ -1401,8 +1401,9 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     auto start = std::chrono::high_resolution_clock::now();
     resHW = solver_exp(argHW);
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     NMPCsolvetime = static_cast<int>(duration.count());
+    std::cout << "Solve Time: " << NMPCsolvetime << " us"  << "\t" << controlTick << std::endl;
     
 
     setprevioussol(resHW.at("x"));

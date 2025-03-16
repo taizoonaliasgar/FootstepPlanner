@@ -328,9 +328,9 @@ void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, c
 void ExternalComm::HighLevel(){
 
     //std::cout << "Inhighlevel" << std::endl;
-
+    auto start = std::chrono::high_resolution_clock::now();
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
         HLData.fDes= nmpc_obj->returnfDes();
@@ -344,6 +344,9 @@ void ExternalComm::HighLevel(){
         updateData(SET_DATA, HL_DATA, &HLData);
     }
     //std::cout << "Exitinghighlevel" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "HighLevel Time: " << duration.count() << " us" << std::endl;
         
 }
 
@@ -562,7 +565,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         A1.back()->setGeneralizedForce(SimData.tau);
         world.integrate();        
         
-        if (simcounter%15 == 0)
+        if (simcounter%120 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
@@ -589,7 +592,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
         simcounter++; 
         
     }
