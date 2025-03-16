@@ -67,6 +67,25 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     contact_sequence_dm_T(1,casadi::Slice(340,360)) = contact_sequence_dm(1,casadi::Slice(20,40));
     contact_sequence_dm_T(2,casadi::Slice(340,360)) = contact_sequence_dm(2,casadi::Slice(20,40));
     contact_sequence_dm_T(3,casadi::Slice(340,360)) = contact_sequence_dm(3,casadi::Slice(20,40));
+
+    for(int k=0 ; k<HORIZ ; k++){
+        
+        for(int leg=0 ; leg<4 ; leg++){     
+            lbg2(casadi::Slice(NFS*(HORIZ+1)+NFI*k+4*leg,NFS*(HORIZ+1)+NFI*k+4*leg+2)) = -casadi::DM::inf();    
+        }
+    }
+
+    for(int k=0 ; k<HORIZ ; k++){
+        
+        for(int leg=0 ; leg<4 ; leg++){     
+            ubg2(casadi::Slice(NFS*(HORIZ+1)+NFI*k+4*leg+2,NFS*(HORIZ+1)+NFI*k+4*leg+4)) = casadi::DM::inf();    
+        }
+    }
+
+    argHW["lbg"] = lbg2;
+    argHW["ubg"] = ubg2;
+
+
     
 }
 
@@ -1378,14 +1397,14 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     }
     
     casadi::DM X_prev = getprevioussol_fullsim(q0,foot_position,lastQPforce,controlMPC);
-    if(controlMPC==2740){
-        q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);
-    }else{
+    //if(controlMPC==2740){
+    //    q0.block(12,0,4,1) << foot_position(0,0),foot_position(0,1),foot_position(0,2),foot_position(0,3);
+    //}else{
         q0(12) = double(X_prev(12));
         q0(13) = double(X_prev(13));
         q0(14) = double(X_prev(14));
         q0(15) = double(X_prev(15));
-    }
+    //}
             
     casadi::DM p = motionPlannerN(q0,controlMPC);
     
@@ -1393,8 +1412,8 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
 
     argHW["lbx"] = lowerboundx(p, controlMPC);
     argHW["ubx"] = upperboundx(p);
-    argHW["lbg"] = lowerboundg();
-    argHW["ubg"] = upperboundg();
+    //argHW["lbg"] = lowerboundg();
+    //argHW["ubg"] = upperboundg();
     argHW["x0"] = X_prev;
     argHW["p"] = p;
             

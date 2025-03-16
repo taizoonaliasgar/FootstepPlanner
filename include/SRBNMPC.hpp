@@ -274,6 +274,10 @@ private:
     Eigen::Matrix<double,12,1> comDes = Eigen::MatrixXd::Zero(12,1);
     Eigen::Matrix<double,17,1> fDes = Eigen::MatrixXd::Zero(17,1);
     int NMPCsolvetime = 0;
+
+    casadi::DM lbg2 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
+    casadi::DM ubg2 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
+    
     
 };
 
