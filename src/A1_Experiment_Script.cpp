@@ -763,7 +763,7 @@ int main(int argc, char *argv[]) {
     //loco_obj1->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "take2_w0p2N15";//"take2_1";
+    std::string file_name = "take2_w0p2N14";//"take2_1";
     
     std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
     std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
