@@ -571,7 +571,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         A1.back()->setGeneralizedForce(SimData.tau);
         world.integrate();        
         
-        if (simcounter%30 == 0)
+        if (simcounter%60 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
