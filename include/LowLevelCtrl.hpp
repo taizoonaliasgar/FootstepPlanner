@@ -34,6 +34,7 @@ public:
     void afterfirststep(){firststeptaken=true;};
     void fullyupright(){uprighty = true;};
     void keepwalking(){dFnew = dFnew*100;};
+    void keepwalking2(){dFnew = 1000;};
     void enablehipposcntrl(){uprighty2=true;};
 
 private:

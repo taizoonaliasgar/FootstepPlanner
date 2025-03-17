@@ -126,7 +126,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 40*ctrlHz;
+    double simlength = 50*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -330,7 +330,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     updateData(GET_DATA, HL_DATA, &HLData);
-    // if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
+    //if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
     if(HLData.control_Tick > 26999){
         
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
