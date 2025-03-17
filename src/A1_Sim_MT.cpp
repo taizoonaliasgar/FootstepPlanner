@@ -126,7 +126,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 35*ctrlHz;
+    double simlength = 40*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -571,7 +571,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         A1.back()->setGeneralizedForce(SimData.tau);
         world.integrate();        
         
-        if (simcounter%60 == 0)
+        if (simcounter%30 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)

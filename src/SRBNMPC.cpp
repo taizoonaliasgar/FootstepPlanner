@@ -1392,9 +1392,9 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
     // auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
-    if(controlTick == 32000){letsgo();}
+    //if(controlTick == 32000){letsgo();}
     controlMPC_MT = std::floor(controlTick/10); 
-    
+    if(controlMPC_MT == 3200){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
         q0_MT(i+3) = dq[i];
