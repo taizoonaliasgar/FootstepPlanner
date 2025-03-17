@@ -134,7 +134,9 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         
         if(readytowalkf){
         
-            if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+            // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+            if (HLphase == 0 || HLphase == 20 || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+
                 locoTick = 0;
                 phaseVar = getPhase(1.0*locoTick, 0.0, 199);
                 flphase = 0;
@@ -148,7 +150,8 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
                 flphase = (flphase<0)?0:(flphase>1)?1:flphase;
                 rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
-                if(locoTick==50||locoTick==80){
+                // if(locoTick==50||locoTick==80){
+                if(HLphase == 5 || HLphase == 8 || HLphase == 25 || HLphase == 28){
                     conEst->forceDomChange();
                 }            
             }
@@ -519,9 +522,10 @@ void LocoWrapper::getStateEstimatefull(double q[18], double dq[18], const int* c
 
 
 void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
-                                int HLContactIndex[4], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
+                                int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
 
     setoptNLstateExp(comDes,fDes);
+    setHLphase(HLContactIndex[4]);
     if(control_Tick < loco_start_e+shifttime){
         nextcon_e(0) = 0;
         
@@ -598,7 +602,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
     
 }
 
-void LocoWrapper::setcontactconfigExp(int HLContactIndex[4]){
+void LocoWrapper::setcontactconfigExp(int HLContactIndex[5]){
     
     desired_contact[0] = HLContactIndex[0];
     desired_contact[1] = HLContactIndex[1];

@@ -1468,13 +1468,14 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
 
 int* SRBNMPC::returnConInd(size_t controlTick){
     int controlMPC = std::floor(controlTick/10);
-    static int conInd[4] = {0,0,0,0};
+    static int conInd[5] = {0,0,0,0,0};
     
     int conmark = controlMPC%40;
     conInd[0] = static_cast<double>(contact_sequence_dm(0,conmark));
     conInd[1] = static_cast<double>(contact_sequence_dm(1,conmark));
     conInd[2] = static_cast<double>(contact_sequence_dm(2,conmark));
     conInd[3] = static_cast<double>(contact_sequence_dm(3,conmark));
+    conInd[4] = conmark;
     return conInd;
 }
 
