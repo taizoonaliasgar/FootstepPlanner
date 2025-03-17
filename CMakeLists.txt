@@ -3,8 +3,10 @@ project(footstep_planner)
 
 
 set(CMAKE_BUILD_TYPE RELEASE)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_C_COMPILER "/usr/bin/gcc-11")
+set(CMAKE_CXX_COMPILER "/usr/bin/g++-11")
 
 set(CMAKE_CXX_FLAGS "-O3")
 set(USE_QPSWIFT TRUE) 
@@ -15,19 +17,27 @@ add_definitions(-DUSE_QPSWIFT=1)
 set(LL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/LL_integrator)
 set(ROBOT_DIR "A1_New_wFoot")
 
-find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/lib/cmake/raisim")
-find_package(raisimOgre CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/share/raisimOgre/cmake")
+# find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/lib/cmake/raisim")
+# find_package(raisimOgre CONFIG HINTS "/home/taizoon/raisimEnvT/rInstall/share/raisimOgre/cmake")
 
-# find_package(raisim CONFIG HINTS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/cmake/raisim")
-# find_package(OGRE CONFIG REQUIRED PATHS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/OGRE/cmake")
-# find_package(raisimOgre CONFIG HINTS  "/home/trec/WorkRaj/raisim_legged/raisim_build/share/raisimOgre/cmake")  
+find_package(raisim CONFIG HINTS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/cmake/raisim")
+find_package(OGRE CONFIG REQUIRED PATHS "/home/trec/WorkRaj/raisim_legged/raisim_build/lib/OGRE/cmake")
+find_package(raisimOgre CONFIG HINTS  "/home/trec/WorkRaj/raisim_legged/raisim_build/share/raisimOgre/cmake")  
 
 include_directories(PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include)
 find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})
 
 #find_package(osqp REQUIRED)
+find_package(Boost REQUIRED COMPONENTS timer system thread)
+find_library(LCM lcm HINTS /usr/local/lib)
+find_package(yaml-cpp REQUIRED)
 
 find_package(casadi REQUIRED)
+if (casadi_FOUND)
+    message(STATUS "CasADi found!")
+else()
+    message(FATAL_ERROR "CasADi not found!")
+endif()
 # set casadi include directory
 set(CASADI_INCLUDE_DIR /usr/local/include/casadi)
 
@@ -211,14 +221,14 @@ target_include_directories(plan_lib PUBLIC
 #     plan_lib)
 
 # # ===== Combining dynamics for both configurations ===== #
-add_library(wrapperwalk2
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapperwalk.cpp")
-target_include_directories(wrapperwalk2 PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# add_library(wrapperwalk2
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapperwalk.cpp")
+# target_include_directories(wrapperwalk2 PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include)
  
- target_link_libraries(wrapperwalk2 PUBLIC
-    ctrl_lib_full
-    plan_lib)
+#  target_link_libraries(wrapperwalk2 PUBLIC
+#     ctrl_lib_full
+#     plan_lib)
 
 add_library(wrapper2
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LocoWrapper.cpp")
@@ -242,26 +252,26 @@ target_link_libraries(nmpc_lib PUBLIC
     params_lib
     -L/usr/local/lib)
 
-add_library(nmpcr_lib
-    "src/SRBNMPCR.cpp")
-target_compile_options(nmpcr_lib PRIVATE -std=c++17)
+# add_library(nmpcr_lib
+#     "src/SRBNMPCR.cpp")
+# target_compile_options(nmpcr_lib PRIVATE -std=c++17)
 
-target_include_directories(nmpcr_lib PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/util_include
-    ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
-target_link_libraries(nmpcr_lib PUBLIC 
-    params_lib
-    -L/usr/local/lib)
+# target_include_directories(nmpcr_lib PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include
+#     ${CMAKE_CURRENT_SOURCE_DIR}/util_include
+#     ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
+# target_link_libraries(nmpcr_lib PUBLIC 
+#     params_lib
+#     -L/usr/local/lib)
 
 
 
-add_executable(upright_NMPC src/upright_NMPC.cpp)
-target_link_libraries(upright_NMPC PUBLIC raisim::raisimOgre raisim::assimp nmpc_lib ${CASADI_LIBRARIES} ipopt)
-target_include_directories(upright_NMPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-target_include_directories(upright_NMPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(upright_NMPC PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-target_compile_options(upright_NMPC PRIVATE -std=c++17)
+# add_executable(upright_NMPC src/upright_NMPC.cpp)
+# target_link_libraries(upright_NMPC PUBLIC raisim::raisimOgre raisim::assimp nmpc_lib ${CASADI_LIBRARIES} ipopt)
+# target_include_directories(upright_NMPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+# target_include_directories(upright_NMPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# target_compile_definitions(upright_NMPC PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+# target_compile_options(upright_NMPC PRIVATE -std=c++17)
 
 # add_executable(upright_NMPCR src/upright_NMPCR.cpp)
 # target_link_libraries(upright_NMPCR PUBLIC raisim::raisimOgre raisim::assimp nmpcr_lib ${CASADI_LIBRARIES} ipopt)
@@ -270,33 +280,33 @@ target_compile_options(upright_NMPC PRIVATE -std=c++17)
 # target_compile_definitions(upright_NMPCR PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 # target_compile_options(upright_NMPCR PRIVATE -std=c++17)
 
-add_executable(uprightwalk src/A1_up_walk.cpp)
-target_link_libraries(uprightwalk PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
-target_include_directories(uprightwalk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
-target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-target_compile_options(uprightwalk PRIVATE -std=c++17)
+# add_executable(uprightwalk src/A1_up_walk.cpp)
+# target_link_libraries(uprightwalk PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+# target_include_directories(uprightwalk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+# #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+# target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+# target_compile_options(uprightwalk PRIVATE -std=c++17)
 
-add_executable(uprightwalkR src/A1_up_walk_Raib.cpp)
-target_link_libraries(uprightwalkR PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpcr_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
-target_include_directories(uprightwalkR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
-target_compile_definitions(uprightwalkR PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-target_compile_options(uprightwalkR PRIVATE -std=c++17)
+# add_executable(uprightwalkR src/A1_up_walk_Raib.cpp)
+# target_link_libraries(uprightwalkR PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpcr_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+# target_include_directories(uprightwalkR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+# #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+# target_compile_definitions(uprightwalkR PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+# target_compile_options(uprightwalkR PRIVATE -std=c++17)
 
-add_executable(uprightwalkExp src/A1_up_walk_Exp.cpp)
-target_link_libraries(uprightwalkExp PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
-target_include_directories(uprightwalkExp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
-target_compile_definitions(uprightwalkExp PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-target_compile_options(uprightwalkExp PRIVATE -std=c++17)
+# add_executable(uprightwalkExp src/A1_up_walk_Exp.cpp)
+# target_link_libraries(uprightwalkExp PUBLIC raisim::raisimOgre raisim::assimp wrapperwalk2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+# target_include_directories(uprightwalkExp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+# #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+# target_compile_definitions(uprightwalkExp PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+# target_compile_options(uprightwalkExp PRIVATE -std=c++17)
 
-add_executable(makeUpright src/A1_makeupright.cpp)
-target_link_libraries(makeUpright PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
-target_include_directories(makeUpright PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
-#target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
-target_compile_definitions(makeUpright PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-target_compile_options(makeUpright PRIVATE -std=c++17)
+# add_executable(makeUpright src/A1_makeupright.cpp)
+# target_link_libraries(makeUpright PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+# target_include_directories(makeUpright PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+# #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
+# target_compile_definitions(makeUpright PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
+# target_compile_options(makeUpright PRIVATE -std=c++17)
 
 add_executable(fullExpSim src/A1_Experiment_Script.cpp)
 target_link_libraries(fullExpSim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
@@ -306,9 +316,9 @@ target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CM
 target_compile_options(fullExpSim PRIVATE -std=c++17)
 
 add_executable(MT_Sim src/A1_Sim_MT.cpp)
-target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt ${EXTRA_LIBS} ${LCM} ${Boost_LIBRARIES})# osqp::osqpstatic)
 target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(MT_Sim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
-#target_include_directories(MT_Sim PRIVATE ${UT_INC})
+target_include_directories(MT_Sim PRIVATE ${UT_INC})
 target_compile_options(MT_Sim PRIVATE -std=c++17)

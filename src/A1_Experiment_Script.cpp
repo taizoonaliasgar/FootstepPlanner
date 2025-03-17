@@ -765,8 +765,8 @@ int main(int argc, char *argv[]) {
     loco_plan->generator();
     std::string file_name = "take2_w0p2N12";//"take2_1";
     
-    std::string prefix_code = std::filesystem::current_path().string() + "/";
-    std::string prefix_lib = std::filesystem::current_path().string() + "/";
+    std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
+    std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
     // Create a new NLP solver instance from the compiled code
     std::string lib_name = prefix_lib + file_name + ".so";

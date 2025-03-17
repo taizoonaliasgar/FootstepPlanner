@@ -13,7 +13,7 @@
 
 
 
-namespace fs = std::filesystem;
+//namespace fs = std::filesystem;
 
 SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(argc,argv){
     // filename = ""; // empty string will produce no output file
@@ -126,12 +126,12 @@ void SRBNMPC::generator(){
     // file name
     std::string file_name = "take2_w0p2N12";//"take2_1";
     // code predix
-    std::string prefix_code = std::filesystem::current_path().string() + "/";
+    std::string prefix_code = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
     // Generate C code for the NLP functions
     solver.generate_dependencies(file_name + ".c");
 
-    std::string prefix_lib = std::filesystem::current_path().string() + "/";
+    std::string prefix_lib = "/home/trec/WorkRaj/raisim_legged/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
     // compile c code to a shared library
     std::string compile_command = "gcc -fPIC -shared -O3 " + 
         prefix_code + file_name + ".c -o " +
@@ -1390,7 +1390,7 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 
 
 void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     if(controlTick == 32000){letsgo();}
     controlMPC_MT = std::floor(controlTick/10); 
@@ -1401,7 +1401,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
-    auto end01 = std::chrono::high_resolution_clock::now();
+    // auto end01 = std::chrono::high_resolution_clock::now();
     
     X_prev_MT = getprevioussol_fullsim(q0_MT,foot_position,lastQPforce,controlMPC_MT);
     auto end02 = std::chrono::high_resolution_clock::now();
@@ -1413,12 +1413,12 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(14) = double(X_prev_MT(14));
         q0_MT(15) = double(X_prev_MT(15));
     //}
-    auto end03 = std::chrono::high_resolution_clock::now();
+    // auto end03 = std::chrono::high_resolution_clock::now();
     p_MT = motionPlannerN(q0_MT,controlMPC_MT);
-    auto end04 = std::chrono::high_resolution_clock::now();
+    // auto end04 = std::chrono::high_resolution_clock::now();
     //setpreviousp(p);
     statebounds_MT(p_MT);
-    auto end05 = std::chrono::high_resolution_clock::now();
+    // auto end05 = std::chrono::high_resolution_clock::now();
     argHW["lbx"] = lbx_MT;//(p_MT, controlMPC_MT);
     argHW["ubx"] = ubx_MT;//upperboundx(p_MT);
     //argHW["lbg"] = lowerboundg();
@@ -1442,26 +1442,26 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     comDes = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
     fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
     fDes(16) = static_cast<double>(vRaibstep(0));
-    auto end3 = std::chrono::high_resolution_clock::now();
+    // auto end3 = std::chrono::high_resolution_clock::now();
 
-    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start);
-    auto duration3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - end2);
-    auto duration01 = std::chrono::duration_cast<std::chrono::microseconds>(end01 - start);
-    auto duration02 = std::chrono::duration_cast<std::chrono::microseconds>(end02 - end01);
-    auto duration03 = std::chrono::duration_cast<std::chrono::microseconds>(end03 - end02);
-    auto duration04 = std::chrono::duration_cast<std::chrono::microseconds>(end04 - end03);
-    auto duration05 = std::chrono::duration_cast<std::chrono::microseconds>(end05 - end04);
-    auto duration06 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - end05);
-    std::cout << duration01.count() << "\t" << "Duration01" << std::endl;
-    std::cout << duration02.count() << "\t" << "Duration02" << std::endl;
-    std::cout << duration03.count() << "\t" << "Duration03" << std::endl;
-    std::cout << duration04.count() << "\t" << "Duration04" << std::endl;
-    std::cout << duration05.count() << "\t" << "Duration05" << std::endl;
-    std::cout << duration06.count() << "\t" << "Duration06" << std::endl;
+    // auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start);
+    // auto duration3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - end2);
+    // auto duration01 = std::chrono::duration_cast<std::chrono::microseconds>(end01 - start);
+    // auto duration02 = std::chrono::duration_cast<std::chrono::microseconds>(end02 - end01);
+    // auto duration03 = std::chrono::duration_cast<std::chrono::microseconds>(end03 - end02);
+    // auto duration04 = std::chrono::duration_cast<std::chrono::microseconds>(end04 - end03);
+    // auto duration05 = std::chrono::duration_cast<std::chrono::microseconds>(end05 - end04);
+    // auto duration06 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - end05);
+    // std::cout << duration01.count() << "\t" << "Duration01" << std::endl;
+    // std::cout << duration02.count() << "\t" << "Duration02" << std::endl;
+    // std::cout << duration03.count() << "\t" << "Duration03" << std::endl;
+    // std::cout << duration04.count() << "\t" << "Duration04" << std::endl;
+    // std::cout << duration05.count() << "\t" << "Duration05" << std::endl;
+    // std::cout << duration06.count() << "\t" << "Duration06" << std::endl;
     
-    std::cout << duration1.count() << "\t" << controlTick << std::endl;
-    std::cout << NMPCsolvetime << std::endl;
-    std::cout << duration3.count() << std::endl;
+    // std::cout << duration1.count() << "\t" << controlTick << std::endl;
+    // std::cout << NMPCsolvetime << std::endl;
+    // std::cout << duration3.count() << std::endl;
             
     //mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
 }
