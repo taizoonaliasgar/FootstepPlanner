@@ -75,7 +75,7 @@ public:
 		
         delete vis;
         delete ground;
-        // delete list;
+        delete list;
             auto test = A1.back();
             A1.pop_back();
             delete test;
@@ -83,7 +83,8 @@ public:
 
     //support functions
 	void setupCallback();
-	void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
+	// void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
+    void plotGRFs(std::map<std::string, raisim::VisualObject>* list, Eigen::Matrix<double,17,1> GRF, Eigen::Matrix<double, 3, 4> toePos, const int contacts[4]);
     void setupRaisim();
 
     // main thread execution functions
@@ -116,6 +117,7 @@ public:
     raisim::World world;
     raisim::OgreVis *vis = raisim::OgreVis::get();
     raisim::HeightMap *ground;
+    std::map<std::string, raisim::VisualObject>* list = nullptr;
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
@@ -284,17 +286,19 @@ void ExternalComm::setupCallback() {
 
 
 
-void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts) {
+//void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts) {
+void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, Eigen::Matrix<double,17,1> GRF, Eigen::Matrix<double, 3, 4> toePos, const int contacts[4]) {
+
     // Ensure the vectors are of the correct size
-    if (GRF.size() < 12 || feet_vec.size() < 12 || contacts.size() < 4) {
-        std::cerr << "Error: Input vectors are of incorrect size." << std::endl;
-        return;
-    }
+    // if (GRF.size() < 12 || feet_vec.size() < 12 || contacts.size() < 4) {
+    //     std::cerr << "Error: Input vectors are of incorrect size." << std::endl;
+    //     return;
+    // }
 
     for (int i = 0; i < 4; ++i) {
         raisim::Vec<3> dir;
         for (int j = 0; j < 3; ++j) {
-            dir[j] = GRF[3 * i + j];
+            dir[j] = GRF(3 * i + j);
         }
 
         // Normalize the direction vector if it is not a zero vector
@@ -316,7 +320,7 @@ void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, c
 
         // Visual object key
         std::string objKey = "GRF" + std::to_string(i + 1);
-        (*list)[objKey].offset = {feet_vec[3 * i], feet_vec[3 * i + 1], feet_vec[3 * i + 2]};
+        (*list)[objKey].offset = {toePos(0,i), toePos(1,i),toePos(2,i)};
         (*list)[objKey].scale = {0.2, 0.2, 0.005 * norm};  // Scaling based on the norm of the GRF vector
 
         // Set the rotation matrix
@@ -341,6 +345,7 @@ void ExternalComm::HighLevel(){
         HLData.ind[1] = indcon[1];
         HLData.ind[2] = indcon[2];
         HLData.ind[3] = indcon[3];
+        HLData.ind[4] = indcon[4];
 
         updateData(SET_DATA, HL_DATA, &HLData);
         auto end = std::chrono::high_resolution_clock::now();
@@ -566,6 +571,11 @@ void ExternalComm::SimExec(std::ofstream &file_est){
     if(!vis->getRoot()->endRenderingQueued() && simcounter < simlength){
         
         A1.back()->setGeneralizedForce(SimData.tau);
+        // std::vector<double> GRF(std::begin(HLData.fDes), std::end(HLData.fDes)-5);
+		// std::vector<double> feet_vec(std::begin(SimData.toePos), std::end(SimData.toePos));
+		// std::vector<double> contacts(std::begin(SimData.ind_LL), std::end(SimData.ind_LL));
+        // if(GRF.size() >0) plotGRFs(list, GRF, feet_vec, contacts);
+        //plotGRFs(list, HLData.fDes, SimData.toePos, SimData.ind_LL);
         world.integrate();        
         
         if (simcounter%120 == 0)

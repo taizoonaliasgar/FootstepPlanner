@@ -23,7 +23,7 @@ struct sharedData
 	Eigen::Matrix<double,  17, 1> fDes   = Eigen::Matrix<double, 17, 1>::Zero();
 	int MPC_cnt = 0;
 	
-	int ind[4] = {1};
+	int ind[5] = {1};
 	// Provided by LL
 	size_t gait = STAND;
 	int control_Tick = 0;
@@ -67,7 +67,7 @@ void updateData(int setget, int highlow, sharedData *newData){
 			//memcpy(&data,newData,sizeof(sharedData));
 			data.fDes = newData->fDes;//fDes_temp;
 			data.comDes = newData->comDes;//comDes_temp;
-			memcpy(data.ind,newData->ind,4*sizeof(int));
+			memcpy(data.ind,newData->ind,5*sizeof(int));
 			data.solvetime = newData->solvetime;
 		
 		}else{
@@ -103,7 +103,7 @@ void updateData(int setget, int highlow, sharedData *newData){
 			memcpy(newData->dq,data.dq,18*sizeof(double));
 			memcpy(newData->rotMatrixDouble,data.rotMatrixDouble,9*sizeof(double));
 			
-			memcpy(newData->ind,data.ind,4*sizeof(int));
+			memcpy(newData->ind,data.ind,5*sizeof(int));
 			newData->control_Tick = data.control_Tick;
 
 			newData->solvetime = data.solvetime;

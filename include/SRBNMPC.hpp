@@ -135,7 +135,10 @@ public:
     int* returnConInd(size_t controlTick);
 
     //Saving MT time
+    casadi::DM motionPlannerN_MT(casadi::DM q0, size_t controlTick);
     void statebounds_MT(casadi::DM p);
+    void getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP, size_t controlTick);
+  
 
 private: 
     std::string filename;
@@ -268,7 +271,7 @@ private:
     bool starttrotting = false;
 
     //Hardware
-    std::string lib_name_exp = "/home/taizoon/raisimEnvT/rWorkspace/footstep_planner/build/take2_w0p2N12.so";
+    std::string lib_name_exp = "/home/taizoon/raisimEnvT/rWorkspace/footstep_planner/build/take2_w0p2N14.so";
     casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
 
@@ -283,10 +286,11 @@ private:
     casadi::DM ubg2 = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM X_prev_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
     casadi::DM p_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2));
-    Eigen::Matrix<double,16,1> q0_MT = Eigen::Matrix<double,16,1>::Zero();
+    casadi::DM q0_MT = casadi::DM::zeros(16,1);
     int controlMPC_MT = 0;
     casadi::DM lbx_MT = -casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM ubx_MT = casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
+    casadi::DM x0_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
     
 };
 

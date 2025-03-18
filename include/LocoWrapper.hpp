@@ -70,11 +70,14 @@ public:
 
     //Hardware
     void ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
-                                    int HLContactIndex[4], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
-    void setcontactconfigExp(int HLContactIndex[4]);
+                                    int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
+    void setcontactconfigExp(int HLContactIndex[5]);
     void setoptNLstateExp(Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
     Eigen::Matrix<double, 3, 4> gettoe_prev(){return toe_prev;};
     void settoe_prev(){toe_prev = kin->toePos;};
+
+    //Multi-threading
+    void setHLphase(int HLContact5){HLMTphase = HLContact5;};
 
     // Pointers to structs
     const StateInfo *state;
@@ -156,6 +159,9 @@ private:
     double *tau_LL;
     const int force_LL[4] = {0,0,0,0};
     Eigen::Matrix<double, 3, 4> toe_prev = Eigen::MatrixXd::Zero(3,4);
+
+    //Multi-threading
+    int HLMTphase = 0;
     
 };
 
