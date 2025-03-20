@@ -59,7 +59,12 @@ set(EXTRA_LIBS -pthread ${UT_LINK}/libunitree_legged_sdk_amd64.so)
 
 include_directories(PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
+#include_directories(${Boost_INCLUDE_DIRS})
+set(BOOST_ROOT "/opt/boost_1_68_0")
+set(Boost_NO_SYSTEM_PATHS TRUE)
+find_package(Boost REQUIRED COMPONENTS system)
 include_directories(${Boost_INCLUDE_DIRS})
+
 
 set(dyn_srcs 
     "${LL_DIR}/dynamics/A1/A1_Dynamics_z.cpp"
@@ -254,7 +259,11 @@ target_link_libraries(nmpcr_lib PUBLIC
     params_lib
     -L/usr/local/lib)
 
-
+# # ===== Microstrain ===== #
+# add_library(mscl
+#     "${CMAKE_CURRENT_SOURCE_DIR}/../MSCL-latest/build/MSCL/MSCL_Static/libMSCL.a")
+# target_include_directories(mscl PUBLIC 
+#     ${CMAKE_CURRENT_SOURCE_DIR}/../MSCL-latest/MSCL/source)
 
 add_executable(upright_NMPC src/upright_NMPC.cpp)
 target_link_libraries(upright_NMPC PUBLIC raisim::raisimOgre raisim::assimp nmpc_lib ${CASADI_LIBRARIES} ipopt)
@@ -306,7 +315,7 @@ target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CM
 target_compile_options(fullExpSim PRIVATE -std=c++17)
 
 add_executable(MT_Sim src/A1_Sim_MT.cpp)
-target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ipopt)# osqp::osqpstatic)
+target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ${Boost_LIBRARIES} ipopt)# mscl)# osqp::osqpstatic)
 target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(MT_Sim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
