@@ -201,8 +201,8 @@ void ExternalComm::setupRaisim(){
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.32,0.4);
-    box_left->setPosition(0,0.32,0.4);
+    box_right->setPosition(0,-0.35,0.4);
+    box_left->setPosition(0,0.35,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
