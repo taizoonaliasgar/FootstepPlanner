@@ -28,6 +28,7 @@ find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})
 #find_package(osqp REQUIRED)
 
 find_package(casadi REQUIRED)
+find_package(OpenSSL REQUIRED)
 # set casadi include directory
 set(CASADI_INCLUDE_DIR /usr/local/include/casadi)
 
@@ -62,7 +63,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
 #include_directories(${Boost_INCLUDE_DIRS})
 set(BOOST_ROOT "/opt/boost_1_68_0")
 set(Boost_NO_SYSTEM_PATHS TRUE)
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 
 
@@ -260,10 +261,17 @@ target_link_libraries(nmpcr_lib PUBLIC
     -L/usr/local/lib)
 
 # # ===== Microstrain ===== #
-# add_library(mscl
-#     "${CMAKE_CURRENT_SOURCE_DIR}/../MSCL-latest/build/MSCL/MSCL_Static/libMSCL.a")
-# target_include_directories(mscl PUBLIC 
-#     ${CMAKE_CURRENT_SOURCE_DIR}/../MSCL-latest/MSCL/source)
+set(MSCL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MSCL")
+# Add the static library
+add_library(mscl STATIC IMPORTED)
+set_target_properties(mscl PROPERTIES 
+    IMPORTED_LOCATION 
+    "${MSCL_DIR}/build/MSCL/MSCL_Static/libMSCL.a")
+# Include the header files
+target_include_directories(mscl INTERFACE 
+    "${MSCL_DIR}/MSCL/source")
+target_link_libraries(mscl INTERFACE ${Boost_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto)
+
 
 add_executable(upright_NMPC src/upright_NMPC.cpp)
 target_link_libraries(upright_NMPC PUBLIC raisim::raisimOgre raisim::assimp nmpc_lib ${CASADI_LIBRARIES} ipopt)
@@ -315,8 +323,8 @@ target_compile_definitions(fullExpSim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CM
 target_compile_options(fullExpSim PRIVATE -std=c++17)
 
 add_executable(MT_Sim src/A1_Sim_MT.cpp)
-target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ${Boost_LIBRARIES} ipopt)# mscl)# osqp::osqpstatic)
-target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS})
+target_link_libraries(MT_Sim PUBLIC raisim::raisimOgre raisim::assimp wrapper2 nmpc_lib optimization_lib ${CASADI_LIBRARIES} ${Boost_LIBRARIES} ipopt mscl OpenSSL::SSL OpenSSL::Crypto)# osqp::osqpstatic)
+target_include_directories(MT_Sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include ${EIGEN3_INCLUDE_DIRS} ${MSCL_DIR}/MSCL/source)
 #target_compile_definitions(uprightwalk PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${LL_DIR}/rsc/")
 target_compile_definitions(MT_Sim PRIVATE "-DEXAMPLE_ROBOT_RESOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/rsc/")
 #target_include_directories(MT_Sim PRIVATE ${UT_INC})

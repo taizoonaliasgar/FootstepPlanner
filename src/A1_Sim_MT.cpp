@@ -30,7 +30,13 @@
 //#include "OtherUtils.hpp"
 //#include <yaml-cpp/yaml.h>
 #include "stdio.h"
-
+#include "mscl/mscl.h"
+// #include "mscl/getCurrentConfig.h"
+// #include "mscl/parseData.h"
+// #include "mscl/setCurrentConfig.h"
+// #include "mscl/startSampling.h"
+// #include "mscl/setToIdle.h"
+#include "mscl/Communication/SerialConnection.h"
 
 //using namespace UNITREE_LEGGED_SDK;
 
@@ -65,6 +71,17 @@ public:
         // const float threshold = 0.4;
         // bool shared_data_backed_up = 0;
         //raisim::OgreVis *vis = raisim::OgreVis::get();			
+
+        // Initialize IMU - move this code from class definition to constructor
+        bool success = node.ping();
+        std::cout << "Connected?" << "\t" << success << std::endl;
+        std::cout << "Node Information: " << std::endl;
+        std::cout << "Model Number: " << node.modelNumber() << std::endl;
+        std::cout << "Serial: " << node.serialNumber() << std::endl;
+        std::cout << "Firmware: " << node.firmwareVersion().str() << std::endl;
+        std::cout << "Model Name: " << node.modelName() << std::endl;
+
+        node.enableDataStream(mscl::MipTypes::CLASS_AHRS_IMU);
     }	
 
 	virtual ~ExternalComm(){
@@ -128,7 +145,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 1;//50*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -142,6 +159,12 @@ public:
     void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
     //A1
     std::vector<raisim::ArticulatedSystem*> A1;
+    
+    // mscl::Serial::Connection connection("/dev/ttyACM0", 9600);
+    mscl::Connection connection = mscl::Connection::Serial("/dev/ttyACM0");
+    //create an InertialNode with the connection
+    // mscl::InertialNode node(connection);
+    mscl::InertialNode node = mscl::InertialNode(connection);
 
 };
 
@@ -605,7 +628,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
-        //std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        std::cout << "simcounter" << "\t" << simcounter << std::endl;
         simcounter++; 
         
     }
