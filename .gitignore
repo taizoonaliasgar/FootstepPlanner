@@ -9,3 +9,5 @@ data25/
 rsc/activation.raisim
 *.txt
 extensions.json
+unitree_legged_sdk/
+unitree_legged_sdk_FP/
