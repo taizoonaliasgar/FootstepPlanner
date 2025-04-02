@@ -68,17 +68,17 @@ public:
         //raisim::OgreVis *vis = raisim::OgreVis::get();			
 
         // Initialize IMU - move this code from class definition to constructor
-        node.setUARTBaudRate(921600);
-        bool success = node.ping();
-        std::cout << "Connected?" << "\t" << success << std::endl;
+        // node.setUARTBaudRate(921600);
+        // bool success = node.ping();
+        // std::cout << "Connected?" << "\t" << success << std::endl;
 
-        node.enableDataStream(mscl::MipTypes::CLASS_AHRS_IMU);
-        mscl::MipChannels channels;
-        // Only request exactly what you need
-        channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_EULER_ANGLES, mscl::SampleRate::Hertz(4000))); // Euler Angles
-        channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_SCALED_GYRO_VEC, mscl::SampleRate::Hertz(4000))); // Angular Velocity
+        // node.enableDataStream(mscl::MipTypes::CLASS_AHRS_IMU);
+        // mscl::MipChannels channels;
+        // // Only request exactly what you need
+        // channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_EULER_ANGLES, mscl::SampleRate::Hertz(4000))); // Euler Angles
+        // channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_SCALED_GYRO_VEC, mscl::SampleRate::Hertz(4000))); // Angular Velocity
    
-        node.setActiveChannelFields(mscl::MipTypes::CLASS_AHRS_IMU, channels);
+        // node.setActiveChannelFields(mscl::MipTypes::CLASS_AHRS_IMU, channels);
     }	
 
 	virtual ~ExternalComm(){
@@ -90,10 +90,10 @@ public:
         delete vis;
         delete ground;
         delete list;
-            auto test = A1.back();
-            A1.pop_back();
-            delete test;
-        }
+        auto test = A1.back();
+        A1.pop_back();
+        delete test;
+    }
 
     //support functions
 	void setupCallback();
@@ -164,10 +164,10 @@ public:
     std::vector<raisim::ArticulatedSystem*> A1;
     
     // mscl::Serial::Connection connection("/dev/ttyACM0", 9600);
-    mscl::Connection connection = mscl::Connection::Serial("/dev/ttyACM0");
-    //create an InertialNode with the connection
-    // mscl::InertialNode node(connection);
-    mscl::InertialNode node = mscl::InertialNode(connection);
+    // mscl::Connection connection;// = mscl::Connection::Serial("/dev/ttyACM0");
+    // // //create an InertialNode with the connection
+    // // // mscl::InertialNode node(connection);
+    // mscl::InertialNode node;// = mscl::InertialNode(connection);
     float rollIMU = 0.0f, pitchIMU = 0.0f, yawIMU = 0.0f;
     float gyroXIMU = 0.0f, gyroYIMU = 0.0f, gyroZIMU = 0.0f;
     uint64_t timestampIMU = 0;
@@ -175,202 +175,202 @@ public:
 };
 
 
-void ExternalComm::getIMUread(){
+// void ExternalComm::getIMUread(){
     
-    auto now = std::chrono::system_clock::now();
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch()).count();
+//     auto now = std::chrono::system_clock::now();
+//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+//                 now.time_since_epoch()).count();
    
-    mscl::MipDataPackets packets = node.getDataPackets(1,1);
+//     mscl::MipDataPackets packets = node.getDataPackets(1,1);
     
-    // Variables to store the values
-    float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
-    float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
-    uint64_t timestamp = 0;
-    uint64_t timestampnano = 0;
-    if(!packets.empty()) {
+//     // Variables to store the values
+    // float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
+    // float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
+    // uint64_t timestamp = 0;
+    // uint64_t timestampnano = 0;
+    // if(!packets.empty()) {
 
-        bool hasValidData = false;
-        mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-        timestamp = packet.collectedTimestamp().nanoseconds() / 1e6;
+    //     bool hasValidData = false;
+        // mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
+        // timestamp = packet.collectedTimestamp().nanoseconds() / 1e6;
         
         
-        if((now_ms - timestamp) < 20){
-            mscl::MipDataPoints points = packet.data();
+        // if((now_ms - timestamp) < 20){
+        //     mscl::MipDataPoints points = packet.data();
             
-            // Process each data point
-            for(const mscl::MipDataPoint& point : points) {
-                // Check for Euler angles
-                if(point.channelName() == "roll"){
-                    roll = point.as_float();
-                    hasValidData = true;
-                } else if(point.channelName() == "pitch"){
-                    pitch = point.as_float();
-                } else if(point.channelName() == "yaw"){
-                    yaw = point.as_float();
-                }
-                // Check for angular velocities
-                if(point.channelName() == "scaledGyroX") {
-                    gyroX = point.as_float();
-                    hasValidData = true;
-                } else if(point.channelName() == "scaledGyroY") {
-                    gyroY = point.as_float();
-                } else if(point.channelName() == "scaledGyroZ") {
-                    gyroZ = point.as_float();
-                }
-            }
+        //     // Process each data point
+        //     for(const mscl::MipDataPoint& point : points) {
+        //         // Check for Euler angles
+        //         if(point.channelName() == "roll"){
+        //             roll = point.as_float();
+        //             hasValidData = true;
+        //         } else if(point.channelName() == "pitch"){
+        //             pitch = point.as_float();
+        //         } else if(point.channelName() == "yaw"){
+        //             yaw = point.as_float();
+        //         }
+        //         // Check for angular velocities
+        //         if(point.channelName() == "scaledGyroX") {
+        //             gyroX = point.as_float();
+        //             hasValidData = true;
+        //         } else if(point.channelName() == "scaledGyroY") {
+        //             gyroY = point.as_float();
+        //         } else if(point.channelName() == "scaledGyroZ") {
+        //             gyroZ = point.as_float();
+        //         }
+        //     }
         
-            if(hasValidData){
-                int64_t offset = now_ms - timestamp;
-                printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
-                    now_ms, timestamp, offset, roll, pitch, yaw, gyroX, gyroY, gyroZ);
-            }else{
-                std::cout << "System time:" << now_ms << "\t" << "No valid IMU data available" << std::endl;
-            }
-        }else{
-            std::cout << "System time:" << now_ms << "\t" << "Discarding stale IMU data (offset: " << (now_ms - timestamp) << "ms)";
-            // Force a buffer clear to resynchronize
-            flushIMUBuffer2();
-        }
+        //     if(hasValidData){
+        //         int64_t offset = now_ms - timestamp;
+        //         printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
+//                     now_ms, timestamp, offset, roll, pitch, yaw, gyroX, gyroY, gyroZ);
+//             }else{
+//                 std::cout << "System time:" << now_ms << "\t" << "No valid IMU data available" << std::endl;
+//             }
+//         }else{
+//             std::cout << "System time:" << now_ms << "\t" << "Discarding stale IMU data (offset: " << (now_ms - timestamp) << "ms)";
+//             // Force a buffer clear to resynchronize
+//             flushIMUBuffer2();
+//         }
     
-    } else {
-        std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
-    }
-}   
+//     } else {
+//         std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
+//     }
+// }   
 
 
-void ExternalComm::getIMUread2(){
+// void ExternalComm::getIMUread2(){
 
-    auto now = std::chrono::system_clock::now();
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch()).count();
-    std::cout << "System time IMU 2:" << now_ms << std::endl;
-    // Get IMU data
-    mscl::MipDataPackets packets = node.getDataPackets(1,1);
+//     auto now = std::chrono::system_clock::now();
+//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+//                   now.time_since_epoch()).count();
+//     std::cout << "System time IMU 2:" << now_ms << std::endl;
+//     // Get IMU data
+    // mscl::MipDataPackets packets = node.getDataPackets(1,1);
     
-    if(!packets.empty()) {
-        bool hasValidData = false;
-        bool hasRoll = false;
-        bool hasPitch = false;
-        bool hasYaw = false;
-        mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-        // timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
-        // << std::endl;
-        // Get all the points in the packet
-        mscl::MipDataPoints points = packet.data();
+    // if(!packets.empty()) {
+    //     bool hasValidData = false;
+    //     bool hasRoll = false;
+    //     bool hasPitch = false;
+    //     bool hasYaw = false;
+    //     mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
+    //     // timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
+        // // << std::endl;
+        // // Get all the points in the packet
+        // mscl::MipDataPoints points = packet.data();
         
-        // Process each data point
-        for(const mscl::MipDataPoint& point : points) {
-            // Check for Euler angles
-            // if(point.channelName() == "roll"){
-            //     rollIMU = point.as_float();
-            //     hasValidData = true;
-            //     hasRoll = true;
-            //     timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
-            //     std::cout << "Logged data:" << now_ms << std::endl;
-            // } else if(point.channelName() == "pitch"){//&& !hasPitch) {
-            //     pitchIMU = point.as_float();
-            //     hasPitch = true;
-            // } else if(point.channelName() == "yaw"){//} && !hasYaw) {
-            //     yawIMU = point.as_float();
-            //     hasYaw = true;
-            // }
-            // Check for angular velocities
-            if(point.channelName() == "scaledGyroX"){// && !hasRoll) {
-                gyroXIMU = point.as_float();
-                // hasRoll = true;
-            } else if(point.channelName() == "scaledGyroY"){// && !hasRoll) {
-                gyroYIMU = point.as_float();
-            } else if(point.channelName() == "scaledGyroZ"){// && !hasRoll) {
-                gyroZIMU = point.as_float();
-            }
-        }
+        // // Process each data point
+        // for(const mscl::MipDataPoint& point : points) {
+        //     // Check for Euler angles
+        //     // if(point.channelName() == "roll"){
+        //     //     rollIMU = point.as_float();
+        //     //     hasValidData = true;
+        //     //     hasRoll = true;
+        //     //     timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
+        //     //     std::cout << "Logged data:" << now_ms << std::endl;
+        //     // } else if(point.channelName() == "pitch"){//&& !hasPitch) {
+        //     //     pitchIMU = point.as_float();
+//             //     hasPitch = true;
+//             // } else if(point.channelName() == "yaw"){//} && !hasYaw) {
+//             //     yawIMU = point.as_float();
+//             //     hasYaw = true;
+//             // }
+//             // Check for angular velocities
+//             if(point.channelName() == "scaledGyroX"){// && !hasRoll) {
+//                 gyroXIMU = point.as_float();
+//                 // hasRoll = true;
+//             } else if(point.channelName() == "scaledGyroY"){// && !hasRoll) {
+//                 gyroYIMU = point.as_float();
+//             } else if(point.channelName() == "scaledGyroZ"){// && !hasRoll) {
+//                 gyroZIMU = point.as_float();
+//             }
+//         }
         
-    }
-}
+//     }
+// }
 
-void ExternalComm::getIMUread3(){
+// void ExternalComm::getIMUread3(){
 
-    auto now = std::chrono::system_clock::now();
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch()).count();
-    int64_t offset = now_ms - timestampIMU;
+//     auto now = std::chrono::system_clock::now();
+//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+//                   now.time_since_epoch()).count();
+//     int64_t offset = now_ms - timestampIMU;
     
-    printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
-        now_ms, timestampIMU, offset, rollIMU, pitchIMU, yawIMU, gyroXIMU, gyroYIMU, gyroZIMU);
-}
+//     printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
+//         now_ms, timestampIMU, offset, rollIMU, pitchIMU, yawIMU, gyroXIMU, gyroYIMU, gyroZIMU);
+// }
 
-void ExternalComm::flushIMUBuffer() {
-    auto now = std::chrono::system_clock::now();
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch()).count();
-    mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
-    std::cout << "Flush time:" << now_ms << "\t" << "Flushed " << packets.size() << " packets" << std::endl;
+// void ExternalComm::flushIMUBuffer() {
+//     auto now = std::chrono::system_clock::now();
+//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+//                   now.time_since_epoch()).count();
+//     mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
+//     std::cout << "Flush time:" << now_ms << "\t" << "Flushed " << packets.size() << " packets" << std::endl;
    
-}
+// }
 
-void ExternalComm::flushIMUBuffer2(){
-    mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
-    std::cout << "Flushed " << packets.size() << " packets" << std::endl;
-}
+// void ExternalComm::flushIMUBuffer2(){
+//     mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
+//     std::cout << "Flushed " << packets.size() << " packets" << std::endl;
+// }
 
-void ExternalComm::getIMUread4(){
+// void ExternalComm::getIMUread4(){
     
-    // Now get fresh timestamp before requesting data
-    auto now = std::chrono::system_clock::now();
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch()).count();
+//     // Now get fresh timestamp before requesting data
+//     auto now = std::chrono::system_clock::now();
+//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+//                   now.time_since_epoch()).count();
     
-    mscl::MipDataPackets packets = node.getDataPackets(1,1);
+//     mscl::MipDataPackets packets = node.getDataPackets(1,1);
     
-    // Variables to store the values
-    float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
-    float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
-    uint64_t timestamp = 0;
+//     // Variables to store the values
+    // float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
+    // float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
+    // uint64_t timestamp = 0;
     
-    if(!packets.empty()) {
+    // if(!packets.empty()) {
 
-        bool hasValidData = false;
-        mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-        mscl::MipDataPoints points = packet.data();  
-        timestamp = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds  
-        // Process each data point
-        for(const mscl::MipDataPoint& point : points) {
-            // Check for Euler angles
-            if(point.channelName() == "roll"){
-                roll = point.as_float();
-                hasValidData = true;
+    //     bool hasValidData = false;
+    //     mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
+    //     mscl::MipDataPoints points = packet.data();  
+    //     timestamp = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds  
+    //     // Process each data point
+    //     for(const mscl::MipDataPoint& point : points) {
+            // // Check for Euler angles
+            // if(point.channelName() == "roll"){
+            //     roll = point.as_float();
+            //     hasValidData = true;
                 
-            } else if(point.channelName() == "pitch"){
-                pitch = point.as_float();
+            // } else if(point.channelName() == "pitch"){
+            //     pitch = point.as_float();
                 
-            } else if(point.channelName() == "yaw"){
-                yaw = point.as_float();
+            // } else if(point.channelName() == "yaw"){
+            //     yaw = point.as_float();
                 
-            }
-            // Check for angular velocities
-            // else if(point.channelName() == "scaledGyroX" && !hasRoll) {
-            //     gyroX = point.as_float();
-            //     hasRoll = true;
-            // } else if(point.channelName() == "scaledGyroY" && !hasRoll) {
-            //     gyroY = point.as_float();
-            // } else if(point.channelName() == "scaledGyroZ" && !hasRoll) {
-            //     gyroZ = point.as_float();
             // }
-        }
+            // // Check for angular velocities
+            // // else if(point.channelName() == "scaledGyroX" && !hasRoll) {
+            // //     gyroX = point.as_float();
+            // //     hasRoll = true;
+            // // } else if(point.channelName() == "scaledGyroY" && !hasRoll) {
+            // //     gyroY = point.as_float();
+            // // } else if(point.channelName() == "scaledGyroZ" && !hasRoll) {
+            // //     gyroZ = point.as_float();
+            // // }
+//         }
         
-        if(hasValidData){
-            int64_t offset = now_ms - timestamp;
-            printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f\n",
-                now_ms, timestamp, offset, roll, pitch, yaw);
-        }else{
-            std::cout << "System time:" << now_ms << "\t" << "No valid data" << std::endl;
-        }
+//         if(hasValidData){
+//             int64_t offset = now_ms - timestamp;
+//             printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f\n",
+//                 now_ms, timestamp, offset, roll, pitch, yaw);
+//         }else{
+//             std::cout << "System time:" << now_ms << "\t" << "No valid data" << std::endl;
+//         }
         
-    } else {
-        std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
-    }
-}   
+//     } else {
+//         std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
+//     }
+// }   
 
 void ExternalComm::setupRaisim(){  
 	
@@ -423,8 +423,8 @@ void ExternalComm::setupRaisim(){
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.35,0.4);
-    box_left->setPosition(0,0.35,0.4);
+    box_right->setPosition(0,-0.32,0.4);
+    box_left->setPosition(0,0.32,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -948,7 +948,7 @@ int main(int argc, char *argv[]) {
     // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
 	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
 	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    LoopFunc loop_imu("imu_loop", 0.0010001f,3, boost::bind(&ExternalComm::getIMUread, &extComm));
+    // LoopFunc loop_imu("imu_loop", 0.0010001f,3, boost::bind(&ExternalComm::getIMUread, &extComm));
     // LoopFunc loop_flush("flush_loop", 0.004, 4, boost::bind(&ExternalComm::flushIMUBuffer, &extComm));
 
 	
@@ -957,28 +957,28 @@ int main(int argc, char *argv[]) {
 	// loop_mpc.start();
 	// sleep(1.0);
 	// loop_calc.start();
-    loop_imu.start();
+    // loop_imu.start();
     // loop_flush.start();
 
-    while (simIMU < 10000)
-    {
-        sleep(0.1);
-        // extComm.getIMUread2();
-        simIMU++;
-    }
+    // while (simIMU < 10000)
+    // {
+    //     sleep(0.1);
+    //     // extComm.getIMUread2();
+    //     simIMU++;
+    // }
     
-    // std::ofstream file_est("../data25/estimatorMT13.csv");
-    // while (true)
-	// {
+    std::ofstream file_est("../data25/estimatorMT13.csv");
+    while (true)
+	{
 			
-    //     // sleep(0.1);
-    //     extComm.getIMUread();
-    //     extComm.SimExec(file_est);
-    //     extComm.HighLevel();
-    //     extComm.Calc();
-    //     // sim_setup = false;
+        // sleep(0.1);
+        // extComm.getIMUread();
+        extComm.SimExec(file_est);
+        extComm.HighLevel();
+        extComm.Calc();
+        // sim_setup = false;
 
-	// } 
+	} 
 
     // file_est.close();
 

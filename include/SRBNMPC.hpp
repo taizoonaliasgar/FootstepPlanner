@@ -262,7 +262,7 @@ private:
     Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,deltaT*fitsample+1);
     Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
 
-    double wall_y =0.23;
+    double wall_y =0.2;
 
     bool first_time_here = true;
 
