@@ -30,9 +30,21 @@
 //#include "OtherUtils.hpp"
 //#include <yaml-cpp/yaml.h>
 #include "stdio.h"
-#include "mscl/mscl.h"
-#include "mscl/Communication/SerialConnection.h"
 
+#include "mip/mip_all.hpp"
+// #include <microstrain/common/serialization/serializer.hpp>
+#include "microstrain/connections/serial/serial_connection.hpp"
+// #include <mip/definitions/commands_base.hpp>
+// // #include <mip/definitions/commands_base.h>
+// #include <mip/definitions/commands_3dm.hpp>
+// #include <mip/definitions/commands_filter.hpp>
+#include "example_utils.hpp"
+// #include <mip/mip_interface.h>
+// #include <mip/mip_interface.hpp>
+// #include <mip/mip_field.hpp>
+#include <chrono>
+#include <thread>
+#include <memory>
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -40,11 +52,135 @@ sharedData HLData;
 sharedData LLData;
 sharedData SimData;
 
+std::unique_ptr<ExampleUtils> createDeviceConnection() {
+    auto utils = std::make_unique<ExampleUtils>();
+    
+    // Hardcoded connection parameters
+    const std::string port = "/dev/ttyACM0";
+    const uint32_t baudrate = 9600;
+    
+    try {
+        // Create and connect to the device in one go
+        auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+        
+        // This will throw an exception if connection fails
+        connection->connect();
+        
+        // Set up the device interface
+        const size_t parseBufferSize = 1024;
+        uint8_t* parseBuffer = new uint8_t[parseBufferSize];
+        
+        utils->device = std::make_unique<mip::Interface>(
+            connection.get(),       // Connection pointer
+            parseBuffer,            // Parse buffer
+            parseBufferSize,        // Parse buffer size
+            1000,                   // Parse timeout (ms)
+            1000                    // Base reply timeout (ms)
+        );
+        
+        // Echo operation status
+        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
+        
+        return utils;
+    }
+    catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Connection failed: ") + e.what());
+    }
+}
+std::unique_ptr<mip::Interface> createDevice(const std::string& port, uint32_t baudrate) {
+    // Create a serial connection
+    auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+    
+    // Try to connect
+    if (!connection->connect()) {
+        std::cerr << "ERROR: Could not connect to " << port << " at " << baudrate << " baud" << std::endl;
+        return nullptr;
+    }
+    
+    // Parse buffer size (typically 1024 bytes)
+    const size_t parseBufferSize = 1024;
+    uint8_t* parseBuffer = new uint8_t[parseBufferSize];
+    
+    // Create a MIP interface with the connection and parse buffer
+    // Note: these timeout values (in milliseconds) may need adjustment for your specific device
+    const unsigned int parseTimeout = 1000;    // 1 second parse timeout
+    const unsigned int replyTimeout = 1000;    // 1 second reply timeout
+    
+    auto device = std::unique_ptr<mip::Interface>(
+        new mip::Interface(
+            connection.get(),       // Connection pointer
+            parseBuffer,            // Parse buffer
+            parseBufferSize,        // Parse buffer size
+            parseTimeout,           // Parse timeout (ms)
+            replyTimeout            // Base reply timeout (ms)
+        )
+    );
+    
+    return device;
+}
+
 class ExternalComm
 {
+private:
+    std::shared_ptr<microstrain::connections::SerialConnection> connection;
+    std::unique_ptr<uint8_t[]> parseBuffer;
+    const size_t parseBufferSize;
+
+    // Device pointer
+    std::unique_ptr<mip::Interface> device;
+
+    float sensor_to_vehicle_rotation_euler[3] = {0.0, 0.0, 0.0};
+
+    // Data stores
+    mip::data_sensor::GpsTimestamp sensor_gps_time;
+    mip::data_sensor::ScaledAccel sensor_accel;
+    mip::data_sensor::ScaledGyro sensor_gyro;
+
+    mip::data_filter::Timestamp filter_gps_time;
+    mip::data_filter::Status filter_status;
+    mip::data_filter::EulerAngles filter_euler_angles;
+    mip::data_filter::CompAngularRate filter_comp_angular_rate;
+    mip::data_filter::CompAccel filter_comp_accel;
+
+    // Dispatch handlers
+    mip::DispatchHandler sensor_data_handlers[3];
+    mip::DispatchHandler filter_data_handlers[5];
+
+    // State tracking
+    bool filter_state_running = false;
+    bool is_initialized = false;
+    std::mutex update_mutex;
+
 public:
-    ExternalComm(){
+    ExternalComm(int argc, char* argv[])
+    : parseBufferSize(1024), 
+        parseBuffer(new uint8_t[parseBufferSize])
+    {
 		
+        const std::string port = "/dev/ttyACM0";//argv[2];
+        const uint32_t baudrate = 9600;//std::stoi(argv[3]);
+        
+        std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
+        
+        // Create serial connection
+        connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+        
+        // Try to connect
+        if (!connection->connect()) {
+            throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
+        }
+        
+        // Create device interface
+        device = std::make_unique<mip::Interface>(
+            connection.get(),       // Connection pointer
+            parseBuffer.get(),      // Parse buffer
+            parseBufferSize,        // Parse buffer size
+            1000,                   // Parse timeout (ms)
+            1000                    // Base reply timeout (ms)
+        );
+        
+        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
+
         double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
         double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
         populate_filter_d(jointfilter,ad,bd,3,12);
@@ -67,19 +203,7 @@ public:
         // const float threshold = 0.4;
         // bool shared_data_backed_up = 0;
         //raisim::OgreVis *vis = raisim::OgreVis::get();			
-
-        // Initialize IMU - move this code from class definition to constructor
-        // node.setUARTBaudRate(921600);
-        // bool success = node.ping();
-        // std::cout << "Connected?" << "\t" << success << std::endl;
-
-        // node.enableDataStream(mscl::MipTypes::CLASS_AHRS_IMU);
-        // mscl::MipChannels channels;
-        // // Only request exactly what you need
-        // channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_EULER_ANGLES, mscl::SampleRate::Hertz(4000))); // Euler Angles
-        // channels.push_back(mscl::MipChannel(mscl::MipTypes::CH_FIELD_SENSOR_SCALED_GYRO_VEC, mscl::SampleRate::Hertz(4000))); // Angular Velocity
-   
-        // node.setActiveChannelFields(mscl::MipTypes::CLASS_AHRS_IMU, channels);
+        
     }	
 
 	virtual ~ExternalComm(){
@@ -96,22 +220,24 @@ public:
             delete test;
         }
 
+    
+
+  
     //support functions
 	void setupCallback();
 	// void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
     void plotGRFs(std::map<std::string, raisim::VisualObject>* list, Eigen::Matrix<double,17,1> GRF, Eigen::Matrix<double, 3, 4> toePos, const int contacts[4]);
     void setupRaisim();
-    // void getIMUread();
-    // void getIMUread2();
-    // void getIMUread3();
-    // void getIMUread4();
-    // void flushIMUBuffer();
-    // void flushIMUBuffer2();
 
     // main thread execution functions
 	void Calc();
 	void HighLevel();
 	void SimExec(std::ofstream &file_est);  
+
+    void connectIMU();//(mip::Interface& device);
+    void setupIMUfilter();//(mip::Interface& device);
+    void configureIMU();//(mip::Interface& device);
+    void getIMMUdata();//(mip::Interface& device);
 
     std::unique_ptr<LocoWrapper> loco_obj;
 	std::unique_ptr<SRBNMPC> nmpc_obj;
@@ -144,7 +270,7 @@ public:
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;            // Record?
     double fps = 30;            
-    std::string directory = "../data25/Apr1/";
+    std::string directory = "../data25/Feb28/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
@@ -164,214 +290,12 @@ public:
     //A1
     std::vector<raisim::ArticulatedSystem*> A1;
     
-    // mscl::Serial::Connection connection("/dev/ttyACM0", 9600);
-    // mscl::Connection connection = mscl::Connection::Serial("/dev/ttyACM0");
-    // //create an InertialNode with the connection
-    // // mscl::InertialNode node(connection);
-    // mscl::InertialNode node = mscl::InertialNode(connection);
     float rollIMU = 0.0f, pitchIMU = 0.0f, yawIMU = 0.0f;
     float gyroXIMU = 0.0f, gyroYIMU = 0.0f, gyroZIMU = 0.0f;
     uint64_t timestampIMU = 0;
 
 };
 
-
-// void ExternalComm::getIMUread(){
-    
-//     auto now = std::chrono::system_clock::now();
-//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                // now.time_since_epoch()).count();
-   
-    // mscl::MipDataPackets packets = node.getDataPackets(1,1);
-    
-    // // Variables to store the values
-    // float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
-    // float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
-    // uint64_t timestamp = 0;
-    // uint64_t timestampnano = 0;
-    // if(!packets.empty()) {
-
-    //     bool hasValidData = false;
-    //     mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-        // timestamp = packet.collectedTimestamp().nanoseconds() / 1e6;
-        
-        
-        // if((now_ms - timestamp) < 20){
-        //     mscl::MipDataPoints points = packet.data();
-            
-        //     // Process each data point
-        //     for(const mscl::MipDataPoint& point : points) {
-        //         // Check for Euler angles
-        //         if(point.channelName() == "roll"){
-        //             roll = point.as_float();
-        //             hasValidData = true;
-        //         } else if(point.channelName() == "pitch"){
-        //             pitch = point.as_float();
-        //         } else if(point.channelName() == "yaw"){
-        //             yaw = point.as_float();
-        //         }
-        //         // Check for angular velocities
-        //         if(point.channelName() == "scaledGyroX") {
-            //         gyroX = point.as_float();
-            //         hasValidData = true;
-            //     } else if(point.channelName() == "scaledGyroY") {
-            //         gyroY = point.as_float();
-            //     } else if(point.channelName() == "scaledGyroZ") {
-            //         gyroZ = point.as_float();
-            //     }
-            // }
-        
-            // if(hasValidData){
-            //     int64_t offset = now_ms - timestamp;
-//                 printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
-//                     now_ms, timestamp, offset, roll, pitch, yaw, gyroX, gyroY, gyroZ);
-//             }else{
-//                 std::cout << "System time:" << now_ms << "\t" << "No valid IMU data available" << std::endl;
-//             }
-//         }else{
-//             std::cout << "System time:" << now_ms << "\t" << "Discarding stale IMU data (offset: " << (now_ms - timestamp) << "ms)";
-//             // Force a buffer clear to resynchronize
-//             flushIMUBuffer2();
-//         }
-    
-//     } else {
-//         std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
-//     }
-// }   
-
-
-// void ExternalComm::getIMUread2(){
-
-//     auto now = std::chrono::system_clock::now();
-//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                   now.time_since_epoch()).count();
-//     std::cout << "System time IMU 2:" << now_ms << std::endl;
-//     // Get IMU data
-//     mscl::MipDataPackets packets = node.getDataPackets(1,1);
-    
-//     if(!packets.empty()) {
-//         bool hasValidData = false;
-//         bool hasRoll = false;
-//         bool hasPitch = false;
-//         bool hasYaw = false;
-//         mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-        // timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
-        // << std::endl;
-        // Get all the points in the packet
-//         mscl::MipDataPoints points = packet.data();
-        
-//         // Process each data point
-//         for(const mscl::MipDataPoint& point : points) {
-//             // Check for Euler angles
-//             // if(point.channelName() == "roll"){
-//             //     rollIMU = point.as_float();
-//             //     hasValidData = true;
-//             //     hasRoll = true;
-//             //     timestampIMU = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds
-//             //     std::cout << "Logged data:" << now_ms << std::endl;
-//             // } else if(point.channelName() == "pitch"){//&& !hasPitch) {
-//             //     pitchIMU = point.as_float();
-//             //     hasPitch = true;
-//             // } else if(point.channelName() == "yaw"){//} && !hasYaw) {
-//             //     yawIMU = point.as_float();
-//             //     hasYaw = true;
-//             // }
-//             // Check for angular velocities
-//             if(point.channelName() == "scaledGyroX"){// && !hasRoll) {
-//                 gyroXIMU = point.as_float();
-//                 // hasRoll = true;
-//             } else if(point.channelName() == "scaledGyroY"){// && !hasRoll) {
-//                 gyroYIMU = point.as_float();
-//             } else if(point.channelName() == "scaledGyroZ"){// && !hasRoll) {
-//                 gyroZIMU = point.as_float();
-//             }
-//         }
-        
-//     }
-// }
-
-// void ExternalComm::getIMUread3(){
-
-//     auto now = std::chrono::system_clock::now();
-//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                   now.time_since_epoch()).count();
-//     int64_t offset = now_ms - timestampIMU;
-    
-//     printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f | wx: %.6f | wy: %.6f | wz: %.6f\n",
-//         now_ms, timestampIMU, offset, rollIMU, pitchIMU, yawIMU, gyroXIMU, gyroYIMU, gyroZIMU);
-// }
-
-// void ExternalComm::flushIMUBuffer() {
-//     auto now = std::chrono::system_clock::now();
-//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                   now.time_since_epoch()).count();
-//     mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
-//     std::cout << "Flush time:" << now_ms << "\t" << "Flushed " << packets.size() << " packets" << std::endl;
-   
-// }
-
-// void ExternalComm::flushIMUBuffer2(){
-//     mscl::MipDataPackets packets = node.getDataPackets(0xFFFFFFFF, 100);
-//     std::cout << "Flushed " << packets.size() << " packets" << std::endl;
-// }
-
-// void ExternalComm::getIMUread4(){
-    
-//     // Now get fresh timestamp before requesting data
-//     auto now = std::chrono::system_clock::now();
-//     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                   now.time_since_epoch()).count();
-    
-//     mscl::MipDataPackets packets = node.getDataPackets(1,1);
-    
-//     // Variables to store the values
-//     float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
-//     float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
-//     uint64_t timestamp = 0;
-    
-//     if(!packets.empty()) {
-
-//         bool hasValidData = false;
-//         mscl::MipDataPacket& packet = packets.back(); // Get the latest packet
-//         mscl::MipDataPoints points = packet.data();  
-//         timestamp = packet.collectedTimestamp().nanoseconds() / 1e6; // Convert to milliseconds  
-//         // Process each data point
-//         for(const mscl::MipDataPoint& point : points) {
-//             // Check for Euler angles
-//             if(point.channelName() == "roll"){
-//                 roll = point.as_float();
-//                 hasValidData = true;
-                
-//             } else if(point.channelName() == "pitch"){
-//                 pitch = point.as_float();
-                
-//             } else if(point.channelName() == "yaw"){
-//                 yaw = point.as_float();
-                
-//             }
-//             // Check for angular velocities
-//             // else if(point.channelName() == "scaledGyroX" && !hasRoll) {
-//             //     gyroX = point.as_float();
-//             //     hasRoll = true;
-//             // } else if(point.channelName() == "scaledGyroY" && !hasRoll) {
-//             //     gyroY = point.as_float();
-//             // } else if(point.channelName() == "scaledGyroZ" && !hasRoll) {
-//             //     gyroZ = point.as_float();
-//             // }
-//         }
-        
-//         if(hasValidData){
-//             int64_t offset = now_ms - timestamp;
-//             printf("System time: %lld ms | IMU time: %llu ms | Offset: %lld ms | Roll: %.6f | Pitch: %.6f | Yaw: %.6f\n",
-//                 now_ms, timestamp, offset, roll, pitch, yaw);
-//         }else{
-//             std::cout << "System time:" << now_ms << "\t" << "No valid data" << std::endl;
-//         }
-        
-//     } else {
-//         std::cout << "System time:" << now_ms << "\t" << "No IMU data packets available" << std::endl;
-//     }
-// }   
 
 void ExternalComm::setupRaisim(){  
 	
@@ -424,8 +348,8 @@ void ExternalComm::setupRaisim(){
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.32,0.4);
-    box_left->setPosition(0,0.32,0.4);
+    box_right->setPosition(0,-0.35,0.4);
+    box_left->setPosition(0,0.35,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -801,7 +725,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         //plotGRFs(list, HLData.fDes, SimData.toePos, SimData.ind_LL);
         world.integrate();        
         
-        if (simcounter%30 == 0)
+        if (simcounter%120 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
@@ -916,16 +840,16 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);
     }
 
-    // file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
-    //      << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
-    //      << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
-    //      << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
+    file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
         // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
         //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
         //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
         //  << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
         //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
-        //<< "\n";
+        << "\n";
    
     memcpy(SimData.q,jpos_est,18*sizeof(double));
     memcpy(SimData.dq,jvel_est,18*sizeof(double));
@@ -937,53 +861,300 @@ void ExternalComm::SimExec(std::ofstream &file_est){
     
 }
 
+void ExternalComm::connectIMU(){//(mip::Interface& device){
+    // if (!utils->device) {
+    //     std::cerr << "Failed to create device" << std::endl;
+    //     //return -1;
+    // }
+    
+    // Ping the device to verify communication
+    if (mip::commands_base::ping(*device) != mip::CmdResult::ACK_OK) {
+        std::cerr << "ERROR: Could not ping the device!" << std::endl;
+        //return -1;
+    }
+    
+    std::cout << "Successfully pinged the device!" << std::endl;
+    float gyro_bias[3] = {0, 0, 0};
+    // Rest of your code...
+    const uint32_t sampling_time = 2000; // The default is 15000 ms and longer sample times are recommended but shortened for convenience
+    const mip::Timeout old_mip_sdk_timeout = device->baseReplyTimeout();
+    printf("Capturing gyro bias. This will take %d seconds \n", sampling_time/1000);
+    device->setBaseReplyTimeout(sampling_time * 2);
+
+    if(mip::commands_3dm::captureGyroBias(*device, sampling_time, gyro_bias) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not capture gyro bias!");
+
+    if(mip::commands_3dm::saveGyroBias(*device) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not save gyro bias!");
+    
+    const uint8_t device_selector = 3;
+    const uint8_t enable_flag = 1;
+    if(mip::commands_3dm::writeDatastreamControl(*device, device_selector, enable_flag) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not enable device data stream!");
+
+    // Reset the timeout
+    device->setBaseReplyTimeout(old_mip_sdk_timeout);
+
+    printf("Gyro bias captured with sampling time: %d, and gyro bias captured as: %f %f %f.\n", sampling_time, gyro_bias[0], gyro_bias[1], gyro_bias[2]);
+
+}
+
+void ExternalComm::configureIMU(){//(mip::Interface& device){
+    uint16_t sensor_base_rate;
+
+    //Note: Querying the device base rate is only one way to calculate the descriptor decimation.
+    //We could have also set it directly with information from the datasheet.
+
+    if(mip::commands_3dm::imuGetBaseRate(*device, &sensor_base_rate) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not get sensor base rate format!");
+
+    const uint16_t sensor_sample_rate = 1000; // Hz
+    const uint16_t sensor_decimation = sensor_base_rate / sensor_sample_rate;
+
+    std::array<mip::DescriptorRate, 3> sensor_descriptors = {{
+        { mip::data_sensor::DATA_TIME_STAMP_GPS, sensor_decimation },
+        { mip::data_sensor::DATA_ACCEL_SCALED,   sensor_decimation },
+        { mip::data_sensor::DATA_GYRO_SCALED,    sensor_decimation },
+    }};
+
+    if(mip::commands_3dm::writeImuMessageFormat(*device, static_cast<uint8_t>(sensor_descriptors.size()), sensor_descriptors.data()) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not set sensor message format!");
+
+}
+
+void ExternalComm::setupIMUfilter(){//(mip::Interface& device){
+    uint16_t filter_base_rate;
+
+    if(mip::commands_3dm::filterGetBaseRate(*device, &filter_base_rate) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not get filter base rate format!");
+
+    const uint16_t filter_sample_rate = 1000; // Hz
+    const uint16_t filter_decimation = filter_base_rate / filter_sample_rate;
+
+    std::array<mip::DescriptorRate, 5> filter_descriptors = {{
+        { mip::data_filter::DATA_FILTER_TIMESTAMP, filter_decimation },
+        { mip::data_filter::DATA_FILTER_STATUS,    filter_decimation },
+        { mip::data_filter::DATA_ATT_EULER_ANGLES, filter_decimation },
+        { mip::data_filter::DATA_COMPENSATED_ANGULAR_RATE, filter_decimation },
+        { mip::data_filter::DATA_COMPENSATED_ACCELERATION, filter_decimation },
+    }};
+
+    if(mip::commands_3dm::writeFilterMessageFormat(*device, static_cast<uint8_t>(filter_descriptors.size()), filter_descriptors.data()) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not set filter message format!");
+
+    if(mip::commands_filter::writeSensorToVehicleRotationEuler(*device, sensor_to_vehicle_rotation_euler[0], sensor_to_vehicle_rotation_euler[1], sensor_to_vehicle_rotation_euler[2]) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not set sensor-2-vehicle rotation!");
+
+    if(mip::commands_filter::writeAutoInitControl(*device, 1) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not set filter autoinit control!");
+
+    if(mip::commands_filter::reset(*device) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not reset the filter!");
+
+    device->registerExtractor(sensor_data_handlers[0], &sensor_gps_time);
+    device->registerExtractor(sensor_data_handlers[1], &sensor_accel);
+    device->registerExtractor(sensor_data_handlers[2], &sensor_gyro);
+
+    //Filter Data
+    device->registerExtractor(filter_data_handlers[0], &filter_gps_time);
+    device->registerExtractor(filter_data_handlers[1], &filter_status);
+    device->registerExtractor(filter_data_handlers[2], &filter_euler_angles);
+    device->registerExtractor(filter_data_handlers[3], &filter_comp_angular_rate);
+    device->registerExtractor(filter_data_handlers[4], &filter_comp_accel);
+
+    if(mip::commands_base::resume(*device) != mip::CmdResult::ACK_OK)
+        printf("ERROR: Could not resume the device!");
+
+    mip::Timestamp prev_print_timestamp = getCurrentTimestamp();
+    printf("Sensor is configured... waiting for filter to enter running mode.\n");
+
+}
+
+void ExternalComm::getIMMUdata(){//(mip::Interface& device){
+    
+    // if (!device) {
+    //     printf("ERROR: Device pointer is null\n");
+    //     return;
+    // }
+    // try{
+    device->update();
+    //Check Filter State
+    if((!this->filter_state_running) && ((this->filter_status.filter_state == mip::data_filter::FilterMode::GX5_RUN_SOLUTION_ERROR) || (this->filter_status.filter_state == mip::data_filter::FilterMode::GX5_RUN_SOLUTION_VALID)))
+    {
+        printf("NOTE: Filter has entered running mode.\n");
+        this->filter_state_running = true;
+    }
+    //Once in running mode, print out data at 1 Hz
+    if(this->filter_state_running)
+    {
+        auto now = std::chrono::system_clock::now();
+        auto unix_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    
+        printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
+                unix_timestamp,
+                this->filter_gps_time.tow, 
+                this->filter_euler_angles.roll, 
+                this->filter_euler_angles.pitch, 
+                this->filter_euler_angles.yaw,
+                this->filter_comp_angular_rate.gyro[0], 
+                this->filter_comp_angular_rate.gyro[1], 
+                this->filter_comp_angular_rate.gyro[2]);//,
+                
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));             
+    }
+    // }catch (const std::exception& e) {
+    //     printf("ERROR in getIMMUdata: %s\n", e.what());
+    // }
+    // catch (...) {
+    //     printf("Unknown ERROR in getIMMUdata\n");
+    // }
+}
+
+
+
+
 
 int main(int argc, char *argv[]) {
 
-    ExternalComm extComm;
-    // std::cout << std::fixed << std::showpoint;
-    extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
-	extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
+    ExternalComm extComm(argc, argv);
+
+    extComm.connectIMU();//(*device);
+    extComm.configureIMU();//(*device);
+    extComm.setupIMUfilter();//(*device);
+    // while(1)
+    // {
+    //     extComm.getIMMUdata();//(*device);
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    // }
+
+    
+
+    
+    // // std::cout << std::fixed << std::showpoint;
+    // extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
+	// extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     int simIMU = 0;
+
+
 
     // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
 	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
 	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    // LoopFunc loop_imu("imu_loop", 0.0010001f,3, boost::bind(&ExternalComm::getIMUread, &extComm));
-    // LoopFunc loop_flush("flush_loop", 0.004, 4, boost::bind(&ExternalComm::flushIMUBuffer, &extComm));
-
+    LoopFunc loop_imu("imu_loop", extComm.LLdt,3, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
 	// loop_sim.start();
 	// sleep(1.0);
 	// loop_mpc.start();
 	// sleep(1.0);
 	// loop_calc.start();
-    // loop_imu.start();
+    loop_imu.start();
     // loop_flush.start();
 
-    // while(true) //(simIMU < 10000)
-    // {
-    //     sleep(0.1);
-    //     // extComm.getIMUread2();
-    //     //simIMU++;
-    // }
+    while (simIMU < 500000)
+    {
+        sleep(0.1);
+        // extComm.getIMUread2();
+        simIMU++;
+    }
     
-    std::ofstream file_est("../data25/estimatorMT13.csv");
-    while (true)
-	{
+    // std::ofstream file_est("../data25/estimatorMT13.csv");
+    // while (true)
+	// {
 			
-        // sleep(0.1);
-        // extComm.getIMUread();
-        extComm.SimExec(file_est);
-        extComm.HighLevel();
-        extComm.Calc();
-        // sim_setup = false;
+    //     // sleep(0.1);
+    //     extComm.getIMUread();
+    //     extComm.SimExec(file_est);
+    //     extComm.HighLevel();
+    //     extComm.Calc();
+    //     // sim_setup = false;
 
-	} 
+	// } 
 
-    file_est.close();
+    // file_est.close();
 
     
     return 0;
 }
+
+
+// std::unique_ptr<ExampleUtils> utils = handleCommonArgs(argc, const_cast<const char**>(argv));
+    // std::unique_ptr<mip::Interface>& device = utils->device;
+
+    // std::unique_ptr<mip::Interface>& device = std::make_unique<mip::serial::Connection>("/dev/ttyACM0", 9600);
+    // std::unique_ptr<mip::Interface>& device = std::make_unique<microstrain::Connection>("/dev/ttyACM0", 9600);
+    // auto 
+    // std::unique_ptr<mip::Interface>& device = std::make_unique<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
+    
+    // auto connection = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
+    // // Create the MIP interface using the connection
+    // auto device = std::make_shared<mip::Interface>(connection);
+
+    // auto connection = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
+    
+    
+    // Create a MIP interface using the connection
+    // auto device = std::unique_ptr<mip::Interface>(new mip::Interface());
+    // std::unique_ptr<ExampleUtils> utils = handleCommonArgs("/dev/ttyACM0", 9600);
+    // std::unique_ptr<mip::Interface>& device = utils->device;
+    
+    // // Connect the interface to the connection
+    // // mip::connect_interface(*device, *connection);
+    
+    
+    // std::unique_ptr<mip::Interface> device = createDevice("/dev/ttyACM0", 9600);
+        
+
+   
+    // Create an ExampleUtils object and initialize the device
+    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>();
+    // utils->device = createDevice("/dev/ttyACM0", 9600);
+
+    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>();
+    // // utils->device = std::make_unique<mip::serial::Connection>("/dev/ttyACM0", 9600);
+    // utils->device = std::make_unique<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
+    // std::unique_ptr<mip::Interface>& device = utils->device;
+
+    
+    // uint8_t parseBuffer[1024]; 
+    // auto serial = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
+    // // std::unique_ptr<mip::Interface> device = std::make_unique<mip::Interface>(connection);
+    // mip::Interface device(nullptr, nullptr, serial, parseBuffer, sizeof(parseBuffer));
+    // microstrain::connections::SerialConnection* serialRaw_;
+    // serialRaw_ = new microstrain::connections::SerialConnection("/dev/ttyACM0", 9600);
+    // std::unique_ptr<mip::Interface> device_tmp = std::make_unique<mip::Interface>(serialRaw_, parseBuffer, sizeof(parseBuffer));
+    // std::unique_ptr<mip::Interface>& device = device_tmp;
+
+    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>(); 
+    // // Hardcoded connection parameters
+    // const std::string port = "/dev/ttyACM0";
+    // const uint32_t baudrate = 9600;
+    // // Create a serial connection
+    // auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+    // // Try to connect
+    // if (!connection->connect()) {
+    //     printf("ERROR: Could not connect to %s at %u baud\n", port.c_str(), baudrate);
+    //     return -1;
+    // }
+    // // Set up the device interface
+    // const size_t parseBufferSize = 1024;
+    // uint8_t* parseBuffer = new uint8_t[parseBufferSize];
+    // utils->device = std::make_unique<mip::Interface>(
+    //     connection.get(),       // Connection pointer
+    //     parseBuffer,            // Parse buffer
+    //     parseBufferSize,        // Parse buffer size
+    //     1000,                   // Parse timeout (ms)
+    //     1000                    // Base reply timeout (ms)
+    // );
+    // std::unique_ptr<ExampleUtils> utils = handleCommonArgs(argc, const_cast<const char**>(argv));
+    // std::unique_ptr<mip::Interface>& device = utils->device;
+
+
+    // extComm.connectIMU();//(*device);
+    // extComm.configureIMU();//(*device);
+    // extComm.setupIMUfilter();//(*device);
+    // while(1)
+    // {
+    //     extComm.getIMMUdata();//(*device);
+
+    // }
 
