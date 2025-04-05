@@ -9,7 +9,7 @@
 
 
 
-namespace fs = std::filesystem;
+// namespace fs = std::filesystem;
 
 SRBNMPCR::SRBNMPCR(int argc, char *argv[], int numRobots, int id) : Parameters(argc,argv){
     // filename = ""; // empty string will produce no output file
@@ -136,12 +136,12 @@ void SRBNMPCR::generator(){
     // file name
     std::string file_name = "upright_h5_73R";
     // code predix
-    std::string prefix_code = fs::current_path().string() + "/";
+    std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//fs::current_path().string() + "/";
 
     // Generate C code for the NLP functions
     solver.generate_dependencies(file_name + ".c");
 
-    std::string prefix_lib = fs::current_path().string() + "/";
+    std::string prefix_lib = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//fs::current_path().string() + "/";
 
     // compile c code to a shared library
     std::string compile_command = "gcc -fPIC -shared -O3 " + 

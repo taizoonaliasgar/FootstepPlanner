@@ -123,8 +123,8 @@ class ExternalComm
 {
 private:
     std::shared_ptr<microstrain::connections::SerialConnection> connection;
-    std::unique_ptr<uint8_t[]> parseBuffer;
-    const size_t parseBufferSize;
+    // std::unique_ptr<uint8_t[]> parseBuffer;
+    // const size_t parseBufferSize;
 
     // Device pointer
     std::unique_ptr<mip::Interface> device;
@@ -153,33 +153,33 @@ private:
 
 public:
     ExternalComm(int argc, char* argv[])
-    : parseBufferSize(1024), 
-        parseBuffer(new uint8_t[parseBufferSize])
+    // : parseBufferSize(1024), 
+        // parseBuffer(new uint8_t[parseBufferSize])
     {
 		
-        const std::string port = "/dev/ttyACM0";//argv[2];
-        const uint32_t baudrate = 9600;//std::stoi(argv[3]);
+        // const std::string port = "/dev/ttyACM0";//argv[2];
+        // const uint32_t baudrate = 9600;//std::stoi(argv[3]);
         
-        std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
+        // std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
         
-        // Create serial connection
-        connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+        // // Create serial connection
+        // connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
         
-        // Try to connect
-        if (!connection->connect()) {
-            throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
-        }
+        // // Try to connect
+        // if (!connection->connect()) {
+        //     throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
+        // }
         
-        // Create device interface
-        device = std::make_unique<mip::Interface>(
-            connection.get(),       // Connection pointer
-            parseBuffer.get(),      // Parse buffer
-            parseBufferSize,        // Parse buffer size
-            1000,                   // Parse timeout (ms)
-            1000                    // Base reply timeout (ms)
-        );
+        // // Create device interface
+        // device = std::make_unique<mip::Interface>(
+        //     connection.get(),       // Connection pointer
+        //     parseBuffer.get(),      // Parse buffer
+        //     parseBufferSize,        // Parse buffer size
+        //     1000,                   // Parse timeout (ms)
+        //     1000                    // Base reply timeout (ms)
+        // );
         
-        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
+        // std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
 
         double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
         double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
@@ -202,7 +202,8 @@ public:
         // const int NUMBER_OF_SIMS = 1;
         // const float threshold = 0.4;
         // bool shared_data_backed_up = 0;
-        //raisim::OgreVis *vis = raisim::OgreVis::get();			
+        //raisim::OgreVis *vis = raisim::OgreVis::get();		
+        // std::cout << "Setup filter" << std::endl;	
         
     }	
 
@@ -232,7 +233,7 @@ public:
     // main thread execution functions
 	void Calc();
 	void HighLevel();
-	void SimExec(std::ofstream &file_est);  
+	void SimExec();//(std::ofstream &file_est);  
 
     void connectIMU();//(mip::Interface& device);
     void setupIMUfilter();//(mip::Interface& device);
@@ -268,9 +269,9 @@ public:
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;            // Record?
+    bool record = false;//true;            // Record?
     double fps = 30;            
-    std::string directory = "../data25/Feb28/";
+    std::string directory = "../data25/Apr4/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
@@ -348,8 +349,8 @@ void ExternalComm::setupRaisim(){
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.35,0.4);
-    box_left->setPosition(0,0.35,0.4);
+    box_right->setPosition(0,-0.32,0.4);
+    box_left->setPosition(0,0.32,0.4);
 
     //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -481,7 +482,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > 26999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -507,7 +508,7 @@ void ExternalComm::HighLevel(){
 
 void ExternalComm::Calc(){
 
-    //std::cout << "Inlowlevel" << std::endl;
+    // std::cout << "Inlowlevel" << std::endl;
 
     updateData(GET_DATA, LL_DATA, &LLData);
 
@@ -515,13 +516,15 @@ void ExternalComm::Calc(){
         //double temp[18] = {0};
         //tau = temp;
         loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
+        
     }else if(LLData.control_Tick >= settling & LLData.control_Tick < loco_start){ // Start standing
-
+        
         loco_obj->calcTau2(LLData.q,LLData.dq,LLData.rotMatrixDouble,STAND,LLData.control_Tick,LLData.solvetime);  
     }else{
 
         loco_obj->ExpWrapper(LLData.q,LLData.dq,LLData.rotMatrixDouble,LLData.control_Tick,LLData.solvetime,LLData.ind,LLData.comDes,LLData.fDes);
     }
+
     LLData.tau = Eigen::Map<Eigen::VectorXd>(loco_obj->getTorque(),18);
     LLData.tau.block(0,0,6,1).setZero();
     LLData.toePos = loco_obj->getfootposition();
@@ -535,7 +538,7 @@ void ExternalComm::Calc(){
 
     updateData(SET_DATA, LL_DATA, &LLData);
     loco_obj->settoe_prev();
-    //std::cout << "Exitinglowlevel" << std::endl;
+    // std::cout << "Exitinglowlevel" << std::endl;
     
 }
 
@@ -707,12 +710,12 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 
 
-void ExternalComm::SimExec(std::ofstream &file_est){
+void ExternalComm::SimExec(){//(std::ofstream &file_est){
  
     //std::cout << "InSimExec" << std::endl;
     if (setup_raisim){
         setupRaisim();
-        setup_raisim = false;
+        setup_raisim = false; 
     }
     updateData(GET_DATA, SIM_DATA, &SimData);
     if(!vis->getRoot()->endRenderingQueued() && simcounter < simlength){
@@ -725,7 +728,7 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         //plotGRFs(list, HLData.fDes, SimData.toePos, SimData.ind_LL);
         world.integrate();        
         
-        if (simcounter%120 == 0)
+        if (simcounter%60 == 0)
             vis->renderOneFrame();
         
         if (!vis->isRecording() & record & simcounter>=startTime)
@@ -840,16 +843,16 @@ void ExternalComm::SimExec(std::ofstream &file_est){
         kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);
     }
 
-    file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
-         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
-         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
-         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
+    // file_est << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+    //      << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+    //      << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+    //      << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << ","
         // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
         //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
         //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
         //  << rotE(2,0) << "," << rotE(2,1) << "," << rotE(2,2) << ","
         //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
-        << "\n";
+        // << "\n";
    
     memcpy(SimData.q,jpos_est,18*sizeof(double));
     memcpy(SimData.dq,jvel_est,18*sizeof(double));
@@ -1016,56 +1019,51 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 
 int main(int argc, char *argv[]) {
 
+    
     ExternalComm extComm(argc, argv);
-
-    extComm.connectIMU();//(*device);
-    extComm.configureIMU();//(*device);
-    extComm.setupIMUfilter();//(*device);
-    // while(1)
-    // {
-    //     extComm.getIMMUdata();//(*device);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    // }
-
+    extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
+    extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     
-
+    // extComm.connectIMU();//(*device);
+    // extComm.configureIMU();//(*device);
+    // extComm.setupIMUfilter();//(*device);
     
-    // // std::cout << std::fixed << std::showpoint;
-    // extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
-	// extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     int simIMU = 0;
 
 
-
-    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    LoopFunc loop_imu("imu_loop", extComm.LLdt,3, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    // // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	// loop_sim.start();
-	// sleep(1.0);
-	// loop_mpc.start();
-	// sleep(1.0);
-	// loop_calc.start();
-    loop_imu.start();
+	loop_sim.start();
+	sleep(1.0);
+	loop_mpc.start();
+	sleep(1.0);
+	loop_calc.start();
+    // sleep(1.0);
+    // loop_imu.start();
     // loop_flush.start();
 
-    while (simIMU < 500000)
+    while(true)// (simIMU < 500000)
     {
         sleep(0.1);
         // extComm.getIMUread2();
-        simIMU++;
+        // simIMU++;
     }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
     // while (true)
 	// {
 			
-    //     // sleep(0.1);
-    //     extComm.getIMUread();
-    //     extComm.SimExec(file_est);
+    //     sleep(0.1);
+    //     // extComm.getIMUread();
+    //     extComm.SimExec();//(file_est);
+    //     // std::cout << "SimExec" << std::endl;
     //     extComm.HighLevel();
+    //     // std::cout << "HighLevel" << std::endl;
     //     extComm.Calc();
+    //     // std::cout << "Calc" << std::endl;
     //     // sim_setup = false;
 
 	// } 
@@ -1157,4 +1155,3 @@ int main(int argc, char *argv[]) {
     //     extComm.getIMMUdata();//(*device);
 
     // }
-

@@ -13,7 +13,7 @@
 
 
 
-namespace fs = std::filesystem;
+// namespace fs = std::filesystem;
 
 SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(argc,argv){
     // filename = ""; // empty string will produce no output file
@@ -126,12 +126,12 @@ void SRBNMPC::generator(){
     // file name
     std::string file_name = "take2_w0p23N20";//"take2_1";
     // code predix
-    std::string prefix_code = std::filesystem::current_path().string() + "/";
+    std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
     // Generate C code for the NLP functions
     solver.generate_dependencies(file_name + ".c");
 
-    std::string prefix_lib = std::filesystem::current_path().string() + "/";
+    std::string prefix_lib = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
     // compile c code to a shared library
     std::string compile_command = "gcc -fPIC -shared -O3 " + 
         prefix_code + file_name + ".c -o " +
@@ -1392,9 +1392,9 @@ casadi::DM SRBNMPC::motionPlannerN3(Eigen::Matrix<double,16,1> q0, size_t contro
 void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen::Matrix<double, 3, 4> foot_position, Eigen::Matrix<double, 12, 1> lastQPforce){
     auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
-    if(controlTick == 32000){letsgo();}
+    // if(controlTick == 32000){letsgo();}
     controlMPC_MT = std::floor(controlTick/10); 
-    
+    if(controlMPC_MT == 3200){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
         q0_MT(i+3) = dq[i];
