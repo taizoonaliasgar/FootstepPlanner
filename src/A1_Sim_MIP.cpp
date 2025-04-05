@@ -123,8 +123,11 @@ class ExternalComm
 {
 private:
     std::shared_ptr<microstrain::connections::SerialConnection> connection;
-    // std::unique_ptr<uint8_t[]> parseBuffer;
-    // const size_t parseBufferSize;
+    const size_t parseBufferSize = 1024;
+    std::unique_ptr<uint8_t[]> parseBuffer = std::make_unique<uint8_t[]>(parseBufferSize);
+
+    // std::unique_ptr<uint8_t[]> parseBuffer = new uint8_t[parseBufferSize];
+    
 
     // Device pointer
     std::unique_ptr<mip::Interface> device;
@@ -157,29 +160,29 @@ public:
         // parseBuffer(new uint8_t[parseBufferSize])
     {
 		
-        // const std::string port = "/dev/ttyACM0";//argv[2];
-        // const uint32_t baudrate = 9600;//std::stoi(argv[3]);
+        const std::string port = "/dev/ttyACM0";//argv[2];
+        const uint32_t baudrate = 9600;//std::stoi(argv[3]);
         
-        // std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
+        std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
         
-        // // Create serial connection
-        // connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+        // Create serial connection
+        connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
         
-        // // Try to connect
-        // if (!connection->connect()) {
-        //     throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
-        // }
+        // Try to connect
+        if (!connection->connect()) {
+            throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
+        }
         
-        // // Create device interface
-        // device = std::make_unique<mip::Interface>(
-        //     connection.get(),       // Connection pointer
-        //     parseBuffer.get(),      // Parse buffer
-        //     parseBufferSize,        // Parse buffer size
-        //     1000,                   // Parse timeout (ms)
-        //     1000                    // Base reply timeout (ms)
-        // );
+        // Create device interface
+        device = std::make_unique<mip::Interface>(
+            connection.get(),       // Connection pointer
+            parseBuffer.get(),      // Parse buffer
+            parseBufferSize,        // Parse buffer size
+            1000,                   // Parse timeout (ms)
+            1000                    // Base reply timeout (ms)
+        );
         
-        // std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
+        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
 
         double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
         double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
@@ -1024,9 +1027,9 @@ int main(int argc, char *argv[]) {
     extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
     extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     
-    // extComm.connectIMU();//(*device);
-    // extComm.configureIMU();//(*device);
-    // extComm.setupIMUfilter();//(*device);
+    extComm.connectIMU();//(*device);
+    extComm.configureIMU();//(*device);
+    extComm.setupIMUfilter();//(*device);
     
     int simIMU = 0;
 
@@ -1034,15 +1037,15 @@ int main(int argc, char *argv[]) {
     LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
 	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
 	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    // // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
 	loop_sim.start();
 	sleep(1.0);
 	loop_mpc.start();
 	sleep(1.0);
 	loop_calc.start();
-    // sleep(1.0);
-    // loop_imu.start();
+    sleep(1.0);
+    loop_imu.start();
     // loop_flush.start();
 
     while(true)// (simIMU < 500000)
