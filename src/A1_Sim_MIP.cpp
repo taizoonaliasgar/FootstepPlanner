@@ -51,73 +51,7 @@ using namespace UNITREE_LEGGED_SDK;
 sharedData HLData;
 sharedData LLData;
 sharedData SimData;
-
-std::unique_ptr<ExampleUtils> createDeviceConnection() {
-    auto utils = std::make_unique<ExampleUtils>();
-    
-    // Hardcoded connection parameters
-    const std::string port = "/dev/ttyACM0";
-    const uint32_t baudrate = 9600;
-    
-    try {
-        // Create and connect to the device in one go
-        auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
-        
-        // This will throw an exception if connection fails
-        connection->connect();
-        
-        // Set up the device interface
-        const size_t parseBufferSize = 1024;
-        uint8_t* parseBuffer = new uint8_t[parseBufferSize];
-        
-        utils->device = std::make_unique<mip::Interface>(
-            connection.get(),       // Connection pointer
-            parseBuffer,            // Parse buffer
-            parseBufferSize,        // Parse buffer size
-            1000,                   // Parse timeout (ms)
-            1000                    // Base reply timeout (ms)
-        );
-        
-        // Echo operation status
-        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
-        
-        return utils;
-    }
-    catch (const std::exception& e) {
-        throw std::runtime_error(std::string("Connection failed: ") + e.what());
-    }
-}
-std::unique_ptr<mip::Interface> createDevice(const std::string& port, uint32_t baudrate) {
-    // Create a serial connection
-    auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
-    
-    // Try to connect
-    if (!connection->connect()) {
-        std::cerr << "ERROR: Could not connect to " << port << " at " << baudrate << " baud" << std::endl;
-        return nullptr;
-    }
-    
-    // Parse buffer size (typically 1024 bytes)
-    const size_t parseBufferSize = 1024;
-    uint8_t* parseBuffer = new uint8_t[parseBufferSize];
-    
-    // Create a MIP interface with the connection and parse buffer
-    // Note: these timeout values (in milliseconds) may need adjustment for your specific device
-    const unsigned int parseTimeout = 1000;    // 1 second parse timeout
-    const unsigned int replyTimeout = 1000;    // 1 second reply timeout
-    
-    auto device = std::unique_ptr<mip::Interface>(
-        new mip::Interface(
-            connection.get(),       // Connection pointer
-            parseBuffer,            // Parse buffer
-            parseBufferSize,        // Parse buffer size
-            parseTimeout,           // Parse timeout (ms)
-            replyTimeout            // Base reply timeout (ms)
-        )
-    );
-    
-    return device;
-}
+sharedData IMUData;
 
 class ExternalComm
 {
@@ -138,6 +72,7 @@ private:
     mip::data_sensor::GpsTimestamp sensor_gps_time;
     mip::data_sensor::ScaledAccel sensor_accel;
     mip::data_sensor::ScaledGyro sensor_gyro;
+    mip::data_sensor::CompEulerAngles sensor_comp_euler_angles;
 
     mip::data_filter::Timestamp filter_gps_time;
     mip::data_filter::Status filter_status;
@@ -146,13 +81,15 @@ private:
     mip::data_filter::CompAccel filter_comp_accel;
 
     // Dispatch handlers
-    mip::DispatchHandler sensor_data_handlers[3];
+    mip::DispatchHandler sensor_data_handlers[4];
     mip::DispatchHandler filter_data_handlers[5];
 
     // State tracking
     bool filter_state_running = false;
     bool is_initialized = false;
     std::mutex update_mutex;
+
+    bool SIMFlag = true;
 
 public:
     ExternalComm(int argc, char* argv[])
@@ -269,7 +206,7 @@ public:
     raisim::OgreVis *vis = raisim::OgreVis::get();
     raisim::HeightMap *ground;
     std::map<std::string, raisim::VisualObject>* list = nullptr;
-    std::string cameraview = "side";
+    std::string cameraview = "front";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = false;//true;            // Record?
@@ -346,22 +283,22 @@ void ExternalComm::setupRaisim(){
     A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));   // with NMPC and LL 
     vis->createGraphicalObject(A1.back(), "A1");
     A1.back()->setName("A1_Robot");
-    A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1 , 0, 0, 0,0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6, 0.0, Pi/3, -2.6});
+    A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1 , 0, 0, 0,-0.2, Pi/3, -2.6, 0.2, Pi/3, -2.6, -0, Pi/3, -2.6, 0, Pi/3, -2.6});
     A1.back()->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
 
     raisim::Box *box_right = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");//terrainProperties);
     raisim::Box *box_left = world.addBox(200.0, 0.2, 0.8, 1000000, "rubber");
 
-    box_right->setPosition(0,-0.32,0.4);
-    box_left->setPosition(0,0.32,0.4);
+    box_right->setPosition(0,-0.33,0.4);
+    box_left->setPosition(0,0.33,0.4);
 
-    //vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
+    vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
     
     A1.back()->getCollisionBody("FR_foot/0").setMaterial("wood");
     A1.back()->getCollisionBody("FL_foot/0").setMaterial("wood");
 
-    world.setMaterialPairProp("wood", "rubber", 0.8, 0, 0);
+    world.setMaterialPairProp("wood", "rubber", 0.7, 0, 0);
 
     raisim::gui::showContacts = false;
     raisim::gui::showForces = false;
@@ -785,21 +722,31 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     int robotdown = simcounter < switchtime*ctrlHz ? 1 : 0;
     
     if(!robotdown){
-        auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
-        auto imu_o = imu->getOrientation();   // Quaternion
-        auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
-        quat(0) = imu_o[0];
-        quat(1) = imu_o[1];
-        quat(2) = imu_o[2];
-        quat(3) = imu_o[3];
-
-        omega_state(0) = imu_w[0];
-        omega_state(1) = imu_w[1];
-        omega_state(2) = imu_w[2];
-
-        quat_to_XYZ(quat,eul_state);
         Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
-        quat_to_R(quat,rotIMU);
+        if(SIMFlag){
+            auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
+            auto imu_o = imu->getOrientation();   // Quaternion
+            auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+            quat(0) = imu_o[0];
+            quat(1) = imu_o[1];
+            quat(2) = imu_o[2];
+            quat(3) = imu_o[3];
+            quat_to_XYZ(quat,eul_state);
+            quat_to_R(quat,rotIMU);
+            omega_state(0) = imu_w[0];
+            omega_state(1) = imu_w[1];
+            omega_state(2) = imu_w[2];
+            
+        }else{
+            eul_state(0) = SimData.att_euler[0];
+            eul_state(1) = SimData.att_euler[1];
+            eul_state(2) = SimData.att_euler[2];
+            R_XYZ(eul_state,rotIMU);
+            omega_state(0) = SimData.comp_angular_rate[0];
+            omega_state(1) = SimData.comp_angular_rate[1];
+            omega_state(2) = SimData.comp_angular_rate[2];       
+        }
+        
         for(size_t i=0;i<3;i++){
             for (size_t j = 0; j < 3; j++){
                 rotMat[3*i+j] = rotIMU(j,i);
@@ -917,10 +864,11 @@ void ExternalComm::configureIMU(){//(mip::Interface& device){
     const uint16_t sensor_sample_rate = 1000; // Hz
     const uint16_t sensor_decimation = sensor_base_rate / sensor_sample_rate;
 
-    std::array<mip::DescriptorRate, 3> sensor_descriptors = {{
+    std::array<mip::DescriptorRate, 4> sensor_descriptors = {{
         { mip::data_sensor::DATA_TIME_STAMP_GPS, sensor_decimation },
         { mip::data_sensor::DATA_ACCEL_SCALED,   sensor_decimation },
         { mip::data_sensor::DATA_GYRO_SCALED,    sensor_decimation },
+        { mip::data_sensor::DATA_COMP_EULER_ANGLES, sensor_decimation },
     }};
 
     if(mip::commands_3dm::writeImuMessageFormat(*device, static_cast<uint8_t>(sensor_descriptors.size()), sensor_descriptors.data()) != mip::CmdResult::ACK_OK)
@@ -960,6 +908,7 @@ void ExternalComm::setupIMUfilter(){//(mip::Interface& device){
     device->registerExtractor(sensor_data_handlers[0], &sensor_gps_time);
     device->registerExtractor(sensor_data_handlers[1], &sensor_accel);
     device->registerExtractor(sensor_data_handlers[2], &sensor_gyro);
+    device->registerExtractor(sensor_data_handlers[3], &sensor_comp_euler_angles);
 
     //Filter Data
     device->registerExtractor(filter_data_handlers[0], &filter_gps_time);
@@ -982,7 +931,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
     //     printf("ERROR: Device pointer is null\n");
     //     return;
     // }
-    // try{
+    
     device->update();
     //Check Filter State
     if((!this->filter_state_running) && ((this->filter_status.filter_state == mip::data_filter::FilterMode::GX5_RUN_SOLUTION_ERROR) || (this->filter_status.filter_state == mip::data_filter::FilterMode::GX5_RUN_SOLUTION_VALID)))
@@ -996,17 +945,25 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
         auto now = std::chrono::system_clock::now();
         auto unix_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     
-        printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
-                unix_timestamp,
-                this->filter_gps_time.tow, 
-                this->filter_euler_angles.roll, 
-                this->filter_euler_angles.pitch, 
-                this->filter_euler_angles.yaw,
-                this->filter_comp_angular_rate.gyro[0], 
-                this->filter_comp_angular_rate.gyro[1], 
-                this->filter_comp_angular_rate.gyro[2]);//,
-                
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1));             
+        // printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
+        //         unix_timestamp,
+        //         this->filter_gps_time.tow, 
+        //         this->filter_euler_angles.roll, 
+        //         this->filter_euler_angles.pitch, 
+        //         this->filter_euler_angles.yaw,
+        //         // this->filter_comp_angular_rate.gyro[0], 
+        //         // this->filter_comp_angular_rate.gyro[1], 
+        //         // this->filter_comp_angular_rate.gyro[2]);
+        //         this->sensor_comp_euler_angles.roll,
+		// 		this->sensor_comp_euler_angles.pitch,
+		// 		this->sensor_comp_euler_angles.yaw);
+        IMUData.att_euler[0] = this->filter_euler_angles.roll;
+        IMUData.att_euler[1] = this->filter_euler_angles.pitch;
+        IMUData.att_euler[2] = this->filter_euler_angles.yaw;
+        IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
+        IMUData.comp_angular_rate[1] = this->filter_comp_angular_rate.gyro[1];
+        IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2];        
+        updateData(SET_DATA, IMU_DATA, &IMUData);                          
     }
     // }catch (const std::exception& e) {
     //     printf("ERROR in getIMMUdata: %s\n", e.what());
@@ -1024,12 +981,12 @@ int main(int argc, char *argv[]) {
 
     
     ExternalComm extComm(argc, argv);
-    extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv)); //isSim =  - Simulation true, real false
+    extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
     extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     
-    extComm.connectIMU();//(*device);
-    extComm.configureIMU();//(*device);
-    extComm.setupIMUfilter();//(*device);
+    extComm.connectIMU();
+    extComm.configureIMU();
+    extComm.setupIMUfilter();
     
     int simIMU = 0;
 
@@ -1078,83 +1035,3 @@ int main(int argc, char *argv[]) {
 }
 
 
-// std::unique_ptr<ExampleUtils> utils = handleCommonArgs(argc, const_cast<const char**>(argv));
-    // std::unique_ptr<mip::Interface>& device = utils->device;
-
-    // std::unique_ptr<mip::Interface>& device = std::make_unique<mip::serial::Connection>("/dev/ttyACM0", 9600);
-    // std::unique_ptr<mip::Interface>& device = std::make_unique<microstrain::Connection>("/dev/ttyACM0", 9600);
-    // auto 
-    // std::unique_ptr<mip::Interface>& device = std::make_unique<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
-    
-    // auto connection = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
-    // // Create the MIP interface using the connection
-    // auto device = std::make_shared<mip::Interface>(connection);
-
-    // auto connection = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
-    
-    
-    // Create a MIP interface using the connection
-    // auto device = std::unique_ptr<mip::Interface>(new mip::Interface());
-    // std::unique_ptr<ExampleUtils> utils = handleCommonArgs("/dev/ttyACM0", 9600);
-    // std::unique_ptr<mip::Interface>& device = utils->device;
-    
-    // // Connect the interface to the connection
-    // // mip::connect_interface(*device, *connection);
-    
-    
-    // std::unique_ptr<mip::Interface> device = createDevice("/dev/ttyACM0", 9600);
-        
-
-   
-    // Create an ExampleUtils object and initialize the device
-    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>();
-    // utils->device = createDevice("/dev/ttyACM0", 9600);
-
-    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>();
-    // // utils->device = std::make_unique<mip::serial::Connection>("/dev/ttyACM0", 9600);
-    // utils->device = std::make_unique<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
-    // std::unique_ptr<mip::Interface>& device = utils->device;
-
-    
-    // uint8_t parseBuffer[1024]; 
-    // auto serial = std::make_shared<microstrain::connections::SerialConnection>("/dev/ttyACM0", 9600);
-    // // std::unique_ptr<mip::Interface> device = std::make_unique<mip::Interface>(connection);
-    // mip::Interface device(nullptr, nullptr, serial, parseBuffer, sizeof(parseBuffer));
-    // microstrain::connections::SerialConnection* serialRaw_;
-    // serialRaw_ = new microstrain::connections::SerialConnection("/dev/ttyACM0", 9600);
-    // std::unique_ptr<mip::Interface> device_tmp = std::make_unique<mip::Interface>(serialRaw_, parseBuffer, sizeof(parseBuffer));
-    // std::unique_ptr<mip::Interface>& device = device_tmp;
-
-    // std::unique_ptr<ExampleUtils> utils = std::make_unique<ExampleUtils>(); 
-    // // Hardcoded connection parameters
-    // const std::string port = "/dev/ttyACM0";
-    // const uint32_t baudrate = 9600;
-    // // Create a serial connection
-    // auto connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
-    // // Try to connect
-    // if (!connection->connect()) {
-    //     printf("ERROR: Could not connect to %s at %u baud\n", port.c_str(), baudrate);
-    //     return -1;
-    // }
-    // // Set up the device interface
-    // const size_t parseBufferSize = 1024;
-    // uint8_t* parseBuffer = new uint8_t[parseBufferSize];
-    // utils->device = std::make_unique<mip::Interface>(
-    //     connection.get(),       // Connection pointer
-    //     parseBuffer,            // Parse buffer
-    //     parseBufferSize,        // Parse buffer size
-    //     1000,                   // Parse timeout (ms)
-    //     1000                    // Base reply timeout (ms)
-    // );
-    // std::unique_ptr<ExampleUtils> utils = handleCommonArgs(argc, const_cast<const char**>(argv));
-    // std::unique_ptr<mip::Interface>& device = utils->device;
-
-
-    // extComm.connectIMU();//(*device);
-    // extComm.configureIMU();//(*device);
-    // extComm.setupIMUfilter();//(*device);
-    // while(1)
-    // {
-    //     extComm.getIMMUdata();//(*device);
-
-    // }
