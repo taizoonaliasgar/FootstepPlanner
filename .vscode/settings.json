@@ -75,6 +75,7 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "future": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "span": "cpp"
     }
 }

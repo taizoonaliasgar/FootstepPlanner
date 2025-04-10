@@ -90,6 +90,8 @@ private:
     std::mutex update_mutex;
 
     bool SIMFlag = true;
+    std::ofstream csvFile;//("contact_forces.csv");
+
 
 public:
     ExternalComm(int argc, char* argv[])
@@ -135,6 +137,8 @@ public:
         float ba[3] = {0.00003913,0.00007826,0.00003913};
         populate_filter_f(angfilter, aa, ba, 3, 2);
 
+        csvFile.open("../data25/contact_forces4.csv");
+
         // StandDuration = 10000;
         // SettlingTime = 8000;
 
@@ -156,10 +160,11 @@ public:
         delete vis;
         delete ground;
         delete list;
-            auto test = A1.back();
-            A1.pop_back();
-            delete test;
-        }
+        auto test = A1.back();
+        A1.pop_back();
+        delete test;
+        csvFile.close();
+    }
 
     
 
@@ -209,14 +214,14 @@ public:
     std::string cameraview = "front";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = false;//true;            // Record?
+    bool record = true;            // Record?
     double fps = 30;            
-    std::string directory = "../data25/Apr4/";
+    std::string directory = "../data25/Apr9/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 35*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -235,6 +240,19 @@ public:
     float gyroXIMU = 0.0f, gyroYIMU = 0.0f, gyroZIMU = 0.0f;
     uint64_t timestampIMU = 0;
 
+    struct ForceData {
+        double normalForce;      // Normal force magnitude
+        double frictionForce[2]; // Tangential friction force [x,y]
+        double position[3];      // Contact position in world frame
+        bool inContact;          // Contact state
+    };
+
+    ForceData footForces[4];
+    void getDetailedContactForces();
+    size_t calfIdx[4]= {0,1,2,3};
+    raisim::Vec<3> calfPose = {0.0, 0.0, 0.0};
+    raisim::Vec<3> localPosition = {0.0, 0.0, -0.2};
+    // raisim::ArticulatedSystem::JointRef jointFR(static_cast<size_t>(0),A1.back());
 };
 
 
@@ -340,6 +358,11 @@ void ExternalComm::setupRaisim(){
     vis->setDesiredFPS(fps);
     static bool added = false; 
 
+    calfIdx[0] = A1.back()->getBodyIdx("FR_thigh");
+    calfIdx[1] = A1.back()->getBodyIdx("FL_thigh");
+    calfIdx[2] = A1.back()->getBodyIdx("RR_thigh");
+    calfIdx[3] = A1.back()->getBodyIdx("RL_thigh");
+    // jointFR = A1.back()->getJoint("FR_calf_joint");
 }
 
 void ExternalComm::setupCallback() {
@@ -370,6 +393,66 @@ void ExternalComm::setupCallback() {
     vis->setContactVisObjectSize(0.03, 0.6);
     // speed of camera motion in freelook mode
     vis->getCameraMan()->setTopSpeed(5);
+}
+
+void ExternalComm::getDetailedContactForces() {
+    // Reset all force data
+    for (int i = 0; i < 4; i++) {
+        footForces[i].normalForce = 0.0;
+        footForces[i].frictionForce[0] = 0.0;
+        footForces[i].frictionForce[1] = 0.0;
+        footForces[i].position[0] = 0.0;
+        footForces[i].position[1] = 0.0;
+        footForces[i].position[2] = 0.0;
+        footForces[i].inContact = false;
+    }
+    
+    // Get all contacts from Raisim
+    for (auto &con: A1.back()->getContacts()) {
+        // Get foot index (0-3 for FR, FL, RR, RL)
+        int conInd = con.getlocalBodyIndex();
+        int footIndex = conInd/3 - 1;
+        
+        // Ensure valid foot index
+        if (footIndex >= 0 && footIndex < 4) {
+            // Get contact position
+            const auto& position = con.getPosition();
+            footForces[footIndex].position[0] = position[0];
+            footForces[footIndex].position[1] = position[1];
+            footForces[footIndex].position[2] = position[2];
+            
+            // Get normal force (Z component)
+            const auto& normal = con.getNormal();
+            footForces[footIndex].normalForce = normal.e().norm();
+            
+            // Get friction forces (X,Y components)
+            const auto& force = con.getImpulse();
+            // Project force to get tangential components
+            Eigen::Vector3d normalVec(normal.e()(0), normal.e()(1), normal.e()(2));
+            normalVec.normalize();
+            Eigen::Vector3d forceVec(force[0], force[1], force[2]);
+            
+            // Calculate friction force by subtracting normal component
+            double normalComponent = forceVec.dot(normalVec);
+            Eigen::Vector3d frictionVec = forceVec - normalComponent * normalVec;
+            
+            footForces[footIndex].frictionForce[0] = frictionVec(0);
+            footForces[footIndex].frictionForce[1] = frictionVec(1);
+            
+            // Mark as in contact
+            footForces[footIndex].inContact = true;
+            
+            // Print detailed force information
+            printf("Foot %d: Normal=%.2f N, Friction=[%.2f, %.2f] N, Pos=[%.3f, %.3f, %.3f]\n", 
+                   footIndex, 
+                   footForces[footIndex].normalForce,
+                   footForces[footIndex].frictionForce[0],
+                   footForces[footIndex].frictionForce[1],
+                   footForces[footIndex].position[0],
+                   footForces[footIndex].position[1],
+                   footForces[footIndex].position[2]);
+        }
+    }
 }
 
 
@@ -422,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > 26999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -785,7 +868,44 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         jvel_est[i] = jointVelTotal(i);
     }
     
-    
+    // int raisimForce[4] = {0};
+    // for(auto &con: A1.back()->getContacts()){
+    //     int conInd = con.getlocalBodyIndex();//SimData.ind_LL;
+    //     raisimForce[conInd/3-1] = 500;
+    //     raisimForce[conInd/3-1] = con.getNormal().e().norm();
+    // }
+
+    // Assuming raisim::World world and raisim::ArticulatedSystem* a1 are already created and set up
+    // auto& contacts = world.getContactForce();  // get all contact points
+    // For mapping contact forces by foot name
+    // std::map<std::string, Eigen::Vector3d> footContactForces = {
+    //     {"FR_foot", Eigen::Vector3d::Zero()},
+    //     {"FL_foot", Eigen::Vector3d::Zero()},
+    //     {"RR_foot", Eigen::Vector3d::Zero()},
+    //     {"RL_foot", Eigen::Vector3d::Zero()}
+    // };
+    // Iterate through contacts
+    // for (const auto& contact : A1.back()->getContacts()) {
+    //     std::string contactBodyName = A1.back()->getBodyNames()[contact.getlocalBodyIndex()];
+
+    //     if (footContactForces.find(contactBodyName) != footContactForces.end()) {
+    //         Eigen::Vector3d force = Eigen::Vector3d(contact.getImpulse().e());  // in world frame
+    //         footContactForces[contactBodyName] = force;
+
+    //         csvFile << contactBodyName << " Contact Force: "
+    //                 << "X: " << force.x() << ", "
+    //                 << "Y: " << force.y() << ", "
+    //                 << "Z: " << force.z() << std::endl;
+    //     }
+    // }
+    csvFile << simcounter << ",";
+    for(int i=0; i<4; ++i){
+        A1.back()->getPosition(calfIdx[i], localPosition, calfPose);
+        // jointFR.getPosition(calfPose);
+        csvFile << calfPose[0] << "," << calfPose[1] << "," << calfPose[2] << ",";
+    }
+    csvFile << "\n";
+
     if(simcounter>2499){
         getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter);
         
@@ -991,42 +1111,42 @@ int main(int argc, char *argv[]) {
     int simIMU = 0;
 
 
-    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	loop_sim.start();
-	sleep(1.0);
-	loop_mpc.start();
-	sleep(1.0);
-	loop_calc.start();
-    sleep(1.0);
-    loop_imu.start();
-    // loop_flush.start();
+	// loop_sim.start();
+	// sleep(1.0);
+	// loop_mpc.start();
+	// sleep(1.0);
+	// loop_calc.start();
+    // sleep(1.0);
+    // loop_imu.start();
+    // // loop_flush.start();
 
-    while(true)// (simIMU < 500000)
-    {
-        sleep(0.1);
-        // extComm.getIMUread2();
-        // simIMU++;
-    }
+    // while(true)// (simIMU < 500000)
+    // {
+    //     sleep(0.1);
+    //     // extComm.getIMUread2();
+    //     // simIMU++;
+    // }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    // while (true)
-	// {
+    while (true)
+	{
 			
-    //     sleep(0.1);
-    //     // extComm.getIMUread();
-    //     extComm.SimExec();//(file_est);
-    //     // std::cout << "SimExec" << std::endl;
-    //     extComm.HighLevel();
-    //     // std::cout << "HighLevel" << std::endl;
-    //     extComm.Calc();
-    //     // std::cout << "Calc" << std::endl;
-    //     // sim_setup = false;
+        sleep(0.1);
+        // extComm.getIMUread();
+        extComm.SimExec();//(file_est);
+        // std::cout << "SimExec" << std::endl;
+        extComm.HighLevel();
+        // std::cout << "HighLevel" << std::endl;
+        extComm.Calc();
+        // std::cout << "Calc" << std::endl;
+        // sim_setup = false;
 
-	// } 
+	} 
 
     // file_est.close();
 

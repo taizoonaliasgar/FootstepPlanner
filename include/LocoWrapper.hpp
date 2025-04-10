@@ -143,7 +143,7 @@ private:
     size_t duration_e = 1.8*ctrlHz;                   // Stand up 
     size_t loco_start_e = settling_e + duration_e;        // Start the locomotion pattern
 
-    size_t shifttime = 0.75*ctrlHz;
+    size_t shifttime = 0.75*ctrlHz;//0.75*ctrlHz;
     size_t movetime = 0.3*ctrlHz;
     size_t shifttime2 = 1.0*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
