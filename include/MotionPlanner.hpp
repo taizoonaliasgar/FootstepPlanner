@@ -50,7 +50,7 @@ public:
     void setx0y0z0(double x0_, double y0_, double z0_, double p0_){x0 = x0_; y0 = y0_; z0 = z0_;p0 = p0_;};
     void datalogger(size_t ctrlTick){std::cout << ctrlTick << "\t" << x0 << "\t" << y0 << "\t" << z0 << "\t" << xnew << "\t" << ynew << "\t" << znew << std::endl;};
     void increasesteplenth(){if(upstep<-0.01){upstep = upstep+0.04;}else{upstep = -0.01;};};
-    void setrearhip(double x, double y, double z){rhip_x = x; rhip_y = y; rhip_z = z;};
+    void setrearhip(double x, double y, double z,double fx){rhip_x = x; rhip_y = y; rhip_z = z;rearfoot_x = fx;};
     void shiftCoM2(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
     void movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps);
     void shiftCoM3(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
@@ -92,6 +92,7 @@ private:
     double rhip_z = 0;
     double p0 = 0;
     double minpitch = -1.2;
+    double rearfoot_x = 0;
     
 };
 

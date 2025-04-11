@@ -317,7 +317,7 @@ void LocoWrapper::getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight){
     // z_new = newCoM(2);
     CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
     CoMnew(2)=0.25;//CoMnew(2);
-    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.15;
+    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.25;
 }
 
 void LocoWrapper::setrearhippose(){
@@ -325,7 +325,8 @@ void LocoWrapper::setrearhippose(){
     double hip_x = (kin->hipPos(0,2)+kin->hipPos(0,3))/2;
     double hip_y = (kin->hipPos(1,2)+kin->hipPos(1,3))/2;
     double hip_z = (kin->hipPos(2,2)+kin->hipPos(2,3))/2;
-    PP->setrearhip(hip_x,hip_y,hip_z);
+    double foot_x = (kin->toePos(0,2)+kin->toePos(0,3))/2;
+    PP->setrearhip(hip_x,hip_y,hip_z,foot_x);
 }
 
 void LocoWrapper::setfinalCoM(){
@@ -555,8 +556,8 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
      
             if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
-                wfoot(0)=1;//2*nextcon_e(1);
-                wfoot(1)=1;//2*nextcon_e(0);  
+                wfoot(0)=2*nextcon_e(1);
+                wfoot(1)=2*nextcon_e(0);  
                 getshiftedCoM(wfoot);setshiftedCoM();
             }
             setswingContact(nextcon_e);
