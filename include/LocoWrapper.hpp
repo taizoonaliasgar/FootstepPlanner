@@ -78,6 +78,10 @@ public:
 
     //Multi-threading
     void setHLphase(int HLContact5){HLMTphase = HLContact5;};
+    //Managing the knee
+    void ExpWrapperk(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
+        int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
+    void calcTau2k(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick, size_t solveduration);
 
     // Pointers to structs
     const StateInfo *state;
@@ -143,7 +147,7 @@ private:
     size_t duration_e = 1.8*ctrlHz;                   // Stand up 
     size_t loco_start_e = settling_e + duration_e;        // Start the locomotion pattern
 
-    size_t shifttime = 0.75*ctrlHz;//0.75*ctrlHz;
+    size_t shifttime = 0.75*ctrlHz;//1
     size_t movetime = 0.3*ctrlHz;
     size_t shifttime2 = 1.0*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
@@ -162,6 +166,9 @@ private:
 
     //Multi-threading
     int HLMTphase = 0;
+
+    int standoffset = 0;
+    int currentshift = 0;
     
 };
 

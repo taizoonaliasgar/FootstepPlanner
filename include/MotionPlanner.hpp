@@ -55,6 +55,9 @@ public:
     void movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps);
     void shiftCoM3(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
     void movefoot3(size_t movetime);
+    //Correcting knee
+    void shiftCoMk(ContactEst *con_obj, int wallstep, double phase, size_t shifttime, bool maxsteps);
+    void movefootk(size_t movetime, size_t wallsteps, bool maxsteps);
 
 protected:
     inline void setStepLen(double x, double y, double z){

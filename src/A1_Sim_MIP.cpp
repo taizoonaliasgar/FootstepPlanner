@@ -211,7 +211,7 @@ public:
     raisim::OgreVis *vis = raisim::OgreVis::get();
     raisim::HeightMap *ground;
     std::map<std::string, raisim::VisualObject>* list = nullptr;
-    std::string cameraview = "front";
+    std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;            // Record?
@@ -310,7 +310,7 @@ void ExternalComm::setupRaisim(){
     box_right->setPosition(0,-0.33,0.4);
     box_left->setPosition(0,0.33,0.4);
 
-    vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
+    // vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
     
     A1.back()->getCollisionBody("FR_foot/0").setMaterial("wood");
@@ -505,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > 26999 && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();

@@ -555,8 +555,8 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
      
             if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
-                wfoot(0)=1;//3*nextcon_e(1);
-                wfoot(1)=1;//3*nextcon_e(0);  
+                wfoot(0)=1;//2*nextcon_e(1);
+                wfoot(1)=1;//2*nextcon_e(0);  
                 getshiftedCoM(wfoot);setshiftedCoM();
             }
             setswingContact(nextcon_e);
@@ -592,8 +592,8 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
         if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
-        if(control_Tick == 30000){readytoreallywalk();}//break;}
-        if(control_Tick == 31000){readytoreallywalk();}//break;}
+        if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
+        if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
         //updatestate(jpos_est,jvel_est,rotMatrixDouble);
         if(readytowalkf){setcontactconfigExp(HLContactIndex);}
@@ -620,6 +620,187 @@ void LocoWrapper::setoptNLstateExp(Eigen::Matrix<double, 12, 1> comDes, Eigen::M
     //opt_HLstate(2) = 0.35;
     opt_HLstate.block(12,0,12,1) = fDes.block(0,0,12,1);
     NLstep = fDes.block(12,0,5,1);
+}
+
+
+void LocoWrapper::calcTau2k(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick, size_t solveduration){
+
+    phaseVar = getPhase(1.0*locoTick, 0.0, 1.0*traj->domLen);   // update phase variable
+    phaseVar = (phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar);
+
+    quad->updateState(q,dq,R); 
+    
+    if(gait==STAND){
+        //conEst->updateConState(footPos,phaseVar,force);
+        //phaseVar = getPhase(1.0*locoTick, 0.0, 1.0*traj->domLen);
+        
+        PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);
+        quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+        VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+        LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);   
+                                         // run low level controller                                       // log relavent data
+    }else if(gait == UPWALK){
+
+        
+        if(readytowalkf){
+        
+            // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+
+                locoTick = 0;
+                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+                flphase = 0;
+                rlphase = 0;
+                //conEst->forceDomChange();
+                z = Eigen::MatrixXd::Zero(12,1);
+            
+            }else{
+                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+                flphase = getPhase(1.0*locoTick-49, 0.0, 145);
+                rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
+                flphase = (flphase<0)?0:(flphase>1)?1:flphase;
+                rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
+                // if(locoTick==50||locoTick==80){
+                if (HLMTphase == 5 || HLMTphase == 8 || HLMTphase == 25 || HLMTphase == 28){
+                    conEst->forceDomChange();
+                }            
+            }
+   
+            PP->planTraj(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);  
+            VC->updateVirtualConstraintswalk(state, kin, traj, con, gait, flphase,rlphase, &motion_params, ll);    // update VC's    
+            VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+            z.block(6,0,3*(4-con->cnt),0) += vcon->y.block(6,0,3*(4-con->cnt),0)/ctrlHz;         
+            LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, HRai, z, Ki);                                     // run low level controller
+        
+        }else{
+            
+            if( ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3) || ctrlTick == switchtime*ctrlHz+settlestep*(shifttime2+movetime3)+shifttime2){
+                locoTick = 0;
+                phaseVar = 0;
+                PP->setToeInit(kin);
+                PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+            }
+
+            if(ctrlTick < switchtime*ctrlHz + settlestep*(shifttime2+movetime3)+shifttime2){
+                PP->shiftCoM3(conEst,phaseVar,shifttime2,true);
+                quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);    // update VC's
+                VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            }else{
+                if(settlestep%2==0){
+                    nextContact[0] = 0;
+                    nextContact[1] = 1;
+                }else{
+                    nextContact[0] = 1;
+                    nextContact[1] = 0;
+                }
+                conEst->setDesDomain(nextContact);
+                PP->movefoot3(movetime3);
+                quad->updateSwingMatrices(con->ind,con->cnt);
+                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
+                LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+            }
+
+        }
+
+
+    }else{
+
+        if(stopclimb){
+            wallstep = wallstep-maxsteps;
+        }
+        if(ctrlTick == standoffset+(wallstep)*(currentshift+movetime)||ctrlTick == standoffset+(wallstep)*(currentshift+movetime)+currentshift){
+            locoTick = 0;
+            phaseVar = 0;
+            PP->setToeInit(kin);
+            PP->setx0y0z0(state->q(0),state->q(1),state->q(2),state->q(4));
+            if(ctrlTick == loco_start_e+shifttime){
+                setrearhippose();
+            }
+        }
+        
+        if(ctrlTick < standoffset+currentshift+(wallstep)*(currentshift+movetime)){
+            PP->shiftCoMk(conEst,wallstep,phaseVar,currentshift,stopclimb);
+            quad->updateSwingMatrices(con->ind,con->cnt);                                               // update the jacobian    
+            VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll); 
+        }else{
+            conEst->setDesDomain(nextContact);
+            PP->movefootk(movetime,wallstep,stopclimb);//,wallstep);//(state, kin, conEst, gait, phaseVar, ctrlTick, &motion_params, opt_HLstate, NLstep);
+            quad->updateSwingMatrices(con->ind,con->cnt);
+            VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+        }
+
+        if(ctrlTick < loco_start_e+shifttime){
+            LL->calcTorque(state, dyn, kin, vcon, con, &ll_params);
+        }else{
+            LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
+        }
+    }
+                             
+    data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force_LL,opt_HLstate,locoTick,phaseVar,flphase,rlphase,0.0,0.0,NLstep,solveduration);
+    locoTick += (ctrlHz)/LL_Hz;     // increment locoTick
+    gaitTemp = gait;
+
+}
+
+
+void LocoWrapper::ExpWrapperk(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
+    int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
+
+    setoptNLstateExp(comDes,fDes);
+    setHLphase(HLContactIndex[4]);
+    if(control_Tick < switchtime*ctrlHz){//loco_start_e+shifttime){
+        
+        stepind_e = std::floor((control_Tick-loco_start_e)/(shifttime+movetime));
+        stepsonwall(stepind_e);
+        
+        if(stepind_e%2==0){nextcon_e(0) = 0;nextcon_e(1) = 1;}      
+        else{nextcon_e(0) = 1;nextcon_e(1) = 0;}
+        setswingContact(nextcon_e);
+
+        if(stepind_e<maxsteps){
+            standoffset = loco_start_e;
+            currentshift = shifttime;
+            
+            if(stepind_e==1){tookfirststep();}
+            
+            if(control_Tick==loco_start_e + stepind_e*(shifttime+movetime)){
+                Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);
+                wfoot(0)=2*nextcon_e(1);
+                wfoot(1)=2*nextcon_e(0);
+                getshiftedCoM(wfoot);setshiftedCoM();
+            }
+            
+        }else{
+            standoffset = loco_start_e + maxsteps*(shifttime+movetime);
+            currentshift = shifttime2;
+            if(control_Tick==standoffset){// + (maxsteps)*(movetime + shifttime)){
+                stopclimbing();
+                setfinalCoM();
+            } 
+        }
+        calcTau2k(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
+
+    }else{
+
+        stepind2_e = std::floor((control_Tick-switchtime*ctrlHz)/(shifttime2+movetime3));
+        settlesteps(stepind2_e);
+
+
+        if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
+        if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
+        if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
+        if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
+
+        //updatestate(jpos_est,jvel_est,rotMatrixDouble);
+        if(readytowalkf){setcontactconfigExp(HLContactIndex);}
+        calcTau2k(jpos_est,jvel_est,rotMatrixDouble,UPWALK,control_Tick,solveduration);
+
+    }
+
 }
 
 // if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}

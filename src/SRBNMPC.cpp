@@ -1394,7 +1394,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     // if(controlTick == 32000){letsgo();}
     controlMPC_MT = std::floor(controlTick/10); 
-    if(controlMPC_MT == 3200){letsgo();}
+    if(controlMPC_MT == 3500){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
         q0_MT(i+3) = dq[i];

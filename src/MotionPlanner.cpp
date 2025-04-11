@@ -791,3 +791,87 @@ void MotionPlanner::movefoot3(size_t movetime){
     traj.RLstepLen = {0,0,0};
     traj.RRstepLen = {0,0,0};
 }
+
+
+void MotionPlanner::shiftCoMk(ContactEst *con_obj, int wallstep, double phase, size_t shifttime, bool maxsteps){
+    double s = (phase>1) ? 1 : ((phase<0) ? 0 : phase);
+    
+    double pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch;
+    
+    //if(maxsteps){
+    //    pitch_imp = minpitch;
+    //}else{
+        // xnew = rhip_x + 0.183*cos(pitch_imp);
+        // znew = rhip_z - 0.183*sin(pitch_imp);
+    //    pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch;
+   // }
+
+    if(wallstep>0 && !maxsteps){
+        xnew = rhip_x + 0.183*cos(pitch_imp);
+        znew = rhip_z - 0.183*sin(pitch_imp);
+    }
+
+    double alpha_x[8] = { x0,x0,x0,
+                 x0+(xnew-x0)/4,
+                 x0+3*(xnew-x0)/4,
+                 xnew,xnew,xnew};
+    double alpha_y[8] = {y0,y0,y0,
+                 y0+(ynew-y0)/4,
+                 y0+3*(ynew-y0)/4,
+                 ynew,ynew,ynew};
+    double alpha_z[8] = {z0,z0,z0,
+                 z0+(znew-z0)/4,
+                 z0+3*(znew-z0)/4,
+                 znew,znew,znew};
+
+    double alpha_p[8] = {p0,p0,p0,
+                 p0+(pitch_imp-p0)/4,
+                 p0+3*(pitch_imp-p0)/4,
+                 pitch_imp,pitch_imp,pitch_imp};
+
+    double traj_x[3], traj_y[3], traj_z[3], traj_p[3];
+    calcBezierAll((int)8, alpha_x, s, traj_x);
+    calcBezierAll((int)8, alpha_y, s, traj_y);
+    calcBezierAll((int)8, alpha_z, s, traj_z);
+    calcBezierAll((int)8, alpha_p, s, traj_p);
+
+    // traj.comDes -> pos, vel, theta, omega
+    traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
+    traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
+    traj.comDes.block(6,0,3,1) << 0, traj_p[0], 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    con_obj->setDesDomain({1,1,1,1});
+
+    traj.domLen = shifttime-30;
+    // traj.toeInit.setZero();
+    // traj.toeFinal.setZero();
+    // traj.toeOffset[2] = Z_TOE_OFFSET;
+
+}
+
+void MotionPlanner::movefootk(size_t movetime, size_t wallsteps, bool maxsteps){
+    
+    double pitch_imp = (pitchnew > minpitch) ? pitchnew : minpitch; 
+    
+    traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
+    traj.comDes.block(3,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, pitch_imp, 0;
+    traj.comDes.block(9,0,3,1) << 0, 0, 0;
+
+    double frontstep = std::floor(wallsteps/2)*0.05;
+    double upstep2 = -0.2+std::floor(wallsteps/2)*0.04;
+
+    if(maxsteps){
+        frontstep = 0.1;
+        upstep2 = 0;
+    }else{    
+        frontstep = (frontstep<0.20) ? frontstep : 0.2;
+        upstep2 = (frontstep<-0.01) ? upstep2 : -0.01;
+    }
+    traj.domLen = movetime+10;
+    traj.FRstepLen = {frontstep,0,upstep2};//-0.15};
+    traj.FLstepLen = {frontstep,0,upstep2};//-0.15};
+    traj.RLstepLen = {0,0,0};
+    traj.RRstepLen = {0,0,0};
+}
