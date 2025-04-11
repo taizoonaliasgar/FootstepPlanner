@@ -368,9 +368,9 @@ void LocoWrapper::setxzsteplength(size_t movetime){
                     
     Eigen::Matrix<double, 4, 1> xzsteplenth = Eigen::MatrixXd::Zero(4,1);
     xzsteplenth(0) = 0.2;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
-    xzsteplenth(1) = 0;//kin->HipPos(0,1)+0.1-kin->ToePos(0,1);
+    xzsteplenth(1) = -0.05;//kin->HipPos(0,1)+0.1-kin->ToePos(0,1);
     xzsteplenth(2) = 0.2;//kin->HipPos(0,2)-kin->ToePos(0,2);
-    xzsteplenth(3) = 0;//kin->HipPos(0,3)-kin->ToePos(0,3);
+    xzsteplenth(3) = -0.05;//kin->HipPos(0,3)-kin->ToePos(0,3);
     PP->movefoot2(movetime,xzsteplenth);
 }
 
