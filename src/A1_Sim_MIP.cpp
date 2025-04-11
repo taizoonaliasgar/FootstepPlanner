@@ -198,7 +198,7 @@ public:
     size_t settling = 0.2*ctrlHz;                   // Settling down
     size_t duration = 1.8*ctrlHz;                   // Stand up 
     size_t loco_start = settling + duration;        // Start the locomotion pattern
-    double switchtime = 27;
+    double switchtime = 29;
 
     //Eigen::VectorXd jointTorqueFF = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
     Eigen::VectorXd jointPosTotal = Eigen::MatrixXd::Zero(TOTAL_DOF+1,1); // +1 is for 4th Component of Quaternion 

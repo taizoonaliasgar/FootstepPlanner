@@ -317,7 +317,7 @@ void LocoWrapper::getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight){
     // z_new = newCoM(2);
     CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
     CoMnew(2)=0.25;//CoMnew(2);
-    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.25;
+    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.3;
 }
 
 void LocoWrapper::setrearhippose(){
@@ -339,6 +339,18 @@ void LocoWrapper::setfinalCoM(){
 
 };
 
+void LocoWrapper::setfinalCoM3(Eigen::Matrix<double, 4, 1> footweight, size_t setsteps){
+    
+    Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
+    // CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.03;
+    // CoM_final(2) = 0.42;
+    CoM_final(3) = -1.2;
+    // CoM_final(1) = footweight(0)*kin->toePos(1,0) + footweight(1)*kin->toePos(1,1) + footweight(2)*kin->toePos(1,2) + footweight(3)*kin->toePos(1,3);
+    CoM_final(0) = x00 + setdx*setsteps;
+    CoM_final(2) = z00 + setdz*setsteps;
+    PP->setshiftedCoM(CoM_final);
+};
+
 void LocoWrapper::setfinalCoM2(){
     
     double pitch = ((0.3-0.1*(settlestep+1))>0) ? (0.3-0.1*(settlestep+1)) : 0;
@@ -355,9 +367,9 @@ void LocoWrapper::setfinalCoM2(){
 void LocoWrapper::setxzsteplength(size_t movetime){
                     
     Eigen::Matrix<double, 4, 1> xzsteplenth = Eigen::MatrixXd::Zero(4,1);
-    xzsteplenth(0) = 0.1;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
+    xzsteplenth(0) = 0.15;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
     xzsteplenth(1) = 0;//kin->HipPos(0,1)+0.1-kin->ToePos(0,1);
-    xzsteplenth(2) = 0.1;//kin->HipPos(0,2)-kin->ToePos(0,2);
+    xzsteplenth(2) = 0.15;//kin->HipPos(0,2)-kin->ToePos(0,2);
     xzsteplenth(3) = 0;//kin->HipPos(0,3)-kin->ToePos(0,3);
     PP->movefoot2(movetime,xzsteplenth);
 }
@@ -571,7 +583,17 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
             if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)){
                 stopclimbing();
                 stepsonwall(maxsteps);
-                setfinalCoM();
+                x00 = jpos_est[0];
+                z00 = jpos_est[2];
+                setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2+0.1-jpos_est[0])/settlingsteps;
+                setdz = (0.5-jpos_est[2])/settlingsteps;
+                // setfinalCoM();
+            } 
+            if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)+stepind2_e*(shifttime2+movetime2)){
+                Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3     
+                if(stepind2_e%2==0){wfoot(0)=0;wfoot(1)=2;      
+                }else{wfoot(0)=2;wfoot(1)=0;}
+                setfinalCoM3(wfoot,stepind2_e);
             } 
         }
         calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
@@ -769,8 +791,8 @@ void LocoWrapper::ExpWrapperk(const double jpos_est[18], const double jvel_est[1
             
             if(control_Tick==loco_start_e + stepind_e*(shifttime+movetime)){
                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);
-                wfoot(0)=2*nextcon_e(1);
-                wfoot(1)=2*nextcon_e(0);
+                wfoot(0)=3*nextcon_e(1);
+                wfoot(1)=3*nextcon_e(0);
                 getshiftedCoM(wfoot);setshiftedCoM();
             }
             
@@ -779,7 +801,7 @@ void LocoWrapper::ExpWrapperk(const double jpos_est[18], const double jvel_est[1
             currentshift = shifttime2;
             if(control_Tick==standoffset){// + (maxsteps)*(movetime + shifttime)){
                 stopclimbing();
-                setfinalCoM();
+                // setfinalCoM();
             } 
         }
         calcTau2k(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
@@ -804,6 +826,105 @@ void LocoWrapper::ExpWrapperk(const double jpos_est[18], const double jvel_est[1
 
 }
 
+
+// void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
+//     int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes){
+
+//     setoptNLstateExp(comDes,fDes);
+//     setHLphase(HLContactIndex[4]);
+//     if(control_Tick < loco_start_e+shifttime){
+//         nextcon_e(0) = 0;
+
+//         if(control_Tick==loco_start_e){
+//             Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);
+//             wfoot(0)=1;wfoot(1)=1;
+//             getshiftedCoM(wfoot);setshiftedCoM();
+//         }
+//         setswingContact(nextcon_e);
+//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
+
+//     }else if(control_Tick >= loco_start_e + shifttime & control_Tick < switchtime*ctrlHz){// & controlTick < loco_start + shifttime){ // Start locomotion
+
+//         stepind_e = std::floor((control_Tick-loco_start_e-shifttime)/(shifttime+movetime+movehiptime));
+
+//         if(stepind_e<maxsteps){
+//             stepsonwall(stepind_e);
+
+//             if(stepind_e==1){tookfirststep();}
+
+//             if(stepind_e%2==0){
+//                 nextcon_e(0) = 0;nextcon_e(1) = 1;
+//                 if(control_Tick == loco_start_e +shifttime + stepind_e*(shifttime+movetime)){incstep();}       
+//             }else{
+//                 nextcon_e(0) = 1;nextcon_e(1) = 0;
+//             }
+
+//             if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
+//                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
+//                 wfoot(0)=2*nextcon_e(1);
+//                 wfoot(1)=2*nextcon_e(0);  
+//                 getshiftedCoM(wfoot);setshiftedCoM();
+//             }else if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)+shifttime){
+//                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
+//                 wfoot(0)=2*nextcon_e(1);
+//                 wfoot(1)=2*nextcon_e(0);  
+//                 getshiftedCoM2(wfoot);setshiftedCoM();
+//             }
+//             setswingContact(nextcon_e);
+
+//         }else{
+
+//             stepind2_e = std::floor((control_Tick-loco_start_e-shifttime-(maxsteps)*(movetime + shifttime))/(shifttime2+movetime2));
+//             settlesteps(stepind2_e);
+//             if(stepind2_e==settlingsteps){gotfinalstate();}
+
+//             if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)){
+//                 stopclimbing();
+//                 stepsonwall(maxsteps);
+//                 setfinalCoM();
+//             } 
+//         }
+//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,STANDUP,control_Tick,solveduration);
+
+//     }else{
+
+//         stepind2_e = std::floor((control_Tick-switchtime*ctrlHz)/(shifttime2+movetime3));
+//         settlesteps(stepind2_e);
+
+//         // switch (control_Tick) {
+//         //     case switchtime*ctrlHz: readytowalk(); break;
+//         //     case switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3): setfinalCoM2(); break;
+//         //     case switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2: startwalking(); break; // This executes
+//         //     case 30000: readytoreallywalk(); break;
+//         //     case 31000: readytoreallywalk(); break;
+//         //     case 32000: letsgo(); break;
+//         // }
+
+//         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
+//         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
+//         if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+//         if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
+//         if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
+
+//         //updatestate(jpos_est,jvel_est,rotMatrixDouble);
+//         if(readytowalkf){setcontactconfigExp(HLContactIndex);}
+//         calcTau2(jpos_est,jvel_est,rotMatrixDouble,UPWALK,control_Tick,solveduration);
+
+//     }
+
+// }
+
+// void LocoWrapper::getshiftedCoM2(Eigen::Matrix<double, 4, 1> footweight){
+
+//     Eigen::Matrix<double, 3, 4> footpos = kin->toePos;
+//     CoMnew.block(0,0,2,1) = footweight(0)*footpos.block(0,0,2,1) + footweight(1)*footpos.block(0,1,2,1) + footweight(2)*footpos.block(0,2,2,1) + footweight(3)*footpos.block(0,3,2,1);
+//     // x_new = newCoM(0);
+//     // y_new = newCoM(1);
+//     // z_new = newCoM(2);
+//     CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
+//     CoMnew(2)=0.25;//CoMnew(2);
+//     CoMnew(3)= -(std::floor(wallstep/2)+1)*0.25;
+// }
 // if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}
 // if(control_Tick==30000 || control_Tick==31000){readytoreallywalk();}
 // if(control_Tick==32000){letsgo();}

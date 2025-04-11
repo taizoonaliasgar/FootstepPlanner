@@ -82,6 +82,7 @@ public:
     void ExpWrapperk(const double jpos_est[18], const double jvel_est[18], const double rotMatrixDouble[9], size_t control_Tick, size_t solveduration, 
         int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
     void calcTau2k(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick, size_t solveduration);
+    void setfinalCoM3(Eigen::Matrix<double, 4, 1> footweight, size_t setsteps);
 
     // Pointers to structs
     const StateInfo *state;
@@ -149,15 +150,15 @@ private:
 
     size_t shifttime = 1*ctrlHz;//1
     size_t movetime = 0.3*ctrlHz;
-    size_t shifttime2 = 1.0*ctrlHz;
+    size_t shifttime2 = 1.5*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
     size_t movetime3 = 0.2*ctrlHz;
-    size_t switchtime = 27;
+    size_t switchtime = 29;
 
     Eigen::Matrix<double,4,1> nextcon_e = Eigen::MatrixXd::Ones(4,1);
     int maxsteps = 14;
     int settlingsteps = 4;
-    double rearweight = 6;
+    double rearweight = 4;
     int stepind_e = 0;
     int stepind2_e = 0;
     double *tau_LL;
@@ -169,6 +170,12 @@ private:
 
     int standoffset = 0;
     int currentshift = 0;
+
+    //Settling down
+    double x00 = 0;
+    double z00 = 0;
+    double setdx = 0;
+    double setdz = 0;
     
 };
 
