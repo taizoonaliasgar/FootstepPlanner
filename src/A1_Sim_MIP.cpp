@@ -90,7 +90,7 @@ private:
     std::mutex update_mutex;
 
     bool SIMFlag = true;
-    std::ofstream csvFile;//("contact_forces.csv");
+    // std::ofstream csvFile;//("contact_forces.csv");
 
 
 public:
@@ -137,7 +137,7 @@ public:
         float ba[3] = {0.00003913,0.00007826,0.00003913};
         populate_filter_f(angfilter, aa, ba, 3, 2);
 
-        csvFile.open("../data25/contact_forces4.csv");
+        // csvFile.open("../data25/contact_forces4.csv");
 
         // StandDuration = 10000;
         // SettlingTime = 8000;
@@ -163,7 +163,7 @@ public:
         auto test = A1.back();
         A1.pop_back();
         delete test;
-        csvFile.close();
+        // csvFile.close();
     }
 
     
@@ -214,14 +214,14 @@ public:
     std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = true;            // Record?
+    bool record = false;            // Record?
     double fps = 30;            
     std::string directory = "../data25/Apr9/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 35*ctrlHz;
+    double simlength = 50*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -505,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999){// && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -898,13 +898,13 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     //                 << "Z: " << force.z() << std::endl;
     //     }
     // }
-    csvFile << simcounter << ",";
-    for(int i=0; i<4; ++i){
-        A1.back()->getPosition(calfIdx[i], localPosition, calfPose);
-        // jointFR.getPosition(calfPose);
-        csvFile << calfPose[0] << "," << calfPose[1] << "," << calfPose[2] << ",";
-    }
-    csvFile << "\n";
+    // csvFile << simcounter << ",";
+    // for(int i=0; i<4; ++i){
+    //     A1.back()->getPosition(calfIdx[i], localPosition, calfPose);
+    //     // jointFR.getPosition(calfPose);
+    //     csvFile << calfPose[0] << "," << calfPose[1] << "," << calfPose[2] << ",";
+    // }
+    // csvFile << "\n";
 
     if(simcounter>2499){
         getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter);
@@ -1111,42 +1111,42 @@ int main(int argc, char *argv[]) {
     int simIMU = 0;
 
 
-    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	// loop_sim.start();
-	// sleep(1.0);
-	// loop_mpc.start();
-	// sleep(1.0);
-	// loop_calc.start();
-    // sleep(1.0);
-    // loop_imu.start();
+	loop_sim.start();
+	sleep(1.0);
+	loop_mpc.start();
+	sleep(1.0);
+	loop_calc.start();
+    sleep(1.0);
+    loop_imu.start();
     // // loop_flush.start();
 
-    // while(true)// (simIMU < 500000)
-    // {
-    //     sleep(0.1);
-    //     // extComm.getIMUread2();
-    //     // simIMU++;
-    // }
+    while(true)// (simIMU < 500000)
+    {
+        sleep(0.1);
+        // extComm.getIMUread2();
+        // simIMU++;
+    }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    while (true)
-	{
+    // while (true)
+	// {
 			
-        sleep(0.1);
-        // extComm.getIMUread();
-        extComm.SimExec();//(file_est);
-        // std::cout << "SimExec" << std::endl;
-        extComm.HighLevel();
-        // std::cout << "HighLevel" << std::endl;
-        extComm.Calc();
-        // std::cout << "Calc" << std::endl;
-        // sim_setup = false;
+    //     sleep(0.1);
+    //     // extComm.getIMUread();
+    //     extComm.SimExec();//(file_est);
+    //     // std::cout << "SimExec" << std::endl;
+    //     extComm.HighLevel();
+    //     // std::cout << "HighLevel" << std::endl;
+    //     extComm.Calc();
+    //     // std::cout << "Calc" << std::endl;
+    //     // sim_setup = false;
 
-	} 
+	// } 
 
     // file_est.close();
 

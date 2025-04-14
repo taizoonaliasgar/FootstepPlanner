@@ -188,7 +188,7 @@ public:
     size_t duration = 1.8*ctrlHz;                   // Stand up
     size_t loco_start = settling + duration;        // Start the locomotion pattern
     timer tset;
-	double switchtime = 24;
+	double switchtime = 20;
 	int robotdown = 1;
 	
     Eigen::VectorXd jointTorqueFF = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
@@ -382,7 +382,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 void ExternalComm::HighLevel(){
 
     updateDataExp(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > 26999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
