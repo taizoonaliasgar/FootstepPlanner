@@ -90,7 +90,7 @@ private:
     std::mutex update_mutex;
 
     bool SIMFlag = true;
-    // std::ofstream csvFile;//("contact_forces.csv");
+    std::ofstream csvFile;//("contact_forces.csv");
 
 
 public:
@@ -137,7 +137,7 @@ public:
         float ba[3] = {0.00003913,0.00007826,0.00003913};
         populate_filter_f(angfilter, aa, ba, 3, 2);
 
-        // csvFile.open("../data25/contact_forces4.csv");
+        csvFile.open("../data25/contact_forces5.csv");
 
         // StandDuration = 10000;
         // SettlingTime = 8000;
@@ -163,7 +163,7 @@ public:
         auto test = A1.back();
         A1.pop_back();
         delete test;
-        // csvFile.close();
+        csvFile.close();
     }
 
     
@@ -221,7 +221,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 20*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -898,13 +898,13 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     //                 << "Z: " << force.z() << std::endl;
     //     }
     // }
-    // csvFile << simcounter << ",";
-    // for(int i=0; i<4; ++i){
-    //     A1.back()->getPosition(calfIdx[i], localPosition, calfPose);
-    //     // jointFR.getPosition(calfPose);
-    //     csvFile << calfPose[0] << "," << calfPose[1] << "," << calfPose[2] << ",";
-    // }
-    // csvFile << "\n";
+    csvFile << simcounter << ",";
+    for(int i=0; i<4; ++i){
+        A1.back()->getPosition(calfIdx[i], localPosition, calfPose);
+        // jointFR.getPosition(calfPose);
+        csvFile << calfPose[0] << "," << calfPose[1] << "," << calfPose[2] << ",";
+    }
+    csvFile << "\n";
 
     if(simcounter>2499){
         getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter);

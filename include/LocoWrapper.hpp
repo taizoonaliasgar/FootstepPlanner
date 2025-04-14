@@ -83,6 +83,7 @@ public:
         int HLContactIndex[5], Eigen::Matrix<double, 12, 1> comDes, Eigen::Matrix<double, 17, 1> fDes);
     void calcTau2k(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick, size_t solveduration);
     void setfinalCoM3(Eigen::Matrix<double, 4, 1> footweight, size_t setsteps);
+    void tooksecondstep(){LL->aftersecondstep();};
 
     // Pointers to structs
     const StateInfo *state;

@@ -317,7 +317,12 @@ void LocoWrapper::getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight){
     // z_new = newCoM(2);
     CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
     CoMnew(2)=0.25;//CoMnew(2);
-    CoMnew(3)= -(std::floor(wallstep/2)+1)*0.3;
+    if(wallstep<1){
+        CoMnew(3)= -(std::floor(wallstep/2)+1)*0.15;
+    }else{
+        CoMnew(3)= -(std::floor(wallstep/2)+1)*0.3;
+    }
+    
 }
 
 void LocoWrapper::setrearhippose(){
@@ -558,7 +563,8 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
             stepsonwall(stepind_e);
     
             if(stepind_e==1){tookfirststep();}
-    
+            // if(control_Tick==loco_start_e + shifttime + movetime){tookfirststep();}
+            // if(control_Tick==loco_start_e + 2*shifttime + 2*movetime){tooksecondstep();}
             if(stepind_e%2==0){
                 nextcon_e(0) = 0;nextcon_e(1) = 1;
                 if(control_Tick == loco_start_e +shifttime + stepind_e*(shifttime+movetime)){incstep();}       

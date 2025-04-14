@@ -611,7 +611,7 @@ void MotionPlanner::movefoot(size_t movetime, size_t wallsteps){
 
     //con_obj->setDesDomain({1,1,1,1});
     double frontstep = std::floor(wallsteps/2)*0.05;
-    frontstep = (frontstep<0.25) ? frontstep : 0.25;
+    frontstep = (frontstep<0.20) ? frontstep : 0.20;
 
     traj.domLen = movetime+10;
     traj.FRstepLen = {frontstep,0,upstep};//-0.15};

@@ -35,7 +35,7 @@ public:
     void fullyupright(){uprighty = true;};
     void keepwalking(){dFnew = dFnew*100;};
     void enablehipposcntrl(){uprighty2=true;};
-
+    void aftersecondstep(){bothsteptaken=true;};
 private:
 
     #if(USE_QPSWIFT)
@@ -98,6 +98,7 @@ private:
     bool uprighty = false;
     bool uprighty2 = false;
     double dFnew = 1;
+    bool bothsteptaken = false;
 
 };
 
