@@ -580,15 +580,21 @@ void MotionPlanner::shiftCoM(ContactEst *con_obj, double phase, size_t shifttime
                  z0+3*(znew-z0)/4,
                  znew,znew,znew};
 
-    double traj_x[3], traj_y[3], traj_z[3];
+    double alpha_p[8] = {p0,p0,p0,
+                    p0+(pitchnew-p0)/4,
+                    p0+3*(pitchnew-p0)/4,
+                    pitchnew,pitchnew,pitchnew};
+
+    double traj_x[3], traj_y[3], traj_z[3], traj_p[3];
     calcBezierAll((int)8, alpha_x, s, traj_x);
     calcBezierAll((int)8, alpha_y, s, traj_y);
     calcBezierAll((int)8, alpha_z, s, traj_z);
+    calcBezierAll((int)8, alpha_p, s, traj_p);
 
     // traj.comDes -> pos, vel, theta, omega
     traj.comDes.block(0,0,3,1) << traj_x[0], traj_y[0], traj_z[0];
     traj.comDes.block(3,0,3,1) << traj_x[1], traj_y[1], traj_z[1];
-    traj.comDes.block(6,0,3,1) << 0, 0, 0;
+    traj.comDes.block(6,0,3,1) << 0, traj_p[0], 0;
     traj.comDes.block(9,0,3,1) << 0, 0, 0;
 
     con_obj->setDesDomain({1,1,1,1});

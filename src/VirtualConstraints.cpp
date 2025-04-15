@@ -714,7 +714,7 @@ void VirtCon::updateVirtualConstraintssetfoot(const StateInfo *state, const KinI
                         //            pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, pow(-1,i+1)*wall_y+pow(-1,i)*(to+0.005), pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y+pow(-1,i)*to};
                         //double ay[8]= {traj->toeInit(1,i), traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.5*params->swingHeight, pow(-1,i+1)*wall_y+pow(-1,i)*params->swingHeight, 
                         //        pow(-1,i+1)*wall_y+pow(-1,i)*0.5*params->swingHeight, pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y, pow(-1,i+1)*wall_y};
-                        double ay[8]= {traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, 
+                        double ay[8]= {traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, 
                                 pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.03, pow(-1,i+1)*(wall_y+0.02)};
 
                         calcBezierAll(n, ay, phase, ty);

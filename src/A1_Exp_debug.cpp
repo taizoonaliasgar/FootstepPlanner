@@ -451,7 +451,7 @@ void ExternalComm::Calc(){
 		q[3] = state.imu.rpy[0]; q[4] = state.imu.rpy[1]; q[5] = state.imu.rpy[2];
 		dq[3] = state.imu.gyroscope[0]; dq[4] = state.imu.gyroscope[1]; dq[5] = state.imu.gyroscope[2];
 	}else{	
-		q[3] = -LLData.att_euler[0]; q[4] = LLData.att_euler[1]; q[5] = -(LLData.att_euler[2]);//+0.16);
+		q[3] = -LLData.att_euler[0]; q[4] = LLData.att_euler[1]; q[5] = -(LLData.att_euler[2]+1.8);//+0.16);
 		dq[3] = -LLData.comp_angular_rate[0]; dq[4] = LLData.comp_angular_rate[1]; dq[5] = -LLData.comp_angular_rate[2];
 	}
 
@@ -746,9 +746,9 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 				this->sensor_comp_euler_angles.pitch,
 				this->sensor_comp_euler_angles.yaw);
 
-				// this->filter_comp_angular_rate.gyro[0], 
-                // this->filter_comp_angular_rate.gyro[1], 
-                // this->filter_comp_angular_rate.gyro[2]);
+		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
+		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
+		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
         IMUData.att_euler[0] = this->sensor_comp_euler_angles.roll;
         IMUData.att_euler[1] = this->sensor_comp_euler_angles.pitch;
         IMUData.att_euler[2] = this->sensor_comp_euler_angles.yaw;

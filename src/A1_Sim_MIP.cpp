@@ -211,7 +211,7 @@ public:
     raisim::OgreVis *vis = raisim::OgreVis::get();
     raisim::HeightMap *ground;
     std::map<std::string, raisim::VisualObject>* list = nullptr;
-    std::string cameraview = "side";
+    std::string cameraview = "front";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = false;            // Record?
@@ -221,7 +221,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 20*ctrlHz;
+    double simlength = 6*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;

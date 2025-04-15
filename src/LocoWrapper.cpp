@@ -574,8 +574,12 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
      
             if(control_Tick==loco_start_e + (stepind_e+1)*(movetime + shifttime)){
                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3
-                wfoot(0)=2*nextcon_e(1);
-                wfoot(1)=2*nextcon_e(0);  
+                // if(stepind_e>0){
+                    wfoot(0)=2*nextcon_e(1);
+                    wfoot(1)=2*nextcon_e(0);
+                // }else{
+                //     wfoot(0)=1;wfoot(1)=1;
+                // }
                 getshiftedCoM(wfoot);setshiftedCoM();
             }
             setswingContact(nextcon_e);
