@@ -76,6 +76,7 @@ private:
 	bool filter_state_running = false;
 	bool is_initialized = false;
 	std::mutex update_mutex;
+	Eigen::Matrix<double,3,1> eigen_eul = Eigen::MatrixXd::Zero(3,1);
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
@@ -365,7 +366,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 	// Set results
 	q[0] = COM_e[0]; q[1] = COM_e[1]; q[2] = COM_e[2];
-    if(ctrlTick<27000){
+    if(ctrlTick<(switchtime+3)*ctrlHz){
 	    dq[0] = COM_vel_e[0] > xdot_thresh ? xdot_thresh : (COM_vel_e[0] < -xdot_thresh ? -xdot_thresh : COM_vel_e[0]); 
         dq[1] = COM_vel_e[1] > yzdot_thresh ? yzdot_thresh : (COM_vel_e[1] < -yzdot_thresh ? -yzdot_thresh : COM_vel_e[1]);
         dq[2] = COM_vel_e[2] > yzdot_thresh ? yzdot_thresh : (COM_vel_e[2] < -yzdot_thresh ? -yzdot_thresh : COM_vel_e[2]); 
@@ -438,6 +439,8 @@ void ExternalComm::Calc(){
 	pose[4] = ang[0]; // set filtered pose
 	vel[2] = ang[1];  // set filtered ang vel
 	// std::cout << "Updating State \n";
+	double *rotMat;
+	Eigen::Matrix3d R;
 	// ===================================================== //
 	// ================= Update the State ================== //
 	// ===================================================== //
@@ -447,16 +450,20 @@ void ExternalComm::Calc(){
 	}
 	discrete_butter_d(jointfilter,&dq[6]);
 
-	if(robotdown){
+	if(robotdown>0){
 		q[3] = state.imu.rpy[0]; q[4] = state.imu.rpy[1]; q[5] = state.imu.rpy[2];
 		dq[3] = state.imu.gyroscope[0]; dq[4] = state.imu.gyroscope[1]; dq[5] = state.imu.gyroscope[2];
+		quat_to_R(state.imu.quaternion,R);
 	}else{	
 		q[3] = -LLData.att_euler[0]; q[4] = LLData.att_euler[1]; q[5] = -(LLData.att_euler[2]+1.8);//+0.16);
 		dq[3] = -LLData.comp_angular_rate[0]; dq[4] = LLData.comp_angular_rate[1]; dq[5] = -LLData.comp_angular_rate[2];
+		eigen_eul = {q[3],q[4],q[5]};
+		R_XYZ(eigen_eul,R);
 	}
 
-	quat_to_XYZ(state.imu.quaternion[0],state.imu.quaternion[1],state.imu.quaternion[2],state.imu.quaternion[3],
-	            q[3],q[4],q[5]);
+	// quat_to_XYZ(state.imu.quaternion[0],state.imu.quaternion[1],state.imu.quaternion[2],state.imu.quaternion[3],
+	//             q[3],q[4],q[5]);
+	
 	//Offset for Halo 
 	// q[3]+= -3.0*MY_PI/180.0;
 	// q[4] += 1.5*MY_PI/180.0;
@@ -467,9 +474,6 @@ void ExternalComm::Calc(){
 	q[5] += 0*MY_PI/180.0;
 	//dq[5] += 5.0*MY_PI/180.0; */
 
-	double *rotMat;
-	Eigen::Matrix3d R;
-	quat_to_R(state.imu.quaternion,R);
 	rotMat = R.data();
 	Eigen::Map< Eigen::Matrix<double, 3, 3> > rotE(rotMat, 3, 3);
 
@@ -516,6 +520,7 @@ void ExternalComm::Calc(){
 				loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
 				setup = false;
 			}
+			loco_obj->setIMUdata(LLData.att_euler);
 
 			// double phaseVar;
 			if(motiontime < loco_start){ // Start standing
@@ -736,15 +741,15 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
         auto now = std::chrono::system_clock::now();
         auto unix_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     
-        printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
-                unix_timestamp,
-                this->filter_gps_time.tow, 
-                this->filter_euler_angles.roll, 
-                this->filter_euler_angles.pitch, 
-                this->filter_euler_angles.yaw,
-				this->sensor_comp_euler_angles.roll,
-				this->sensor_comp_euler_angles.pitch,
-				this->sensor_comp_euler_angles.yaw);
+        // printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
+        //         unix_timestamp,
+        //         this->filter_gps_time.tow, 
+        //         this->filter_euler_angles.roll, 
+        //         this->filter_euler_angles.pitch, 
+        //         this->filter_euler_angles.yaw,
+		// 		this->sensor_comp_euler_angles.roll,
+		// 		this->sensor_comp_euler_angles.pitch,
+		// 		this->sensor_comp_euler_angles.yaw);
 
 		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
 		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 

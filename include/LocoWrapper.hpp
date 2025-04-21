@@ -84,6 +84,9 @@ public:
     void calcTau2k(const double q[18], const double dq[18], const double R[9], size_t gait, size_t ctrlTick, size_t solveduration);
     void setfinalCoM3(Eigen::Matrix<double, 4, 1> footweight, size_t setsteps);
     void tooksecondstep(){LL->aftersecondstep();};
+    
+    //Logging IMU
+    void setIMUdata(double att_euler[3]){data->setIMUeuler(att_euler);};
 
     // Pointers to structs
     const StateInfo *state;
@@ -176,8 +179,7 @@ private:
     double x00 = 0;
     double z00 = 0;
     double setdx = 0;
-    double setdz = 0;
-    
+    double setdz = 0;    
 };
 
 inline double getPhase(double time, double time_0, double time_f){

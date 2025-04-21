@@ -15,12 +15,13 @@ public:
     void writeData(const StateInfo *state, const VCInfo *vc, const ContactInfo *con, 
                     const TrajInfo *traj, const LLInfo *LL, const KinematicsInfo *kin, const size_t ctrlTick, 
                     const int force[4], Eigen::Matrix<double, 24, 1>& opt_HL_state, size_t locoTick, double locoPhase, double flightPhaseRL, double flightPhaseLR, double DDiff, double HDiff, Eigen::Matrix<double, 5, 1> NLstep, size_t duration);
-
+    void setIMUeuler(double euler[3]){IMUeuler[0]=euler[0];IMUeuler[1]=euler[1];IMUeuler[2]=euler[2];};    
 private:
     std::fstream fid;
     Eigen::Matrix<double, 12, 1> y_, dy_, hd_, dhd_, ddhd_;
 
     int success = 0;
+    double IMUeuler[3] = {0}; 
 
 };
 

@@ -102,6 +102,7 @@ void DataLog::writeData(const StateInfo *state, const VCInfo *vc, const ContactI
             << con->ind[0] << "," << con->ind[1] << "," << con->ind[2] << "," << con->ind[3] << ","
             << locoTick << "," << locoPhase << "," << flightPhaseRL << "," << flightPhaseLR << "," << DDiff << "," << HDiff  << ","
             << NLstep(0) << "," << NLstep(1) << "," << NLstep(2) << "," << NLstep(3) << "," 
-            << traj->FRstepLen(0) << "," << traj->FLstepLen(0) << "," << traj->RRstepLen(0) << "," << traj->RLstepLen(0) << "," << NLstep(4) << "," << duration << std::endl;
+            << traj->FRstepLen(0) << "," << traj->FLstepLen(0) << "," << traj->RRstepLen(0) << "," << traj->RLstepLen(0) << "," << NLstep(4) << "," << duration << ","
+            << IMUeuler[0] << "," << IMUeuler[1] << "," << IMUeuler[2] << std::endl;
     }
 };
