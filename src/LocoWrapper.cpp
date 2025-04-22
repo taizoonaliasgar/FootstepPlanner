@@ -598,6 +598,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
                 setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2+0.1-jpos_est[0])/settlingsteps;
                 setdz = (0.5-jpos_est[2])/settlingsteps;
                 // setfinalCoM();
+                switchKp();
             } 
             if(control_Tick==loco_start_e + shifttime + (maxsteps)*(movetime + shifttime)+stepind2_e*(shifttime2+movetime2)){
                 Eigen::Matrix<double, 4, 1> wfoot = rearweight*Eigen::MatrixXd::Ones(4,1);//3     

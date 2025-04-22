@@ -88,6 +88,9 @@ public:
     //Logging IMU
     void setIMUdata(double att_euler[3]){data->setIMUeuler(att_euler);};
 
+    //Switching Kp
+    void switchKp(){LL->switchKp();};
+
     // Pointers to structs
     const StateInfo *state;
     const DynamicsInfo *dyn;
