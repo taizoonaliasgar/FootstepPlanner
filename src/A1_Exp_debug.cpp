@@ -61,7 +61,9 @@ private:
 	mip::data_sensor::ScaledAccel sensor_accel;
 	mip::data_sensor::ScaledGyro sensor_gyro;
 	mip::data_sensor::CompEulerAngles sensor_comp_euler_angles;
-
+	mip::data_sensor::CompOrientationMatrix sensor_comp_orientation_matrix;
+	mip::data_sensor::CompQuaternion sensor_comp_quaternion;
+	
 	mip::data_filter::Timestamp filter_gps_time;
 	mip::data_filter::Status filter_status;
 	mip::data_filter::EulerAngles filter_euler_angles;
@@ -69,14 +71,15 @@ private:
 	mip::data_filter::CompAccel filter_comp_accel;
 
 	// Dispatch handlers
-	mip::DispatchHandler sensor_data_handlers[4];
+	mip::DispatchHandler sensor_data_handlers[6];
 	mip::DispatchHandler filter_data_handlers[5];
 
 	// State tracking
 	bool filter_state_running = false;
 	bool is_initialized = false;
 	std::mutex update_mutex;
-	Eigen::Matrix<double,3,1> eigen_eul = Eigen::MatrixXd::Zero(3,1);
+	std::ofstream csvFile;
+	
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
@@ -125,6 +128,8 @@ public:
             double av[5] = { 1.000000000, -3.934325821, 5.805125421,-3.807232457, 0.936433243}; 
 			double bv[5] = {0.000000024, 0.000000097, 0.000000145,0.000000097, 0.000000024}; 
             populate_filter_d(linearvelfilter, av, bv, 5, 3);
+
+			csvFile.open("../data25/trackingIMU.csv");
 			
 		}
 	
@@ -139,6 +144,7 @@ public:
 		// nmpc_obj->logData();
         nmpc_obj.reset();
         loco_obj.reset();
+		csvFile.close();
         
 	}
 
@@ -206,6 +212,21 @@ public:
     double xdot_thresh = 0.3;
     double yzdot_thresh2 = 0.8;
     double xdot_thresh2 = 0.5;
+
+	// Eigen::Matrix<double,3,1> eigen_eul = Eigen::MatrixXd::Zero(3,1);
+	
+	Eigen::Matrix<double,3,3> IMUframeoffset = (Eigen::Matrix3d() << 
+																1, 0, 0,
+																0, -1, 0,
+																0, 0, -1).finished();
+
+	Eigen::Matrix<double,3,3> IMUR = Eigen::MatrixXd::Identity(3,3);
+	Eigen::Matrix<double,3,3> IMURotation = Eigen::MatrixXd::Identity(3,3);
+	// Eigen::Matrix<double,3,1> imurot_eul = Eigen::MatrixXd::Zero(3,1);
+	// Eigen::Matrix<double,3,1> imurot_eul2 = Eigen::MatrixXd::Zero(3,1);
+	// Eigen::Matrix<double,3,1> imurot_eul3 = Eigen::MatrixXd::Zero(3,1);
+	// Eigen::Matrix<double,4,1> imuquat = Eigen::MatrixXd::Zero(4,1);
+	// Eigen::Matrix<double,3,1> imuquat_eul = Eigen::MatrixXd::Zero(3,1);
 
     //Estimator
     void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
@@ -455,11 +476,16 @@ void ExternalComm::Calc(){
 		dq[3] = state.imu.gyroscope[0]; dq[4] = state.imu.gyroscope[1]; dq[5] = state.imu.gyroscope[2];
 		quat_to_R(state.imu.quaternion,R);
 	}else{	
-		q[3] = -LLData.att_euler[0]; q[4] = LLData.att_euler[1]; q[5] = -(LLData.att_euler[2]+1.8);//+0.16);
-		dq[3] = -LLData.comp_angular_rate[0]; dq[4] = LLData.comp_angular_rate[1]; dq[5] = -LLData.comp_angular_rate[2];
-		eigen_eul = {q[3],q[4],q[5]};
-		R_XYZ(eigen_eul,R);
+		q[3] = LLData.att_euler[0]; q[4] = LLData.att_euler[1]; q[5] = LLData.att_euler[2];//+1.8;//+0.16);
+		dq[3] = LLData.comp_angular_rate[0]; dq[4] = -LLData.comp_angular_rate[1]; dq[5] = -LLData.comp_angular_rate[2];
+		// eigen_eul = {q[3],q[4],q[5]};
+		R = IMURotation;//(eigen_eul,R);
 	}
+
+	csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
+			  	<< LLData.att_euler[0] << "," << LLData.att_euler[1] << "," << LLData.att_euler[2] << "\n";//","
+					// << imurot_eul(0) << "," << imurot_eul(1) << "," << imurot_eul(2) << "\n";
+    
 
 	// quat_to_XYZ(state.imu.quaternion[0],state.imu.quaternion[1],state.imu.quaternion[2],state.imu.quaternion[3],
 	//             q[3],q[4],q[5]);
@@ -660,11 +686,13 @@ void ExternalComm::configureIMU(){//(mip::Interface& device){
     const uint16_t sensor_sample_rate = 1000; // Hz
     const uint16_t sensor_decimation = sensor_base_rate / sensor_sample_rate;
 
-    std::array<mip::DescriptorRate, 4> sensor_descriptors = {{
+    std::array<mip::DescriptorRate, 6> sensor_descriptors = {{
         { mip::data_sensor::DATA_TIME_STAMP_GPS, sensor_decimation },
         { mip::data_sensor::DATA_ACCEL_SCALED,   sensor_decimation },
         { mip::data_sensor::DATA_GYRO_SCALED,    sensor_decimation },
 		{mip::data_sensor::DATA_COMP_EULER_ANGLES, sensor_decimation},
+		{mip::data_sensor::DATA_COMP_ORIENTATION_MATRIX, sensor_decimation},
+		{mip::data_sensor::DATA_COMP_QUATERNION, sensor_decimation},
     }};
 
     if(mip::commands_3dm::writeImuMessageFormat(*device, static_cast<uint8_t>(sensor_descriptors.size()), sensor_descriptors.data()) != mip::CmdResult::ACK_OK)
@@ -705,6 +733,8 @@ void ExternalComm::setupIMUfilter(){//(mip::Interface& device){
     device->registerExtractor(sensor_data_handlers[1], &sensor_accel);
     device->registerExtractor(sensor_data_handlers[2], &sensor_gyro);
 	device->registerExtractor(sensor_data_handlers[3], &sensor_comp_euler_angles);
+	device->registerExtractor(sensor_data_handlers[4], &sensor_comp_orientation_matrix);
+	device->registerExtractor(sensor_data_handlers[5], &sensor_comp_quaternion);
 
     //Filter Data
     device->registerExtractor(filter_data_handlers[0], &filter_gps_time);
@@ -754,12 +784,48 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
 		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
 		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
-        IMUData.att_euler[0] = this->sensor_comp_euler_angles.roll;
-        IMUData.att_euler[1] = this->sensor_comp_euler_angles.pitch;
-        IMUData.att_euler[2] = this->sensor_comp_euler_angles.yaw;
         IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
         IMUData.comp_angular_rate[1] = this->filter_comp_angular_rate.gyro[1];
-        IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2];        
+        IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2]; 
+		for(size_t i = 0; i < 3; i++){
+			for (size_t j = 0; j < 3; j++)
+			{
+				IMUR(i,j) = this->sensor_comp_orientation_matrix.m[3*i+j];
+			}
+		}
+		// imuquat(0) = this->sensor_comp_quaternion.q[0];
+		// imuquat(1) = this->sensor_comp_quaternion.q[1];
+		// imuquat(2) = this->sensor_comp_quaternion.q[2];
+		// imuquat(3) = this->sensor_comp_quaternion.q[3];
+		// quat_to_XYZ(imuquat,imuquat_eul);
+		// 	//             q[3],q[4],q[5]);
+		
+		// imurot_eul2(0) = atan2(IMUR(1,2),IMUR(2,2));
+		// imurot_eul2(1) = -asin(IMUR(0,2));
+		// imurot_eul2(2) = atan2(IMUR(0,1),IMUR(0,0));
+		// IMURotation = IMUoooffset*IMUR;
+		// imurot_eul(0) = atan2(IMURotation(1,2),IMURotation(2,2));
+		// imurot_eul(1) = -asin(IMURotation(0,2));
+		// imurot_eul(2) = atan2(IMURotation(0,1),IMURotation(0,0));
+		IMURotation = IMUframeoffset*IMUR*IMUframeoffset;
+		// imurot_eul3(0) = atan2(IMURotation(1,2),IMURotation(2,2));
+		// imurot_eul3(1) = -asin(IMURotation(0,2));
+		// imurot_eul3(2) = atan2(IMURotation(0,1),IMURotation(0,0));
+
+		// IMUData.att_euler[0] = this->sensor_comp_euler_angles.roll;
+        // IMUData.att_euler[1] = this->sensor_comp_euler_angles.pitch;
+        // IMUData.att_euler[2] = this->sensor_comp_euler_angles.yaw;
+		IMUData.att_euler[0] = atan2(IMURotation(1,2),IMURotation(2,2));
+		IMUData.att_euler[1] = -asin(IMURotation(0,2));
+		IMUData.att_euler[2] = atan2(IMURotation(0,1),IMURotation(0,0));
+
+		// csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
+		// csvFile << IMUData.att_euler[0] << "," << IMUData.att_euler[1] << "," << IMUData.att_euler[2] << ","
+		// 			<< imurot_eul2(0) << "," << imurot_eul2(1) << "," << imurot_eul2(2) << ","
+		// 				<< imurot_eul(0) << "," << imurot_eul(1) << "," << imurot_eul(2) << ","
+		// 				//  << imuquat_eul3(0) << "," << imuquat_eul3(1) << "," << imuquat_eul3(2) << ","
+		// 				 << imurot_eul3(0) << "," << imurot_eul3(1) << "," << imurot_eul3(2) << "\n";
+ 
         updateDataExp(SET_DATA, IMU_DATA, &IMUData);                          
     }
     // }catch (const std::exception& e) {
