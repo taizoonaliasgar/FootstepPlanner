@@ -595,6 +595,15 @@ void ExternalComm::Calc(){
 					}	
 				}
 			}
+			
+			if(motiontime>switchtime*ctrlHz+2999){
+				cmd.motorCmd[6].q  = 0;
+				cmd.motorCmd[9].q  = 0;
+				// cmd.motorCmd[6].dq = 0;
+				// cmd.motorCmd[9].dq = 0;
+				// cmd.motorCmd[6].Kp = 20;
+				// cmd.motorCmd[9].Kp = 20;
+			}
 
             // Saturate the command
 			float hr_max = 10.0f, hr_min = -10.0f;
@@ -753,10 +762,6 @@ void ExternalComm::setupIMUfilter(){//(mip::Interface& device){
 
 void ExternalComm::getIMMUdata(){//(mip::Interface& device){
     
-    // if (!device) {
-    //     printf("ERROR: Device pointer is null\n");
-    //     return;
-    // }
     
     device->update();
     //Check Filter State
@@ -770,20 +775,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
     {
         auto now = std::chrono::system_clock::now();
         auto unix_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-    
-        // printf("Timestamp = %lld ms: TOW = %f: ATT_EULER = [%f %f %f]: COMP_ANG_RATE = [%f %f %f]\n",//: COMP_ACCEL = [%f %f %f]\n",
-        //         unix_timestamp,
-        //         this->filter_gps_time.tow, 
-        //         this->filter_euler_angles.roll, 
-        //         this->filter_euler_angles.pitch, 
-        //         this->filter_euler_angles.yaw,
-		// 		this->sensor_comp_euler_angles.roll,
-		// 		this->sensor_comp_euler_angles.pitch,
-		// 		this->sensor_comp_euler_angles.yaw);
 
-		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
-		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
-		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
         IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
         IMUData.comp_angular_rate[1] = this->filter_comp_angular_rate.gyro[1];
         IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2]; 
@@ -793,33 +785,17 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 				IMUR(i,j) = this->sensor_comp_orientation_matrix.m[3*i+j];
 			}
 		}
-		// imuquat(0) = this->sensor_comp_quaternion.q[0];
-		// imuquat(1) = this->sensor_comp_quaternion.q[1];
-		// imuquat(2) = this->sensor_comp_quaternion.q[2];
-		// imuquat(3) = this->sensor_comp_quaternion.q[3];
-		// quat_to_XYZ(imuquat,imuquat_eul);
-		// 	//             q[3],q[4],q[5]);
 		
-		// imurot_eul2(0) = atan2(IMUR(1,2),IMUR(2,2));
-		// imurot_eul2(1) = -asin(IMUR(0,2));
-		// imurot_eul2(2) = atan2(IMUR(0,1),IMUR(0,0));
-		// IMURotation = IMUoooffset*IMUR;
-		// imurot_eul(0) = atan2(IMURotation(1,2),IMURotation(2,2));
-		// imurot_eul(1) = -asin(IMURotation(0,2));
-		// imurot_eul(2) = atan2(IMURotation(0,1),IMURotation(0,0));
 		IMURotation = IMUframeoffset*IMUR*IMUframeoffset;
-		// imurot_eul3(0) = atan2(IMURotation(1,2),IMURotation(2,2));
-		// imurot_eul3(1) = -asin(IMURotation(0,2));
-		// imurot_eul3(2) = atan2(IMURotation(0,1),IMURotation(0,0));
-
-		// IMUData.att_euler[0] = this->sensor_comp_euler_angles.roll;
-        // IMUData.att_euler[1] = this->sensor_comp_euler_angles.pitch;
-        // IMUData.att_euler[2] = this->sensor_comp_euler_angles.yaw;
+		
 		IMUData.att_euler[0] = atan2(IMURotation(1,2),IMURotation(2,2));
 		IMUData.att_euler[1] = -asin(IMURotation(0,2));
 		IMUData.att_euler[2] = atan2(IMURotation(0,1),IMURotation(0,0));
+		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
+		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
+		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
 
-		// csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
+		
 		// csvFile << IMUData.att_euler[0] << "," << IMUData.att_euler[1] << "," << IMUData.att_euler[2] << ","
 		// 			<< imurot_eul2(0) << "," << imurot_eul2(1) << "," << imurot_eul2(2) << ","
 		// 				<< imurot_eul(0) << "," << imurot_eul(1) << "," << imurot_eul(2) << ","
@@ -828,12 +804,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
  
         updateDataExp(SET_DATA, IMU_DATA, &IMUData);                          
     }
-    // }catch (const std::exception& e) {
-    //     printf("ERROR in getIMMUdata: %s\n", e.what());
-    // }
-    // catch (...) {
-    //     printf("Unknown ERROR in getIMMUdata\n");
-    // }
+    
 }
 
 
