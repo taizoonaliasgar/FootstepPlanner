@@ -596,14 +596,14 @@ void ExternalComm::Calc(){
 				}
 			}
 			
-			if(motiontime>switchtime*ctrlHz+2999){
-				cmd.motorCmd[6].q  = 0;
-				cmd.motorCmd[9].q  = 0;
-				// cmd.motorCmd[6].dq = 0;
-				// cmd.motorCmd[9].dq = 0;
-				// cmd.motorCmd[6].Kp = 20;
-				// cmd.motorCmd[9].Kp = 20;
-			}
+			// if(motiontime>switchtime*ctrlHz){
+			// 	// cmd.motorCmd[6].q  = 0;
+			// 	// cmd.motorCmd[9].q  = 0;
+			// 	// cmd.motorCmd[6].dq = 0;
+			// 	// cmd.motorCmd[9].dq = 0;
+			// 	cmd.motorCmd[6].Kp = 20;
+			// 	cmd.motorCmd[9].Kp = 20;
+			// }
 
             // Saturate the command
 			float hr_max = 10.0f, hr_min = -10.0f;
