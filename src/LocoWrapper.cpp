@@ -364,7 +364,7 @@ void LocoWrapper::setfinalCoM2(){
     Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
     CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
     CoM_final(2) = 0.5;//rhipz + 0.183*cos(pitch)-0.05;//0.5
-    CoM_final(3) = pitch;///(phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar)
+    CoM_final(3) = 0*pitch;///(phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar)
     PP->setshiftedCoM(CoM_final);
 
 };
