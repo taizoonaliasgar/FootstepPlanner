@@ -129,7 +129,7 @@ public:
 			double bv[5] = {0.000000024, 0.000000097, 0.000000145,0.000000097, 0.000000024}; 
             populate_filter_d(linearvelfilter, av, bv, 5, 3);
 
-			csvFile.open("../data25/trackingIMU.csv");
+			csvFile.open("../data25/torqueEstimates.csv");
 			
 		}
 	
@@ -468,6 +468,7 @@ void ExternalComm::Calc(){
 	for (int i=0; i<12; ++i){
 		q[i+6] = state.motorState[i].q;
 		dq[i+6] = state.motorState[i].dq;
+		tauEst[i] = state.motorState[i].tauEst;
 	}
 	discrete_butter_d(jointfilter,&dq[6]);
 
@@ -482,10 +483,12 @@ void ExternalComm::Calc(){
 		R = IMURotation;//(eigen_eul,R);
 	}
 
-	csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
-			  	<< LLData.att_euler[0] << "," << LLData.att_euler[1] << "," << LLData.att_euler[2] << "\n";//","
-					// << imurot_eul(0) << "," << imurot_eul(1) << "," << imurot_eul(2) << "\n";
-    
+	// csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
+	// 		  	<< LLData.att_euler[0] << "," << LLData.att_euler[1] << "," << LLData.att_euler[2] << "\n";
+	csvFile << motiontime << "," << tauEst[0] << "," << tauEst[1] << "," << tauEst[2] << ","
+									<< tauEst[3] << "," << tauEst[4] << "," << tauEst[5] << ","
+										<< tauEst[6] << "," << tauEst[7] << "," << tauEst[8] << ","
+											<< tauEst[9] << "," << tauEst[10] << "," << tauEst[11] << "\n";
 
 	// quat_to_XYZ(state.imu.quaternion[0],state.imu.quaternion[1],state.imu.quaternion[2],state.imu.quaternion[3],
 	//             q[3],q[4],q[5]);
