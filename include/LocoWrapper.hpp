@@ -160,11 +160,11 @@ private:
     size_t shifttime2 = 1.0*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
     size_t movetime3 = 0.2*ctrlHz;
-    size_t switchtime = 20;
+    size_t switchtime = 18;
 
     Eigen::Matrix<double,4,1> nextcon_e = Eigen::MatrixXd::Ones(4,1);
     int maxsteps = 7;//14;
-    int settlingsteps = 6;//4;
+    int settlingsteps = 4;//4;
     double rearweight = 6;
     int stepind_e = 0;
     int stepind2_e = 0;
