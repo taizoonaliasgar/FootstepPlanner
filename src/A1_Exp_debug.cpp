@@ -195,7 +195,7 @@ public:
     size_t duration = 1.8*ctrlHz;                   // Stand up
     size_t loco_start = settling + duration;        // Start the locomotion pattern
     timer tset;
-	double switchtime = 18;
+	double switchtime = 20;
 	int robotdown = 1;
 	
     Eigen::VectorXd jointTorqueFF = Eigen::MatrixXd::Zero(TOTAL_DOF,1);
