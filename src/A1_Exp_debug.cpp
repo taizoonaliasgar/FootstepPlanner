@@ -609,7 +609,7 @@ void ExternalComm::Calc(){
 			// }
 
             // Saturate the command
-			float hr_max = 10.0f, hr_min = -10.0f;
+			float hr_max = 20.0f, hr_min = -20.0f;
 			float hp_max = 30.0f, hp_min = -30.0f;
 			float kn_max = 33.0f, kn_min = -33.0f;
 			for (int i = 0; i < 4; i++){
