@@ -221,7 +221,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 6*ctrlHz;
+    double simlength = 36*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
