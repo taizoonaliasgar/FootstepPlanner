@@ -20,8 +20,10 @@ find_package(raisim CONFIG HINTS "/home/taizoon/raisimEnv/Buildspace/lib/cmake/r
 find_package(raisimOgre CONFIG HINTS "/home/taizoon/raisimEnv/Buildspace/share/raisimOgre/cmake")
 
 include_directories(PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/raisimOgre_include)
-find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})
-
+# find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})
+find_package(Eigen3 REQUIRED HINTS /home/taizoon/local/eigen)
+include_directories("/home/taizoon/local/eigen/include")
+include_directories("/home/taizoon/local/eigen/include/eigen3")
 
 find_package(casadi REQUIRED)
 find_package(OpenSSL REQUIRED)
