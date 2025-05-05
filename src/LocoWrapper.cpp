@@ -362,7 +362,7 @@ void LocoWrapper::setfinalCoM2(){
 
     double rhipz = (kin->hipPos(2,2) + kin->hipPos(2,3))/2;
     Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
-    CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
+    CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
     CoM_final(2) = 0.5;//rhipz + 0.183*cos(pitch)-0.05;//0.5
     CoM_final(3) = 0*pitch;///(phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar)
     PP->setshiftedCoM(CoM_final);
@@ -595,7 +595,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
                 stepsonwall(maxsteps);
                 x00 = jpos_est[0];
                 z00 = jpos_est[2];
-                setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2+0.1-jpos_est[0])/settlingsteps;
+                setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2-jpos_est[0])/settlingsteps;
                 setdz = (0.5-jpos_est[2])/settlingsteps;
                 // setfinalCoM();
                 switchKp();
@@ -625,9 +625,9 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
-        if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
-        if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
-        if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
+        // if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
+        // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
         //updatestate(jpos_est,jvel_est,rotMatrixDouble);
         if(readytowalkf){setcontactconfigExp(HLContactIndex);}
