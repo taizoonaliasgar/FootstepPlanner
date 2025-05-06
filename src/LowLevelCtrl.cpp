@@ -244,7 +244,7 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
     if(uprighty2){
         for(int i=2; i<4; ++i){
             if (con->ind[i]==1){
-                tau[6+3*i] = -130*state->q(6+3*i,0)-5*state->dq(6+3*i,0);//(ll.q.block(6+3*i,0,3,1)-state->q.block(6+3*i,0,3,1));
+                tau[6+3*i] = -100*state->q(6+3*i,0)-10*state->dq(6+3*i,0);//(ll.q.block(6+3*i,0,3,1)-state->q.block(6+3*i,0,3,1));
                                        //+ 1*(ll.dq.block(6+3*i,0,3,1)-state->dq.block(6+3*i,0,3,1));
             }
         }
