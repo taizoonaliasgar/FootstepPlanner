@@ -124,7 +124,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "take2_w0p23N20";//"take2_1";
+    std::string file_name = "take2_w0p2_ro_0";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 

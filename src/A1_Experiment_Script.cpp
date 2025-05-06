@@ -763,7 +763,7 @@ int main(int argc, char *argv[]) {
     //loco_obj1->setRFfalse();
     SRBNMPC* loco_plan = new SRBNMPC(argc,argv,1,0);
     loco_plan->generator();
-    std::string file_name = "take2_w0p23N20";//"take2_1";
+    std::string file_name = "take2_w0p2_ro_0";//"take2_1";
     
     std::string prefix_code = std::filesystem::current_path().string() + "/";
     std::string prefix_lib = std::filesystem::current_path().string() + "/";
@@ -793,7 +793,7 @@ int main(int argc, char *argv[]) {
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 5;//50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
     std::string directory = "../data25/Feb28/";
