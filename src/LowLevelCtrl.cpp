@@ -181,7 +181,7 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
     // ====================================================================== //
     size_t useCLF = 0;//params->useCLF;
     size_t conDim = 3*con->cnt;
-    size_t outDim = 6+3*(4-con->cnt);
+    size_t outDim = 6+3*(4-con->cnt);//+(con->ind[2]+con->ind[3])*uprighty2;
     size_t numDec = conDim+TOTAL_IN+outDim+useCLF;
 
     // ====================================================================== //
@@ -241,14 +241,14 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
        }
     }
 
-    if(uprighty2){
-        for(int i=2; i<4; ++i){
-            // if (con->ind[i]==1){
-                tau[6+3*i] = -40*state->q(6+3*i,0)-2*state->dq(6+3*i,0);//(ll.q.block(6+3*i,0,3,1)-state->q.block(6+3*i,0,3,1));
-                                       //+ 1*(ll.dq.block(6+3*i,0,3,1)-state->dq.block(6+3*i,0,3,1));
-            // }
-        }
-    }
+    // if(uprighty2){
+    //     for(int i=2; i<4; ++i){
+    //         // if (con->ind[i]==1){
+    //             tau[6+3*i] = -40*state->q(6+3*i,0)-2*state->dq(6+3*i,0);//(ll.q.block(6+3*i,0,3,1)-state->q.block(6+3*i,0,3,1));
+    //                                    //+ 1*(ll.dq.block(6+3*i,0,3,1)-state->dq.block(6+3*i,0,3,1));
+    //         // }
+    //     }
+    // }
             
 
 }
@@ -547,9 +547,14 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
 
     P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);
     P_QP.block(conDim,conDim,TOTAL_IN,TOTAL_IN) = params->tauPen*Eigen::MatrixXd::Identity(TOTAL_IN,TOTAL_IN);
-    P_QP(conDim+6,conDim+6) = 0.00000000001*params->tauPen;
-    P_QP(conDim+9,conDim+9) = 0.00000000001*params->tauPen;
+    P_QP(conDim+6,conDim+6) = 0.00000000000001*params->tauPen;
+    P_QP(conDim+9,conDim+9) = 0.00000000000001*params->tauPen;
     P_QP.block(conDim+TOTAL_IN,conDim+TOTAL_IN,outDim,outDim) = params->auxPen*Eigen::MatrixXd::Identity(outDim,outDim);
+    
+    // if(uprighty2){
+    //     P_QP.block(conDim+TOTAL_IN+6+3*(4-con->cnt),conDim+TOTAL_IN+6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) = 
+    //                                             1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
+    // }
     if (useCLF){
         P_QP(numDec-1, numDec-1) = params->clfPen;
     }
@@ -575,10 +580,10 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
     double mu = params->mu;
     double kpGain = params->kp;
     if(uprighty){
-        kpGain = 400;
+        kpGain = 700;
     }
     else if(upKp){
-        kpGain = 400;
+        kpGain = 700;
     }
     double kdGain = params->kd;
 
@@ -599,8 +604,14 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
         KP.block(6,6,3*(4-con->cnt),3*(4-con->cnt)) = kpGain*Eigen::MatrixXd::Identity(3*(4-con->cnt),3*(4-con->cnt));
         KD.block(6,6,3*(4-con->cnt),3*(4-con->cnt)) = kdGain*Eigen::MatrixXd::Identity(3*(4-con->cnt),3*(4-con->cnt));
     }
-    
-    // ====================================================================== //
+
+    // if(uprighty2){
+    //     KP.block(6+3*(4-con->cnt),6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) = 
+    //                                             1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
+    //     KD.block(6+3*(4-con->cnt),6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) =
+    //                                             0.1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
+    // }
+                                                // ====================================================================== //
     // ======================== Equality Constraints ======================== //
     // ====================================================================== //
     A_QP.block(0,0,conDim+outDim,numDec-useCLF) <<  

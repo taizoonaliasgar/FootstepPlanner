@@ -13,7 +13,7 @@ VirtCon::VirtualConstraints(){
 }
 
 void VirtCon::updateVirtualConstraints(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, double phaseVar, MP *params, const LLInfo *ll){
-    size_t outDim = 6+3*(4-con->cnt);
+    size_t outDim = 6+3*(4-con->cnt);//+2*rearhipcons;
     size_t conDim = 3*con->cnt;
 
     h0.setZero(outDim,1);
@@ -30,6 +30,10 @@ void VirtCon::updateVirtualConstraints(const StateInfo *state, const KinInf *kin
     VC.hd_ST.setZero(conDim,1);
     VC.dhd_ST.setZero(conDim,1);
     VC.H0.block(0,0,6,6) = Eigen::MatrixXd::Identity(6,6);
+    // if(rearhipcons>0){
+    //     VC.H0(outDim-2,TOTAL_DOF-6) = 1;
+    //     VC.H0(outDim-1,TOTAL_DOF-3) = 1;
+    // }
     
     h0 = VC.H0*state->q;
 
@@ -200,7 +204,7 @@ void VirtCon::updateVirtualConstraintsflight(const StateInfo *state, const KinIn
 }
 
 void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, double frontphase, double rearphase, MP *params, const LLInfo *ll){
-    size_t outDim = 6+3*(4-con->cnt);
+    size_t outDim = 6+3*(4-con->cnt);//+con->ind[2]+con->ind[3];
     size_t conDim = 3*con->cnt;
 
     h0.setZero(outDim,1);
@@ -217,6 +221,18 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
     VC.hd_ST.setZero(conDim,1);
     VC.dhd_ST.setZero(conDim,1);
     VC.H0.block(0,0,6,6) = Eigen::MatrixXd::Identity(6,6);
+    
+    // if(conDim<8){
+    //     if(con->ind[2]>0){
+    //         VC.H0(outDim-1,TOTAL_DOF-6) = 1;
+    //     }else{
+    //         VC.H0(outDim-1,TOTAL_DOF-3) = 1;
+    //     }  
+    // }else{
+    //     VC.H0(outDim-2,TOTAL_DOF-6) = 1;
+    //     VC.H0(outDim-1,TOTAL_DOF-3) = 1;
+    // }
+    
     
     h0 = VC.H0*state->q;
 
@@ -558,7 +574,7 @@ void VirtCon::updateVirtualConstraintswalkR(const StateInfo *state, const KinInf
 
 
 void VirtCon::updateVirtualConstraintssetfoot(const StateInfo *state, const KinInf *kin, const TrajInfo *traj, const ConInf *con, size_t gait, double phaseVar, MP *params, const LLInfo *ll, double frontphase, double rearphase, bool reachedwall){
-    size_t outDim = 6+3*(4-con->cnt);
+    size_t outDim = 6+3*(4-con->cnt);//+2*rearhipcons;
     size_t conDim = 3*con->cnt;
 
     h0.setZero(outDim,1);
@@ -575,6 +591,11 @@ void VirtCon::updateVirtualConstraintssetfoot(const StateInfo *state, const KinI
     VC.hd_ST.setZero(conDim,1);
     VC.dhd_ST.setZero(conDim,1);
     VC.H0.block(0,0,6,6) = Eigen::MatrixXd::Identity(6,6);
+    // if(rearhipcons>0){
+    //     VC.H0(outDim-2,TOTAL_DOF-6) = 1;
+    //     VC.H0(outDim-1,TOTAL_DOF-3) = 1;
+    // }
+    
     
     h0 = VC.H0*state->q;
     double step[3] = {0.0,0.0,0.0};

@@ -99,29 +99,29 @@ public:
         // parseBuffer(new uint8_t[parseBufferSize])
     {
 		
-        const std::string port = "/dev/ttyACM0";//argv[2];
-        const uint32_t baudrate = 9600;//std::stoi(argv[3]);
+        // const std::string port = "/dev/ttyACM0";//argv[2];
+        // const uint32_t baudrate = 9600;//std::stoi(argv[3]);
         
-        std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
+        // std::cout << "Initializing IMU Sensor on port " << port << " at " << baudrate << " baud" << std::endl;
         
-        // Create serial connection
-        connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
+        // // Create serial connection
+        // connection = std::make_shared<microstrain::connections::SerialConnection>(port, baudrate);
         
-        // Try to connect
-        if (!connection->connect()) {
-            throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
-        }
+        // // Try to connect
+        // if (!connection->connect()) {
+        //     throw std::runtime_error("Failed to connect to " + port + " at " + std::to_string(baudrate) + " baud");
+        // }
         
-        // Create device interface
-        device = std::make_unique<mip::Interface>(
-            connection.get(),       // Connection pointer
-            parseBuffer.get(),      // Parse buffer
-            parseBufferSize,        // Parse buffer size
-            1000,                   // Parse timeout (ms)
-            1000                    // Base reply timeout (ms)
-        );
+        // // Create device interface
+        // device = std::make_unique<mip::Interface>(
+        //     connection.get(),       // Connection pointer
+        //     parseBuffer.get(),      // Parse buffer
+        //     parseBufferSize,        // Parse buffer size
+        //     1000,                   // Parse timeout (ms)
+        //     1000                    // Base reply timeout (ms)
+        // );
         
-        std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
+        // std::cout << "Connected to device on " << port << " at " << baudrate << " baud" << std::endl;
 
         double ad[3] = {1.0, -1.47548044359265, 0.58691950806119};
         double bd[3] = {0.02785976611714, 0.05571953223427, 0.02785976611714};
@@ -214,14 +214,14 @@ public:
     std::string cameraview = "front";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
-    bool record = false;            // Record?
+    bool record = true;            // Record?
     double fps = 30;            
-    std::string directory = "../data25/Apr9/";
+    std::string directory = "../data25/May16/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 36*ctrlHz;
+    double simlength = 35*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -263,7 +263,7 @@ void ExternalComm::setupRaisim(){
 
     /// these method must be called before initApp
     vis->setWorld(&world);
-    vis->setWindowSize(1792, 1200); // Should be evenly divisible by 16!!
+    vis->setWindowSize(1920, 1080); // Should be evenly divisible by 16!!
     vis->setImguiSetupCallback(imguiSetupCallback); // These 2 lines make the interactable gui visible
     vis->setImguiRenderCallback(imguiRenderCallBack);
     vis->setKeyboardCallback(raisimKeyboardCallback);
@@ -505,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999){// && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -521,7 +521,7 @@ void ExternalComm::HighLevel(){
         updateData(SET_DATA, HL_DATA, &HLData);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
+        // std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
     //std::cout << "Exitinghighlevel" << std::endl;
     
@@ -778,7 +778,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
                 vis->getCameraMan()->getCamera()->setPosition(currentPos);
             }
         
-        std::cout << "simcounter" << "\t" << simcounter << std::endl;
+        // std::cout << "simcounter" << "\t" << simcounter << std::endl;
         simcounter++; 
         
     }
@@ -1104,49 +1104,49 @@ int main(int argc, char *argv[]) {
     extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
     extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     
-    extComm.connectIMU();
-    extComm.configureIMU();
-    extComm.setupIMUfilter();
+    // extComm.connectIMU();
+    // extComm.configureIMU();
+    // extComm.setupIMUfilter();
     
     int simIMU = 0;
 
 
-    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	loop_sim.start();
-	sleep(1.0);
-	loop_mpc.start();
-	sleep(1.0);
-	loop_calc.start();
-    sleep(1.0);
-    loop_imu.start();
+	// loop_sim.start();
+	// sleep(1.0);
+	// loop_mpc.start();
+	// sleep(1.0);
+	// loop_calc.start();
+    // sleep(1.0);
+    // loop_imu.start();
     // // loop_flush.start();
 
-    while(true)// (simIMU < 500000)
-    {
-        sleep(0.1);
-        // extComm.getIMUread2();
-        // simIMU++;
-    }
+    // while(true)// (simIMU < 500000)
+    // {
+    //     sleep(0.1);
+    //     // extComm.getIMUread2();
+    //     // simIMU++;
+    // }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    // while (true)
-	// {
+    while (true)
+	{
 			
-    //     sleep(0.1);
-    //     // extComm.getIMUread();
-    //     extComm.SimExec();//(file_est);
-    //     // std::cout << "SimExec" << std::endl;
-    //     extComm.HighLevel();
-    //     // std::cout << "HighLevel" << std::endl;
-    //     extComm.Calc();
-    //     // std::cout << "Calc" << std::endl;
-    //     // sim_setup = false;
+        sleep(0.1);
+        // extComm.getIMUread();
+        extComm.SimExec();//(file_est);
+        // std::cout << "SimExec" << std::endl;
+        extComm.HighLevel();
+        // std::cout << "HighLevel" << std::endl;
+        extComm.Calc();
+        // std::cout << "Calc" << std::endl;
+        // sim_setup = false;
 
-	// } 
+	} 
 
     // file_est.close();
 
