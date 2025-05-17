@@ -793,7 +793,7 @@ int main(int argc, char *argv[]) {
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;             // Record?
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 5;//50000;//60000;//300*ctrlHz;   // Sim end time
+    double simlength = 50000;//60000;//300*ctrlHz;   // Sim end time
     double fps = 30;            
     //std::string directory = "/home/taizoon/raisimEnv/raisimWorkspace/footstep_planner/datalog/Oct10/";
     std::string directory = "../data25/Feb28/";

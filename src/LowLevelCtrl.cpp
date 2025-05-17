@@ -181,7 +181,7 @@ void LowLevelCtrl::calcTorquewalk(const StateInfo *state, const DynInf *dyn, con
     // ====================================================================== //
     size_t useCLF = 0;//params->useCLF;
     size_t conDim = 3*con->cnt;
-    size_t outDim = 6+3*(4-con->cnt);//+(con->ind[2]+con->ind[3])*uprighty2;
+    size_t outDim = 6+3*(4-con->cnt);
     size_t numDec = conDim+TOTAL_IN+outDim+useCLF;
 
     // ====================================================================== //
@@ -550,11 +550,6 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
     P_QP(conDim+6,conDim+6) = 0.00000000000001*params->tauPen;
     P_QP(conDim+9,conDim+9) = 0.00000000000001*params->tauPen;
     P_QP.block(conDim+TOTAL_IN,conDim+TOTAL_IN,outDim,outDim) = params->auxPen*Eigen::MatrixXd::Identity(outDim,outDim);
-    
-    // if(uprighty2){
-    //     P_QP.block(conDim+TOTAL_IN+6+3*(4-con->cnt),conDim+TOTAL_IN+6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) = 
-    //                                             1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
-    // }
     if (useCLF){
         P_QP(numDec-1, numDec-1) = params->clfPen;
     }
@@ -605,13 +600,7 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
         KD.block(6,6,3*(4-con->cnt),3*(4-con->cnt)) = kdGain*Eigen::MatrixXd::Identity(3*(4-con->cnt),3*(4-con->cnt));
     }
 
-    // if(uprighty2){
-    //     KP.block(6+3*(4-con->cnt),6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) = 
-    //                                             1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
-    //     KD.block(6+3*(4-con->cnt),6+3*(4-con->cnt),con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]) =
-    //                                             0.1*Eigen::MatrixXd::Identity(con->ind[2]+con->ind[3],con->ind[2]+con->ind[3]);
-    // }
-                                                // ====================================================================== //
+    // ====================================================================== //
     // ======================== Equality Constraints ======================== //
     // ====================================================================== //
     A_QP.block(0,0,conDim+outDim,numDec-useCLF) <<  

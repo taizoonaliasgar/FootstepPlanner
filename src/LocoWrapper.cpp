@@ -119,7 +119,6 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
     phaseVar = (phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar);
 
     quad->updateState(q,dq,R); 
-
     
     if(gait==STAND){
         //conEst->updateConState(footPos,phaseVar,force);
@@ -279,7 +278,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
     }
     
     //PP->datalogger(ctrlTick);
-    std::cout << ctrlTick << "\t" << (kin->Jc*dyn->Dinv*kin->Jc.transpose()).determinant() << std::endl;
+    // std::cout << ctrlTick << "\t" << (kin->Jc*dyn->Dinv*kin->Jc.transpose()).determinant() << std::endl;
     data->writeData(state,vcon,con,traj,ll,kin,ctrlTick,force_LL,opt_HLstate,locoTick,phaseVar,flphase,rlphase,0.0,0.0,NLstep,solveduration);
     locoTick += (ctrlHz)/LL_Hz;     // increment locoTick
     gaitTemp = gait;
