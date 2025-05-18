@@ -626,7 +626,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
-        if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        // if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
