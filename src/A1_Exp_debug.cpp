@@ -204,7 +204,7 @@ public:
     int conIndDes[4] = {1,1,1,1};
 
 	double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 35*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;

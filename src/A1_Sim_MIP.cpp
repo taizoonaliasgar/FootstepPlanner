@@ -211,7 +211,7 @@ public:
     raisim::OgreVis *vis = raisim::OgreVis::get();
     raisim::HeightMap *ground;
     std::map<std::string, raisim::VisualObject>* list = nullptr;
-    std::string cameraview = "front";
+    std::string cameraview = "side";
     bool panX = true;                // Pan view with robot during walking (X direction)
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = false;            // Record?
