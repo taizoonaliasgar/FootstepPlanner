@@ -135,7 +135,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         if(readytowalkf){
         
             // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
-            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
+            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 6*(shifttime2+movetime3) + shifttime2){ 
 
                 locoTick = 0;
                 phaseVar = getPhase(1.0*locoTick, 0.0, 199);
@@ -357,13 +357,18 @@ void LocoWrapper::setfinalCoM3(Eigen::Matrix<double, 4, 1> footweight, size_t se
     PP->setshiftedCoM(CoM_final);
 };
 
-void LocoWrapper::setfinalCoM2(){
+void LocoWrapper::setfinalCoM2(int settlesteps){
     
     double pitch = ((0.3-0.1*(settlestep+1))>0) ? (0.3-0.1*(settlestep+1)) : 0;
 
     double rhipz = (kin->hipPos(2,2) + kin->hipPos(2,3))/2;
     Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
-    CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
+    if(settlesteps>4){
+        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;
+    }else{
+        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;
+    }
+    // CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
     CoM_final(2) = 0.5;//rhipz + 0.183*cos(pitch)-0.05;//0.5
     CoM_final(3) = 0.35;//0*pitch;///(phaseVar>1) ? 1 : ((phaseVar<0) ? 0 : phaseVar)
     PP->setshiftedCoM(CoM_final);
@@ -625,8 +630,8 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
         // }
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
-        if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
-        // if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
+        if(control_Tick == switchtime*ctrlHz+6*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
@@ -825,7 +830,7 @@ void LocoWrapper::ExpWrapperk(const double jpos_est[18], const double jvel_est[1
 
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
-        if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2();}//break;}
+        if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
         if(control_Tick == switchtime*ctrlHz+2*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}

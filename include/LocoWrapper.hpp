@@ -62,7 +62,7 @@ public:
 
     //Stitching together
     void readytowalk(){quad->fullyupright();LL->fullyupright();};
-    void setfinalCoM2();
+    void setfinalCoM2(int settlesteps);
     void startwalking(){readytowalkf = true;LL->fullyupright();LL->enablehipposcntrl();};
     Eigen::Matrix<double, 12, 1> getpreviousQPforce(){return ll->QP_force;};
     void readytoreallywalk(){LL->keepwalking();};

@@ -499,7 +499,7 @@ void controller(std::vector<raisim::ArticulatedSystem *> A1, LocoWrapper *loco_o
 
         if(controlTick == switchtime*ctrlHz + stepind2*(shifttime2+movetime3)){
             //q_est.block(0,0,3,1) = q0.block(0,0,3,1);
-            loco_obj->setfinalCoM2();
+            loco_obj->setfinalCoM2(stepind2);
         }
 
         // q_est.block(6,0,3,1) = imu_eul;
