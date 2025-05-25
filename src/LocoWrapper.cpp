@@ -364,7 +364,7 @@ void LocoWrapper::setfinalCoM2(int settlesteps){
     double rhipz = (kin->hipPos(2,2) + kin->hipPos(2,3))/2;
     Eigen::Matrix<double,4,1> CoM_final = Eigen::MatrixXd::Zero(4,1);
     if(settlesteps>4){
-        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.1;
+        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+(settlesteps-4)*0.1;
     }else{
         CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;
     }
