@@ -135,7 +135,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         if(readytowalkf){
         
             // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
-            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 18*(shifttime2+movetime3) + shifttime2){ 
+            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 12*(shifttime2+movetime3) + shifttime2){ 
 
                 locoTick = 0;
                 phaseVar = getPhase(1.0*locoTick, 0.0, 199);
@@ -631,7 +631,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
-        if(control_Tick == switchtime*ctrlHz+18*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        if(control_Tick == switchtime*ctrlHz+12*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
