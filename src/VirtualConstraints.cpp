@@ -338,7 +338,7 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                     double ddaz[4] = {0, 0, hipAcc(2), hipAcc(2)};
                     calcVaryingBezierAll(n,dt,az,daz,ddaz,phase,tz);
 
-                    //double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i)+0.1, 
+                    // double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i)+0.1, 
                     //            kin->hipPos(0,i)+2*step[0], kin->hipPos(0,i)+2*step[0]};
                     double ax[4]{traj->toeInit(0,i), traj->toeInit(0,i),//+step[0]/2, //+0.1
                                 traj->toeInit(0,i)+step[0], traj->toeInit(0,i)+step[0]};
