@@ -216,7 +216,7 @@ public:
     bool panY = false;                // Pan view with robot during walking (Y direction)
     bool record = true;            // Record?
     double fps = 30;            
-    std::string directory = "../data25/May25/";
+    std::string directory = "../data25/May26/";
     std::string filename = "MTSim";
     std::string name = directory+filename+"_"+".mp4";
     

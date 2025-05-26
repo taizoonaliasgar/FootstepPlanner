@@ -416,7 +416,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // traj.comDes(0) = xnew;
         // traj.comDes(1) = 0;
         traj.comDes(2) = 0.5;//params->standHeight;
-        if(ctrlTick>=40000){
+        if(ctrlTick>=50000){
             traj.comDes.block(0,0,2,1) << state->q.block(0,0,2,1) + opt_HLstate.block(3,0,2,1)*dt;
             traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
             traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
