@@ -137,7 +137,7 @@ public:
         float ba[3] = {0.00003913,0.00007826,0.00003913};
         populate_filter_f(angfilter, aa, ba, 3, 2);
 
-        csvFile.open("../data25/contact_forces5.csv");
+        csvFile.open("../data25/kneepose.csv");
 
         // StandDuration = 10000;
         // SettlingTime = 8000;
