@@ -574,13 +574,15 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
                                         Eigen::Matrix<double,18,1> Hr, Eigen::Matrix<double,12,1> z, Eigen::Matrix<double,12,12> Ki){  
     double mu = params->mu;
     double kpGain = params->kp;
+    double kdGain = params->kd;
     if(uprighty){
         kpGain = 200;
+        kdGain = 10;
     }
     else if(upKp){
         kpGain = 400;
     }
-    double kdGain = params->kd;
+    
 
     /*std::cout<< "mu" << mu << std::endl;
     std::cout<< "kp" << kpGain << std::endl;
