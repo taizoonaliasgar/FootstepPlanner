@@ -159,7 +159,7 @@ private:
     size_t movetime = 0.3*ctrlHz;
     size_t shifttime2 = 1.0*ctrlHz;
     size_t movetime2 = 0.3*ctrlHz;
-    size_t movetime3 = 0.2*ctrlHz;
+    size_t movetime3 = 0.3*ctrlHz;
     size_t switchtime = 20;
 
     Eigen::Matrix<double,4,1> nextcon_e = Eigen::MatrixXd::Ones(4,1);
