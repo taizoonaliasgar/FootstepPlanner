@@ -52,7 +52,7 @@ public:
     void increasesteplenth(){if(upstep<-0.01){upstep = upstep+0.04;}else{upstep = -0.01;};};
     void setrearhip(double x, double y, double z,double fx){rhip_x = x; rhip_y = y; rhip_z = z;rearfoot_x = fx;};
     void shiftCoM2(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
-    void movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps);
+    void movefoot2(size_t movetime, Eigen::Matrix<double,2,1> xzsteps);
     void shiftCoM3(ContactEst *con_obj, double phase, size_t shifttime, bool maxsteps);
     void movefoot3(size_t movetime);
     //Correcting knee

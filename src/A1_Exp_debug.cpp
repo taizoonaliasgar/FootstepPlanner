@@ -798,7 +798,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
 		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
 
-		
+		// std::cout << IMUData.att_euler[0] << "\t" << IMUData.att_euler[1] << "\t" << IMUData.att_euler[2] << std::endl;
 		// csvFile << IMUData.att_euler[0] << "," << IMUData.att_euler[1] << "," << IMUData.att_euler[2] << ","
 		// 			<< imurot_eul2(0) << "," << imurot_eul2(1) << "," << imurot_eul2(2) << ","
 		// 				<< imurot_eul(0) << "," << imurot_eul(1) << "," << imurot_eul(2) << ","

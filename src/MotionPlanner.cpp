@@ -730,7 +730,7 @@ void MotionPlanner::shiftCoM2(ContactEst *con_obj, double phase, size_t shifttim
 
 }
 
-void MotionPlanner::movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps){
+void MotionPlanner::movefoot2(size_t movetime, Eigen::Matrix<double,2,1> xzsteps){
     
     traj.comDes.block(0,0,3,1) << xnew,ynew,znew;
     traj.comDes.block(3,0,3,1) << 0, 0, 0;
@@ -739,7 +739,7 @@ void MotionPlanner::movefoot2(size_t movetime, Eigen::Matrix<double,4,1> xzsteps
 
     traj.domLen = movetime+10;
     traj.FRstepLen = {xzsteps(0),0,xzsteps(1)};//-0.15};
-    traj.FLstepLen = {xzsteps(2),0,xzsteps(3)};//-0.15};
+    traj.FLstepLen = {xzsteps(0),0,xzsteps(1)};//-0.15};
     traj.RLstepLen = {0,0,0};
     traj.RRstepLen = {0,0,0};
 }

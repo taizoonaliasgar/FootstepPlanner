@@ -253,6 +253,10 @@ public:
     raisim::Vec<3> calfPose = {0.0, 0.0, 0.0};
     raisim::Vec<3> localPosition = {0.0, 0.0, -0.2};
     // raisim::ArticulatedSystem::JointRef jointFR(static_cast<size_t>(0),A1.back());
+    // Eigen::Matrix<double,3,3> Rpremult = Eigen::MatrixXd::Zero(3,3);
+    // Eigen::Matrix<double,3,3> Rpostmult = Eigen::MatrixXd::Identity(3,3);
+    // Rpremult(0,2)=-1;Rpremult(1,1)=-1;Rpremult(2,0)=-1;
+    // Rpostmult(0,0)=1;Rpostmult(1,1)=-1;Rpostmult(2,2)=-1;
 };
 
 
@@ -829,18 +833,33 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
             omega_state(1) = SimData.comp_angular_rate[1];
             omega_state(2) = SimData.comp_angular_rate[2];       
         }
-        
         for(size_t i=0;i<3;i++){
             for (size_t j = 0; j < 3; j++){
                 rotMat[3*i+j] = rotIMU(j,i);
             }
-        }        
+        } 
+        // }else{
+            // for(size_t i=0;i<3;i++){
+            //     for (size_t j = 0; j < 3; j++){
+            //         rotIMU(j,i)=rotMat[3*i+j];
+            //     }
+            // } 
+            // rotIMU(0,0) = rotMat(0,0)   ;   rotIMU(0,1) =  rotMat(0,1)  ;   rotIMU(0,2) =   rotMat(0,2);
+            // rotMat(0,0) = rotMat(2,0)  ;   rotMat(0,1) =  rotMat(2,1) ;   rotMat(0,2) =   rotMat(2,2);
+            // rotMat(2,0) = -rotIMU(0,0)   ;   rotMat(2,1) =  -rotIMU(0,1)  ;   rotMat(2,2) =   -rotIMU(0,2);
+            // eul_state(0) = atan2(rotMat(1,2),rotMat(2,2));
+		    // eul_state(1) = -asin(rotMat(0,2));
+		    // eul_state(2) = atan2(rotMat(0,1),rotMat(0,0));
+        // }  
+               
     }else{
         quat = jointPosTotal.block(3,0,4,1);
         quat_to_XYZ(quat,eul_state);
     }
 
-    for(size_t i=0;i<9;i++){
+    // std::cout << rotMat(0,0) << "\t" << rotMat(0,1) << "\t" << rotMat(0,2) << std::endl;
+
+    for(size_t i = 0 ; i < 9 ; i++){
         rotMatrixDouble[i] = rotMat[i];
     }
     

@@ -179,16 +179,17 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }else{
                 if(settlestep%2==0){
-                    nextContact[0] = 0;
+                    nextContact[0] = 1;//0;
                     nextContact[1] = 1;
                 }else{
                     nextContact[0] = 1;
-                    nextContact[1] = 0;
+                    nextContact[1] = 1;//0;
                 }
                 conEst->setDesDomain(nextContact);
                 PP->movefoot3(movetime3);
                 quad->updateSwingMatrices(con->ind,con->cnt);
-                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);
+                // VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
                 VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }
@@ -377,11 +378,15 @@ void LocoWrapper::setfinalCoM2(int settlesteps){
 
 void LocoWrapper::setxzsteplength(size_t movetime){
                     
-    Eigen::Matrix<double, 4, 1> xzsteplenth = Eigen::MatrixXd::Zero(4,1);
-    xzsteplenth(0) = 0.15;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
+    Eigen::Matrix<double, 2, 1> xzsteplenth = Eigen::MatrixXd::Zero(2,1);
+    if(stepind2_e<3){
+        xzsteplenth(0) = 0.15;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
+    }else{
+        xzsteplenth(0) = 0.2;//kin->HipPos(0,0)+0.1-kin->ToePos(0,0);
+    }
     xzsteplenth(1) = -0.05;//kin->HipPos(0,1)+0.1-kin->ToePos(0,1);
-    xzsteplenth(2) = 0.15;//kin->HipPos(0,2)-kin->ToePos(0,2);
-    xzsteplenth(3) = -0.05;//kin->HipPos(0,3)-kin->ToePos(0,3);
+    // xzsteplenth(2) = 0.2;//kin->HipPos(0,2)-kin->ToePos(0,2);
+    // xzsteplenth(3) = -0.05;//kin->HipPos(0,3)-kin->ToePos(0,3);
     PP->movefoot2(movetime,xzsteplenth);
 }
 
@@ -631,7 +636,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
-        if(control_Tick == switchtime*ctrlHz+4*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        // if(control_Tick == switchtime*ctrlHz+4*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
