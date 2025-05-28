@@ -249,7 +249,7 @@ private:
     public:
     casadi::DM previousp = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2),1);
     casadi::DM optstephll = casadi::DM::zeros(4,1);
-    casadi::DM front_off = 0.1;
+    casadi::DM front_off = 0.2;
     casadi::DM rear_off = -0.05; 
     casadi::DM pitch_ref = 0;
     int Raibflag = 0;

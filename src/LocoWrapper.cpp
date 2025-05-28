@@ -135,7 +135,7 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         if(readytowalkf){
         
             // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
-            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 4*(shifttime2+movetime3) + shifttime2){ 
+            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 8*(shifttime2+movetime3) + shifttime2){ 
 
                 locoTick = 0;
                 phaseVar = getPhase(1.0*locoTick, 0.0, 199);
@@ -178,18 +178,23 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }else{
-                if(settlestep%2==0){
-                    nextContact[0] = 1;//0;
+                if(stepind2_e<2){
+                    nextContact[0] = 1;
                     nextContact[1] = 1;
                 }else{
-                    nextContact[0] = 1;
-                    nextContact[1] = 1;//0;
+                    if(settlestep%2==0){
+                        nextContact[0] = 0;
+                        nextContact[1] = 1;
+                    }else{
+                        nextContact[0] = 1;
+                        nextContact[1] = 0;
+                    }
                 }
                 conEst->setDesDomain(nextContact);
                 PP->movefoot3(movetime3);
                 quad->updateSwingMatrices(con->ind,con->cnt);
-                VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);
-                // VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                // VC->updateVirtualConstraints(state, kin, traj, con, gait, phaseVar, &motion_params, ll);
+                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
                 VC->setDesiredForce(opt_HLstate.block(12,0,12,1));
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
             }
@@ -636,7 +641,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
 
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
-        // if(control_Tick == switchtime*ctrlHz+4*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
+        if(control_Tick == switchtime*ctrlHz+8*(shifttime2+movetime3)+shifttime2){startwalking();}//break;}
         // if(control_Tick == (switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
         // if(control_Tick == (switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
 
