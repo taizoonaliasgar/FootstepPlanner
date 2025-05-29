@@ -314,7 +314,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
    
     }else if(gait==UPWALK){
         double dt = (1.0/LL_Hz);
-        double domLenSec = 0.20;
+        double domLenSec = 0.30;
         traj.domLen = domLenSec*ctrlHz;
 
         static int startTrot = 0;

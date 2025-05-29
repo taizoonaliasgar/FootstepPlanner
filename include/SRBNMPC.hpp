@@ -138,7 +138,10 @@ public:
     casadi::DM motionPlannerN_MT(casadi::DM q0, size_t controlTick);
     void statebounds_MT(casadi::DM p);
     void getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> foothold, Eigen::Matrix<double,12,1> forceQP, size_t controlTick);
-  
+    
+    //300ms Domain
+    casadi::DM motionPlannerN_MT30(casadi::DM q0, size_t controlTick);
+    int* returnConInd30(size_t controlTick);
 
 private: 
     std::string filename;
@@ -291,6 +294,8 @@ private:
     casadi::DM lbx_MT = -casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM ubx_MT = casadi::DM::inf(NFS*(HORIZ+1)+NFI*HORIZ,1);
     casadi::DM x0_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
+
+    casadi::DM contact_sequence_dm30 = casadi::DM::ones(4,60);//,{0});
     
 };
 

@@ -249,8 +249,8 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
         double to = traj->toeOffset[2];
         //double ds = (1.0*ctrlHz)/(two_contact*10-5);
         //double dt = (two_contact*10-5)/(1.0*ctrlHz);
-        double ds = (1.0*ctrlHz)/(145);
-        double dt = (145)/(1.0*ctrlHz);
+        double ds = (1.0*ctrlHz)/(215);
+        double dt = (215)/(1.0*ctrlHz);
         //double phase = (phaseVar>1.0) ? 1.0 : phaseVar;
 		double phase = frontphase;
         //double dt = traj->domLen/(1.0*ctrlHz);
@@ -296,8 +296,8 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                 
                 if(i>1){
                     phase = rearphase;
-                    double dt = (115)/(1.0*ctrlHz);
-                    double ds = (1.0*ctrlHz)/(115);
+                    double dt = (175)/(1.0*ctrlHz);
+                    double ds = (1.0*ctrlHz)/(175);
                     //double dt = (two_contact*10-5)/(1.0*ctrlHz);
                     //double ds = (1.0*ctrlHz)/(two_contact*10-5);
                     //step[0] = step[0]/2;
@@ -359,11 +359,11 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
                 // Save foot traj
                 VC.hd.block(6+cnts,0,3,1)   << tx[0], ty[0], tz[0];
                 if(i>1){
-                    ds = (1.0*ctrlHz)/115;//(two_contact*10-5);
+                    ds = (1.0*ctrlHz)/175;//(two_contact*10-5);
                     VC.dhd.block(6+cnts,0,3,1)  << tx[1], ty[1], tz[1]*ds;
                     VC.ddhd.block(6+cnts,0,3,1) << tx[2], ty[2], tz[2]*ds*ds; // z scaling necessary!!
                 }else{
-                    ds = (1.0*ctrlHz)/145;//(two_contact*10-5);
+                    ds = (1.0*ctrlHz)/215;//(two_contact*10-5);
                     VC.dhd.block(6+cnts,0,3,1)  << tx[1], ty[1]*ds, tz[1];
                     VC.ddhd.block(6+cnts,0,3,1) << tx[2], ty[2]*ds*ds, tz[2]; // z scaling necessary!!
                 }

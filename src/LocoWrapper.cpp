@@ -135,23 +135,23 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
         if(readytowalkf){
         
             // if (gait!=gaitTemp || (phaseVar>maxPhase) || ctrlTick == switchtime*ctrlHz + 2*(shifttime2+movetime3) + shifttime2){ 
-            if (HLMTphase == 0 || HLMTphase == 20 || ctrlTick == switchtime*ctrlHz + 10*(shifttime2+movetime3) + shifttime2){ 
+            if (HLMTphase == 0 || HLMTphase == 30 || ctrlTick == switchtime*ctrlHz + 10*(shifttime2+movetime3) + shifttime2){ 
 
                 locoTick = 0;
-                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
+                phaseVar = getPhase(1.0*locoTick, 0.0, 299);
                 flphase = 0;
                 rlphase = 0;
                 //conEst->forceDomChange();
                 z = Eigen::MatrixXd::Zero(12,1);
             
             }else{
-                phaseVar = getPhase(1.0*locoTick, 0.0, 199);
-                flphase = getPhase(1.0*locoTick-49, 0.0, 145);
-                rlphase = getPhase(1.0*locoTick-79, 0.0, 115);
+                phaseVar = getPhase(1.0*locoTick, 0.0, 299);
+                flphase = getPhase(1.0*locoTick-79, 0.0, 215);
+                rlphase = getPhase(1.0*locoTick-119, 0.0, 175);
                 flphase = (flphase<0)?0:(flphase>1)?1:flphase;
                 rlphase = (rlphase<0)?0:(rlphase>1)?1:rlphase;
                 // if(locoTick==50||locoTick==80){
-                if (HLMTphase == 5 || HLMTphase == 8 || HLMTphase == 25 || HLMTphase == 28){
+                if (HLMTphase == 8 || HLMTphase == 12 || HLMTphase == 38 || HLMTphase == 42){
                     conEst->forceDomChange();
                 }            
             }
