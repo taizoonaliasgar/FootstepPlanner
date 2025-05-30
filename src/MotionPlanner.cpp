@@ -797,8 +797,8 @@ void MotionPlanner::movefoot3(size_t movetime){
     traj.comDes.block(9,0,3,1) << 0, 0, 0;
 
     traj.domLen = movetime;
-    traj.FRstepLen = {0.15,-0.05,0};//-0.15};
-    traj.FLstepLen = {0.15,-0.05,0};//-0.15};
+    traj.FRstepLen = {0.1,-0.05,0};//-0.15};
+    traj.FLstepLen = {0.1,-0.05,0};//-0.15};
     traj.RLstepLen = {0,0,0};
     traj.RRstepLen = {0,0,0};
 }
