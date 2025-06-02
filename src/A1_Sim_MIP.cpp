@@ -709,7 +709,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	// 	fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
 	// 	rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
 	// }
-	getthetadot(q,dq);
+	// getthetadot(q,dq);
     int robotdown2=1;
 	numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
 	
