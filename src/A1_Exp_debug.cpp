@@ -410,7 +410,7 @@ void ExternalComm::HighLevel(){
         HLData.comDes= nmpc_obj->returncomDes();
         HLData.fDes= nmpc_obj->returnfDes();
         HLData.solvetime = nmpc_obj->returnSolveTime();
-        int* indcon = nmpc_obj->returnConInd(HLData.control_Tick);
+        int* indcon = nmpc_obj->returnConInd30(HLData.control_Tick);
         HLData.ind[0] = indcon[0];
         HLData.ind[1] = indcon[1];
         HLData.ind[2] = indcon[2];
