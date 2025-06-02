@@ -231,6 +231,7 @@ public:
     double xdot_thresh2 = 0.5;
 
     //Estimator
+    void getthetadot(double q[18],double dq[18]);
     void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
     void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
     //A1
@@ -636,6 +637,23 @@ void ExternalComm::kinestimatorrr(double q[18], double dq[18], int contact[4], E
 
 }
 
+void ExternalComm::getthetadot(double q[18],double dq[18]){
+
+    Eigen::Matrix<double,3,3> A;
+    double phi = q[3];
+    double theta = q[4];
+    
+    A(0,0) = 1;     A(0,1) = sin(phi)*tan(theta);   A(0,2) = cos(phi)*tan(theta);
+    A(1,0) = 0;     A(1,1) = cos(phi);              A(1,2) = -sin(phi);
+    A(2,0) = 0;     A(2,1) = sin(phi)/cos(theta);   A(2,2) = cos(phi)/cos(theta);
+
+    Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+    Eigen::Matrix<double,3,1> thetadot = A*dq_temp;
+    dq[3] = thetadot(0);
+    dq[4] = thetadot(1);
+    dq[5] = thetadot(2);
+}
+
 void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick){
     
     float numContact = (contact[0]+contact[1])+rearweight_est*(contact[2]+contact[3]);
@@ -691,15 +709,16 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	// 	fr_prev[i] = fr_toe[i]; fl_prev[i] = fl_toe[i];
 	// 	rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
 	// }
-	
-	numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
+	getthetadot(q,dq);
+    int robotdown2=1;
+	numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
 	
     if(!robotdown){
 
         for (int i = 3; i < 18; ++i){
-		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown + Jfl_toe_e[3*i+0]*contact[1]*robotdown + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel_e[1] -= (Jfr_toe_e[3*i+1]*contact[0]*robotdown + Jfl_toe_e[3*i+1]*contact[1]*robotdown + Jrr_toe_e[3*i+1]*contact[2]*rearweight_est + Jrl_toe_e[3*i+1]*contact[3]*rearweight_est)*dq[i];
-	 	    COM_vel_e[2] -= (Jfr_toe_e[3*i+2]*contact[0]*robotdown + Jfl_toe_e[3*i+2]*contact[1]*robotdown + Jrr_toe_e[3*i+2]*contact[2]*rearweight_est + Jrl_toe_e[3*i+2]*contact[3]*rearweight_est)*dq[i];
+		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown2 + Jfl_toe_e[3*i+0]*contact[1]*robotdown2 + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[1] -= (Jfr_toe_e[3*i+1]*contact[0]*robotdown2 + Jfl_toe_e[3*i+1]*contact[1]*robotdown2 + Jrr_toe_e[3*i+1]*contact[2]*rearweight_est + Jrl_toe_e[3*i+1]*contact[3]*rearweight_est)*dq[i];
+	 	    COM_vel_e[2] -= (Jfr_toe_e[3*i+2]*contact[0]*robotdown2 + Jfl_toe_e[3*i+2]*contact[1]*robotdown2 + Jrr_toe_e[3*i+2]*contact[2]*rearweight_est + Jrl_toe_e[3*i+2]*contact[3]*rearweight_est)*dq[i];
         }
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
