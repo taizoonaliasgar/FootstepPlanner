@@ -32,16 +32,10 @@
 #include "stdio.h"
 
 #include "mip/mip_all.hpp"
-// #include <microstrain/common/serialization/serializer.hpp>
 #include "microstrain/connections/serial/serial_connection.hpp"
-// #include <mip/definitions/commands_base.hpp>
-// // #include <mip/definitions/commands_base.h>
-// #include <mip/definitions/commands_3dm.hpp>
-// #include <mip/definitions/commands_filter.hpp>
 #include "example_utils.hpp"
-// #include <mip/mip_interface.h>
-// #include <mip/mip_interface.hpp>
-// #include <mip/mip_field.hpp>
+#include "fusedVelocityEstimate.hpp"
+
 #include <chrono>
 #include <thread>
 #include <memory>
@@ -91,10 +85,11 @@ private:
 
     bool SIMFlag = true;
     std::ofstream csvFile;//("contact_forces.csv");
+    VelocityKalman3D velocity_filter;
 
 
 public:
-    ExternalComm(int argc, char* argv[])
+    ExternalComm(int argc, char* argv[]):velocity_filter(0.001, 1e-8, 2.7e-4)
     // : parseBufferSize(1024), 
         // parseBuffer(new uint8_t[parseBufferSize])
     {
@@ -168,7 +163,7 @@ public:
 
 
 
-    
+
     //support functions
 	void setupCallback();
 	// void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
@@ -233,7 +228,7 @@ public:
     //Estimator
     void getthetadot(double q[18],double dq[18]);
     void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
-    void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
+    void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick, Eigen::Vector3d acc_bFrame);
     //A1
     std::vector<raisim::ArticulatedSystem*> A1;
     
@@ -654,7 +649,7 @@ void ExternalComm::getthetadot(double q[18],double dq[18]){
     dq[5] = thetadot(2);
 }
 
-void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick){
+void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick, Eigen::Vector3d acc_bFrame){
     
     float numContact = (contact[0]+contact[1])+rearweight_est*(contact[2]+contact[3]);
     // if(ctrlTick>27399){
@@ -716,8 +711,8 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
     if(!robotdown){
 
         numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
-        Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
-        toWorld(&dq[3],dq_temp,R);
+        // Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+        // toWorld(&dq[3],dq_temp,R);
 
         for (int i = 3; i < 18; ++i){
 		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown2 + Jfl_toe_e[3*i+0]*contact[1]*robotdown2 + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
@@ -728,8 +723,13 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
 
-        dq_temp = {dq[3],dq[4],dq[5]};
-	    toBody(&dq[3],dq_temp,R);
+        // dq_temp = {dq[3],dq[4],dq[5]};
+	    // toBody(&dq[3],dq_temp,R);
+        velocity_filter.step(acc_bFrame, R, COM_vel_e);
+        Eigen::Vector3d fused = velocity_filter.getVelocity();
+        COM_vel_e[0] = fused(0);
+        COM_vel_e[1] = fused(1);
+        COM_vel_e[2] = fused(2);
 
     }else{
         numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
@@ -830,6 +830,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     Eigen::Matrix<double, 4, 1> quat = Eigen::MatrixXd::Zero(4,1);
     Eigen::Matrix<double, 3, 1>  eul_state = Eigen::MatrixXd::Zero(3,1);
     Eigen::Matrix<double, 3, 1>  omega_state = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double,3,1> acc_bFrame = Eigen::MatrixXd::Zero(3,1);
 
     A1.back()->getState(jointPosTotal, jointVelTotal);
     A1.back()->getBaseOrientation(rotMat);
@@ -842,6 +843,10 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
             auto imu = A1.back()->getSensorSet("imu_parent")->getSensor<raisim::InertialMeasurementUnit>("imu");
             auto imu_o = imu->getOrientation();   // Quaternion
             auto imu_w = imu->getAngularVelocity();  // Angular velocity in radians/s
+            raisim::Vec<3> linearAcceleration = imu->getLinearAcceleration();
+            acc_bFrame(0) = linearAcceleration(0);
+            acc_bFrame(1) = linearAcceleration(1);
+            acc_bFrame(2) = linearAcceleration(2);
             quat(0) = imu_o[0];
             quat(1) = imu_o[1];
             quat(2) = imu_o[2];
@@ -954,7 +959,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     csvFile << "\n";
 
     if(simcounter>2499){
-        getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter);
+        getStateEstimatefullll(jpos_est,jvel_est,SimData.ind_LL,rotE,SimData.toePos,robotdown,simcounter,acc_bFrame);
         
     }else if(simcounter>0){
         kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);

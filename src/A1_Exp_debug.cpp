@@ -29,10 +29,12 @@
 #include "mip/mip_all.hpp"
 #include "microstrain/connections/serial/serial_connection.hpp"
 #include "example_utils.hpp"
+#include "fusedVelocityEstimate.hpp"
 
 #include <chrono>
 #include <thread>
 #include <memory>
+
 using namespace UNITREE_LEGGED_SDK;
 
 bool rough_terrain_en = 0;
@@ -79,11 +81,13 @@ private:
 	bool is_initialized = false;
 	std::mutex update_mutex;
 	std::ofstream csvFile;
+
+	VelocityKalman3D velocity_filter;
 	
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
-		ExternalComm() : udpComp(LOWLEVEL){
+		ExternalComm() : udpComp(LOWLEVEL), velocity_filter(0.01, 0.1, 0.5){
 
             fid = fopen("/home/taizoon/raisimEnv/Workspace/FootstepPlanner/stateData_1.csv", "w");
             
