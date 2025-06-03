@@ -166,9 +166,9 @@ public:
         csvFile.close();
     }
 
-    
 
-  
+
+    
     //support functions
 	void setupCallback();
 	// void plotGRFs(std::map<std::string, raisim::VisualObject>* list, const std::vector<double>& GRF, const std::vector<double>& feet_vec, const std::vector<double>& contacts);
@@ -710,12 +710,14 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	// 	rr_prev[i] = rr_toe[i]; rl_prev[i] = rl_toe[i];		
 	// }
 	// getthetadot(q,dq);
-    int robotdown2=3;
+    int robotdown2=0;
 	
 	
     if(!robotdown){
 
         numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
+        Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+        toWorld(&dq[3],dq_temp,R);
 
         for (int i = 3; i < 18; ++i){
 		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown2 + Jfl_toe_e[3*i+0]*contact[1]*robotdown2 + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
@@ -725,6 +727,9 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
+
+        dq_temp = {dq[3],dq[4],dq[5]};
+	    toBody(&dq[3],dq_temp,R);
 
     }else{
         numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
@@ -1151,7 +1156,6 @@ int main(int argc, char *argv[]) {
     // extComm.setupIMUfilter();
     
     int simIMU = 0;
-
 
     LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
 	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
