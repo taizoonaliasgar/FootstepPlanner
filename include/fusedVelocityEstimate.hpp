@@ -16,6 +16,7 @@ public:
     }
 
     void step(
+        double simcounter,
         const Eigen::Vector3d& accel_scaled,
         const Eigen::Matrix3d& R_body_to_world,//mip::data_sensor::CompOrientationMatrix& orientation_matrix,
         const double raw_velocity[3]
@@ -32,10 +33,16 @@ public:
         raw_velocity_estimate(1) = raw_velocity[1]; // Replace with actual raw velocity estimate
         raw_velocity_estimate(2) = raw_velocity[2]; // Replace with actual raw velocity estimate
         Eigen::Vector3d a_world = R_body_to_world * accel_scaled;
-
+        Eigen::Vector3d a_world2 = R_body_to_world.transpose() * accel_scaled;
+        // std::cout << "accel_scaled" << "\t" << accel_scaled.transpose() << std::endl;
+        // std::cout << "a_world" << "\t" << a_world.transpose() << std::endl;
         // Remove gravity (assuming Z-up)
         Eigen::Vector3d gravity(0, 0, 9.80665);
         Eigen::Vector3d a_corrected = a_world - gravity;
+
+        // a_corrected(0) = a_corrected(0) > xddot_thresh ? xddot_thresh : (a_corrected(0) < -xddot_thresh ? -xddot_thresh : a_corrected(0)); 
+        // a_corrected(1) = a_corrected(1) > yddot_thresh ? yddot_thresh : (a_corrected(1) < -yddot_thresh ? -yddot_thresh : a_corrected(1));
+        // a_corrected(2) = a_corrected(2) > zddot_thresh ? zddot_thresh : (a_corrected(2) < -zddot_thresh ? -zddot_thresh : a_corrected(2)); 
 
         // Prediction
         x = A * x + B * a_corrected;
@@ -47,6 +54,11 @@ public:
         // Update
         x = x + K * (raw_velocity_estimate - H * x);
         P = (Eigen::Matrix3d::Identity() - K * H) * P;
+
+        // std::cout << simcounter << "\t" << a_corrected(0) << "\t" << a_corrected(1) << "\t" << a_corrected(2) << "\t" << raw_velocity[0] << "\t" << raw_velocity[1] << "\t" << raw_velocity[2] << "\t" 
+        //                 << x(0) << "\t" << x(1) << "\t" << x(2) << std::endl;
+        // std::cout << simcounter << "\t" << accel_scaled(0) << "\t" << accel_scaled(1) << "\t" << accel_scaled(2) << "\t" << a_world(0) << "\t" << a_world(1) << "\t" << a_world(2) << "\t" 
+        //                 << a_world2(0) << "\t" << a_world2(1) << "\t" << a_world2(2) << std::endl;
     }
 
     Eigen::Vector3d getVelocity() const { return x; }
@@ -55,5 +67,8 @@ private:
     double dtK;
     Eigen::Vector3d x;
     Eigen::Matrix3d A, B, H, Q, R, P;
+    double xddot_thresh = 10.0;
+    double yddot_thresh = 10.0;
+    double zddot_thresh = 10.0;
 };
 
