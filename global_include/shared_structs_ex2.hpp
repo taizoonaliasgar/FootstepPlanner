@@ -47,6 +47,7 @@ struct sharedData
 
 	double att_euler[3] = {0};
 	double comp_angular_rate[3] = {0};
+	Eigen::Matrix<double, 3, 1> IMUacc = Eigen::MatrixXd::Zero(3,1); // scaled acc for IMU data
 };
 
 sharedData data;
@@ -140,6 +141,8 @@ void updateDataExp(int setget, int highlow, sharedData *newData){
 		}else{
 			memcpy(data.att_euler,newData->att_euler,3*sizeof(double));
 			memcpy(data.comp_angular_rate,newData->comp_angular_rate,3*sizeof(double));
+			// memcpy(data.IMUacc,newData->IMUacc,3*sizeof(double));
+			data.IMUacc = newData->IMUacc;
 		}
 	}else{
 		
@@ -158,6 +161,8 @@ void updateDataExp(int setget, int highlow, sharedData *newData){
 			newData->solvetime = data.solvetime;
 			memcpy(newData->att_euler,data.att_euler,3*sizeof(double));
 			memcpy(newData->comp_angular_rate,data.comp_angular_rate,3*sizeof(double));
+			// memcpy(newData->IMUacc,data.IMUacc,3*sizeof(double));
+			newData->IMUacc = data.IMUacc;
 
 		}
 

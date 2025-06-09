@@ -13,9 +13,14 @@ inline void quat_to_XYZ(double qw, double qx, double qy, double qz, double &roll
     pitch = asin( aSinInput );
     yaw = atan2( -2*(qx*qy - qz*qw), pow(qw,2) + pow(qx,2) - pow(qy,2) - pow(qz,2) );
 	
-	//roll = atan2(2*(qy*qz+qx*qw), 1 - 2 * (pow(qx,2)+pow(qy,2)));
-    //pitch = 2*atan2( sqrt(1+2*(qy*qw - qx*qz)),sqrt(1-2*(qy*qw - qx*qz)) ) - 1.5708;
-    //yaw = atan2( 2*(qx*qy + qz*qw), 1 - 2 * (pow(qz,2)+pow(qy,2)) );
+	// double aSinInput = 2*(qy*qw - qz*qx);
+	// if (aSinInput > 1.0) aSinInput = 1.0;
+	// if (aSinInput < -1.0) aSinInput = -1.0;
+	
+	// // Calculate roll, pitch, yaw angles
+	// roll = atan2(2*(qy*qz+qx*qw), 1 - 2 * (pow(qx,2)+pow(qy,2)));
+    // pitch = asin(aSinInput);
+    // yaw = atan2( 2*(qx*qy + qz*qw), 1 - 2 * (pow(qz,2)+pow(qy,2)) );
 }
 
 template <typename inputmat, typename outputmat>

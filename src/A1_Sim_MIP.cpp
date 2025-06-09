@@ -216,7 +216,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 50*ctrlHz;
+    double simlength = 20*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -733,8 +733,8 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         // std::cout << "a_world" << "\t" << (R*acc_bFrame).transpose() << std::endl;
         // Eigen::Vector3d a_world = R*acc_bFrame - Eigen::Vector3d(0,0,9.81);
         // dq_temp = {dq[3],dq[4],dq[5]};
-	    // toBody(&dq[3],dq_temp,R);
-        velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
+	    toBody(&dq[3],dq_temp,R);
+        // velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
         // Eigen::Vector3d fused = velocity_filter.getVelocity();
         // COM_vel_e[0] = fused(0);
         // COM_vel_e[1] = fused(1);
@@ -744,9 +744,13 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
         
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
-        getthetadot(q,dq);
-        Eigen::Matrix<double,3,1> dq_temp2 = {dq[3],dq[4],dq[5]};
         toWorld(&dq[3],dq_temp,R);
+        Eigen::Matrix<double,3,1> dq_temp2 = {dq[3],dq[4],dq[5]};
+        // dq[3] = dq_temp(0);
+        // dq[4] = dq_temp(1);
+        // dq[5] = dq_temp(2);
+        // getthetadot(q,dq);
+        
         std::cout << simcounter << "\t" << dq_temp[0] << "\t" << dq_temp[1] << "\t" << dq_temp[2] << "\t" << dq[3] << "\t" << dq[4] << "\t" << dq[5] << "\t"
                                                     << dq_temp2[0] << "\t" << dq_temp2[1] << "\t" << dq_temp2[2] << std::endl;
                 
@@ -759,8 +763,11 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
 	
-	    dq_temp = {dq[3],dq[4],dq[5]};
+	    // dq_temp = {dq[3],dq[4],dq[5]};
 	    toBody(&dq[3],dq_temp,R);
+        // dq[3] = dq_temp[0];
+        // dq[4] = dq_temp[1];
+        // dq[5] = dq_temp[2];
     }
 
 	// Set results
@@ -779,8 +786,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 
 
-void ExternalComm::
-SimExec(){//(std::ofstream &file_est){
+void ExternalComm::SimExec(){//(std::ofstream &file_est){
  
     //std::cout << "InSimExec" << std::endl;
     if (setup_raisim){

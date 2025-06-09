@@ -87,7 +87,7 @@ private:
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
-		ExternalComm() : udpComp(LOWLEVEL), velocity_filter(0.01, 0.1, 0.5){
+		ExternalComm() : udpComp(LOWLEVEL), velocity_filter(0.005, 0.01, 0.1){
 
             fid = fopen("/home/taizoon/raisimEnv/Workspace/FootstepPlanner/stateData_1.csv", "w");
             
@@ -190,6 +190,7 @@ public:
 	double filtered_vel[3] = {0};
 	float pose[6] = {0};
 	float ang[2] = {0};
+	Eigen::Vector3d scaled_acc = Eigen::MatrixXd::Zero(3,1);
 	
 
 	float LLdt = 0.001f;
@@ -233,8 +234,9 @@ public:
 	// Eigen::Matrix<double,3,1> imuquat_eul = Eigen::MatrixXd::Zero(3,1);
 
     //Estimator
+	void getthetadot(double q[3],double dq[3]);
     void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
-    void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick);
+    void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick, Eigen::Vector3d acc_wFrame);
   
 };
 
@@ -304,7 +306,24 @@ void ExternalComm::kinestimatorrr(double q[18], double dq[18], int contact[4], E
 
 }
 
-void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick){
+void ExternalComm::getthetadot(double q[3],double dq[3]){
+
+    Eigen::Matrix<double,3,3> A;
+    double phi = q[1];
+    double theta = q[2];
+    
+    A(0,0) = 1;     A(0,1) = sin(phi)*tan(theta);   A(0,2) = cos(phi)*tan(theta);
+    A(1,0) = 0;     A(1,1) = cos(phi);              A(1,2) = -sin(phi);
+    A(2,0) = 0;     A(2,1) = sin(phi)/cos(theta);   A(2,2) = cos(phi)/cos(theta);
+
+    Eigen::Matrix<double,3,1> dq_temp = {dq[0],dq[1],dq[2]};
+    Eigen::Matrix<double,3,1> thetadot = A*dq_temp;
+    dq[0] = thetadot(0);
+    dq[1] = thetadot(1);
+    dq[2] = thetadot(2);
+}
+
+void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick, Eigen::Vector3d acc_wFrame){
     
     float numContact = (contact[0]+contact[1])+rearweight_est*(contact[2]+contact[3]);
     // if(ctrlTick>27399){
@@ -372,6 +391,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
+		velocity_filter.stepExp(acc_wFrame, COM_vel_e);
 
     }else{
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
@@ -424,7 +444,7 @@ void ExternalComm::HighLevel(){
         updateDataExp(SET_DATA, HL_DATA, &HLData);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
+        // std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
 }
 
@@ -518,7 +538,7 @@ void ExternalComm::Calc(){
 	// kinEst0(footForce,contactIndex,q,dq,R); // Defined in OtherUtils.hpp
 	
 	if(motiontime>2499){
-        getStateEstimatefullll(q,dq,LLData.ind_LL,rotE,LLData.toePos,robotdown,motiontime);
+        getStateEstimatefullll(q,dq,LLData.ind_LL,rotE,LLData.toePos,robotdown,motiontime,LLData.IMUacc);
         
     }else if(motiontime>0){
         kinestimatorrr(q,dq,LLData.ind_LL,rotE);
@@ -783,21 +803,50 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
         auto now = std::chrono::system_clock::now();
         auto unix_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
-        IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
-        IMUData.comp_angular_rate[1] = this->filter_comp_angular_rate.gyro[1];
-        IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2]; 
+        // IMUData.scaled_acc[0] = this->sensor_accel.scaled_accel[0];
+		// IMUData.scaled_acc[1] = this->sensor_accel.scaled_accel[1];
+		// IMUData.scaled_acc[2] = this->sensor_accel.scaled_accel[2];
+		scaled_acc(0) = this->filter_comp_accel.accel[0];
+		scaled_acc(1) = this->filter_comp_accel.accel[1];
+		scaled_acc(2) = this->filter_comp_accel.accel[2];
+		IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
+        IMUData.comp_angular_rate[1] = -this->filter_comp_angular_rate.gyro[1];
+        IMUData.comp_angular_rate[2] = -this->filter_comp_angular_rate.gyro[2]; 
 		for(size_t i = 0; i < 3; i++){
 			for (size_t j = 0; j < 3; j++)
 			{
 				IMUR(i,j) = this->sensor_comp_orientation_matrix.m[3*i+j];
 			}
 		}
-		
+
+		// Eigen::Vector3d acc_world = IMUR*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
+		Eigen::Vector3d acc_IMU0 = IMUR.transpose()*scaled_acc;//Eigen::Vector3d(scaled_acc[0], scaled_acc[1], scaled_acc[2]);
+		IMUData.IMUacc = IMUframeoffset*acc_IMU0;
+		IMUData.IMUacc(2) -= 9.81;
+
 		IMURotation = IMUframeoffset*IMUR*IMUframeoffset;
-		
+		// IMURotation = IMUR;//.transpose();
+		// Eigen::Vector3d acc_world3 = IMURotation*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
+		// Eigen::Vector3d acc_world4 = IMURotation.transpose()*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
+
 		IMUData.att_euler[0] = atan2(IMURotation(1,2),IMURotation(2,2));
 		IMUData.att_euler[1] = -asin(IMURotation(0,2));
 		IMUData.att_euler[2] = atan2(IMURotation(0,1),IMURotation(0,0));
+
+		// double omegabody[3] = {0};
+		// omegabody[0] = IMUData.comp_angular_rate[0];
+		// omegabody[1] = IMUData.comp_angular_rate[1];
+		// omegabody[2] = IMUData.comp_angular_rate[2];
+		// getthetadot(IMUData.att_euler,IMUData.comp_angular_rate);
+
+		// std::cout << motiontime << "\t" << IMUData.att_euler[0] << "\t" << IMUData.att_euler[1] << "\t" << IMUData.att_euler[2] << "\t" 
+		// 				<< IMUData.scaled_acc[0] << "\t" << IMUData.scaled_acc[1] << "\t" << IMUData.scaled_acc[2] << "\t" 
+		// 				<< acc_world2(0) << "\t" << acc_world2(1) << "\t" << acc_world2(2) << "\t"  
+		// 				<< omegabody[0] << "\t" << omegabody[1] << "\t" << omegabody[2] << "\t"
+		// 				<< IMUData.comp_angular_rate[0] << "\t" << IMUData.comp_angular_rate[1] << "\t" << IMUData.comp_angular_rate[2] << "\t"
+		// 				<< acc_world3(0) << "\t" << acc_world3(1) << "\t" << acc_world3(2) << "\t" 
+		// 				<< acc_world4(0) << "\t" << acc_world4(1) << "\t" << acc_world4(2) << "\t"
+		// 				<< acc_worldfinal(0) << "\t" << acc_worldfinal(1) << "\t" << acc_worldfinal(2) << std::endl;
 		// IMUData.att_euler[0] = this->filter_euler_angles.roll; 
 		// IMUData.att_euler[1] = this->filter_euler_angles.pitch; 
 		// IMUData.att_euler[2] = this->filter_euler_angles.yaw;
@@ -809,7 +858,8 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		// 				//  << imuquat_eul3(0) << "," << imuquat_eul3(1) << "," << imuquat_eul3(2) << ","
 		// 				 << imurot_eul3(0) << "," << imurot_eul3(1) << "," << imurot_eul3(2) << "\n";
  
-        updateDataExp(SET_DATA, IMU_DATA, &IMUData);                          
+        updateDataExp(SET_DATA, IMU_DATA, &IMUData);     
+		motiontime += 1;                     
     }
     
 }
@@ -817,11 +867,11 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 
 int main(int argc, char *argv[]) {
 
-    InitEnvironment();
+    // InitEnvironment();
     ExternalComm extComm;
     
-	extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
-    extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
+	// extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
+    // extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     // extComm.moving_avg_filter = std::unique_ptr<MovingAverageFilter>(new MovingAverageFilter(1000,3));
 
     extComm.connectIMU();
@@ -829,15 +879,15 @@ int main(int argc, char *argv[]) {
     extComm.setupIMUfilter();
 
 
-    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	LoopFunc loop_mpc("mpc_loop", 0.010001f,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	// LoopFunc loop_mpc("mpc_loop", 0.010001f,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_imu("imu_loop", 0.010001f,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 
-    extComm.udpComp.InitCmdData(extComm.cmd);
+    // extComm.udpComp.InitCmdData(extComm.cmd);
 	
-	loop_mpc.start();
-	sleep(1.0);
-	loop_calc.start();
+	// loop_mpc.start();
+	// sleep(1.0);
+	// loop_calc.start();
     sleep(1.0);
 	loop_imu.start();
 
