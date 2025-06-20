@@ -12,6 +12,7 @@ public:
         B = Eigen::Matrix3d::Identity() * dtK;
         H = Eigen::Matrix3d::Identity();
         Q = Eigen::Matrix3d::Identity() * accel_var * dtK * dtK;
+        Q(1,1) = 20*Q(0,0);
         R = Eigen::Matrix3d::Identity() * meas_var;
     }
 
