@@ -391,9 +391,9 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
-		if(ctrlTick > 33999){
-			velocity_filter.stepExp(acc_wFrame, COM_vel_e);
-		}
+		// if(ctrlTick > 33999){
+			velocity_filter.stepExp(acc_wFrame, COM_vel_e,ctrlTick);
+		// }
 
     }else{
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
@@ -446,7 +446,7 @@ void ExternalComm::HighLevel(){
         updateDataExp(SET_DATA, HL_DATA, &HLData);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
+        // std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
 }
 
@@ -822,9 +822,12 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		}
 
 		// Eigen::Vector3d acc_world = IMUR*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
-		Eigen::Vector3d acc_IMU0 = IMUR.transpose()*scaled_acc;//Eigen::Vector3d(scaled_acc[0], scaled_acc[1], scaled_acc[2]);
-		IMUData.IMUacc = IMUframeoffset*acc_IMU0;
+		// Eigen::Vector3d acc_IMU0 = IMUR.transpose()*scaled_acc;//Eigen::Vector3d(scaled_acc[0], scaled_acc[1], scaled_acc[2]);
+		IMUData.IMUacc = IMUframeoffset*IMUR.transpose()*scaled_acc;//acc_IMU0;
 		IMUData.IMUacc(2) -= 9.81;
+
+		// std::cout << motiontime << "\t" << IMUData.IMUacc(0) << "\t" << IMUData.IMUacc(1) << "\t" << IMUData.IMUacc(2) << "\t" 
+		// 				<< scaled_acc(0) << "\t" << scaled_acc(1) << "\t" << scaled_acc(2) << std::endl; 
 
 		IMURotation = IMUframeoffset*IMUR*IMUframeoffset;
 		// IMURotation = IMUR;//.transpose();

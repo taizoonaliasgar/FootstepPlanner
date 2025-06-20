@@ -62,7 +62,7 @@ public:
         //                 << a_world2(0) << "\t" << a_world2(1) << "\t" << a_world2(2) << std::endl;
     }
 
-     void stepExp(const Eigen::Vector3d& accel_scaled, double raw_velocity[3]) {
+     void stepExp(const Eigen::Vector3d& accel_scaled, double raw_velocity[3], size_t ctrlTick) {
         
         Eigen::Vector3d raw_velocity_estimate = Eigen::Vector3d::Zero(); // Placeholder for raw velocity estimate
         raw_velocity_estimate(0) = raw_velocity[0]; // Replace with actual raw velocity estimate
@@ -93,11 +93,11 @@ public:
 
         // std::cout << simcounter << "\t" << a_corrected(0) << "\t" << a_corrected(1) << "\t" << a_corrected(2) << "\t" << raw_velocity[0] << "\t" << raw_velocity[1] << "\t" << raw_velocity[2] << "\t" 
         //                 << x(0) << "\t" << x(1) << "\t" << x(2) << std::endl;
-        // std::cout << simcounter << "\t" << accel_scaled(0) << "\t" << accel_scaled(1) << "\t" << accel_scaled(2) << "\t" << a_world(0) << "\t" << a_world(1) << "\t" << a_world(2) << "\t" 
-        //                 << a_world2(0) << "\t" << a_world2(1) << "\t" << a_world2(2) << std::endl;
-        raw_velocity[0] = x(0);
-        raw_velocity[1] = x(1);
-        raw_velocity[2] = x(2);
+        std::cout << ctrlTick << "\t" << accel_scaled(0) << "\t" << accel_scaled(1) << "\t" << accel_scaled(2) << "\t" << raw_velocity[0] << "\t" << raw_velocity[1] << "\t" 
+                        << raw_velocity[2] << "\t" << x(0) << "\t" << x(1) << "\t" << x(2) << std::endl;
+        // raw_velocity[0] = x(0);
+        // raw_velocity[1] = x(1);
+        // raw_velocity[2] = x(2);
     }
 
     Eigen::Vector3d getVelocity() const { return x; }
