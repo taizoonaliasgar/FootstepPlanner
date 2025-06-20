@@ -391,7 +391,9 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
-		velocity_filter.stepExp(acc_wFrame, COM_vel_e);
+		if(ctrlTick > 33999){
+			velocity_filter.stepExp(acc_wFrame, COM_vel_e);
+		}
 
     }else{
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
@@ -444,7 +446,7 @@ void ExternalComm::HighLevel(){
         updateDataExp(SET_DATA, HL_DATA, &HLData);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        // std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
+        std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
 }
 
@@ -859,7 +861,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		// 				 << imurot_eul3(0) << "," << imurot_eul3(1) << "," << imurot_eul3(2) << "\n";
  
         updateDataExp(SET_DATA, IMU_DATA, &IMUData);     
-		motiontime += 1;                     
+		// motiontime += 1;                     
     }
     
 }
@@ -867,11 +869,11 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 
 int main(int argc, char *argv[]) {
 
-    // InitEnvironment();
+    InitEnvironment();
     ExternalComm extComm;
     
-	// extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
-    // extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
+	extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
+    extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     // extComm.moving_avg_filter = std::unique_ptr<MovingAverageFilter>(new MovingAverageFilter(1000,3));
 
     extComm.connectIMU();
@@ -879,15 +881,15 @@ int main(int argc, char *argv[]) {
     extComm.setupIMUfilter();
 
 
-    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	// LoopFunc loop_mpc("mpc_loop", 0.010001f,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_imu("imu_loop", 0.010001f,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	LoopFunc loop_mpc("mpc_loop", 0.010001f,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_imu("imu_loop", 0.0050001f,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 
-    // extComm.udpComp.InitCmdData(extComm.cmd);
+    extComm.udpComp.InitCmdData(extComm.cmd);
 	
-	// loop_mpc.start();
-	// sleep(1.0);
-	// loop_calc.start();
+	loop_mpc.start();
+	sleep(1.0);
+	loop_calc.start();
     sleep(1.0);
 	loop_imu.start();
 
