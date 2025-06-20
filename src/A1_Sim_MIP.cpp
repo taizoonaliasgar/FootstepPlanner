@@ -89,7 +89,7 @@ private:
 
 
 public:
-    ExternalComm(int argc, char* argv[]):velocity_filter(0.001, 1e-2, 2.7e-4)
+    ExternalComm(int argc, char* argv[]):velocity_filter(0.001, 1e-8, 2.7e-4)
     // : parseBufferSize(1024), 
         // parseBuffer(new uint8_t[parseBufferSize])
     {
@@ -216,7 +216,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 40*ctrlHz;
+    double simlength = 50*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -505,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -711,15 +711,15 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
     if(!robotdown){
 
         numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
-        Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
-        getthetadot(q,dq);
-        Eigen::Matrix<double,3,1> dq_temp2 = {dq[3],dq[4],dq[5]};
-        toWorld(&dq[3],dq_temp,R);
-        std::cout << simcounter << "\t" << dq_temp[0] << "\t" << dq_temp[1] << "\t" << dq_temp[2] << "\t" << dq[3] << "\t" << dq[4] << "\t" << dq[5] << "\t"
-                                                    << dq_temp2[0] << "\t" << dq_temp2[1] << "\t" << dq_temp2[2] << std::endl;
-        dq[3] = dq_temp[0];
-        dq[4] = dq_temp[1];
-        dq[5] = dq_temp[2];
+        // Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
+        // getthetadot(q,dq);
+        // Eigen::Matrix<double,3,1> dq_temp2 = {dq[3],dq[4],dq[5]};
+        // toWorld(&dq[3],dq_temp,R);
+        // std::cout << simcounter << "\t" << dq_temp[0] << "\t" << dq_temp[1] << "\t" << dq_temp[2] << "\t" << dq[3] << "\t" << dq[4] << "\t" << dq[5] << "\t"
+        //                                             << dq_temp2[0] << "\t" << dq_temp2[1] << "\t" << dq_temp2[2] << std::endl;
+        // dq[3] = dq_temp[0];
+        // dq[4] = dq_temp[1];
+        // dq[5] = dq_temp[2];
         for (int i = 3; i < 18; ++i){
 		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown2 + Jfl_toe_e[3*i+0]*contact[1]*robotdown2 + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
 	 	    COM_vel_e[1] -= (Jfr_toe_e[3*i+1]*contact[0]*robotdown2 + Jfl_toe_e[3*i+1]*contact[1]*robotdown2 + Jrr_toe_e[3*i+1]*contact[2]*rearweight_est + Jrl_toe_e[3*i+1]*contact[3]*rearweight_est)*dq[i];
@@ -733,7 +733,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         // std::cout << "a_world" << "\t" << (R*acc_bFrame).transpose() << std::endl;
         // Eigen::Vector3d a_world = R*acc_bFrame - Eigen::Vector3d(0,0,9.81);
         // dq_temp = {dq[3],dq[4],dq[5]};
-	    toBody(&dq[3],dq_temp,R);
+	    // toBody(&dq[3],dq_temp,R);
         // velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
         // Eigen::Vector3d fused = velocity_filter.getVelocity();
         // COM_vel_e[0] = fused(0);
@@ -751,8 +751,8 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         // dq[5] = dq_temp(2);
         // getthetadot(q,dq);
         
-        std::cout << simcounter << "\t" << dq_temp[0] << "\t" << dq_temp[1] << "\t" << dq_temp[2] << "\t" << dq[3] << "\t" << dq[4] << "\t" << dq[5] << "\t"
-                                                    << dq_temp2[0] << "\t" << dq_temp2[1] << "\t" << dq_temp2[2] << std::endl;
+        // std::cout << simcounter << "\t" << dq_temp[0] << "\t" << dq_temp[1] << "\t" << dq_temp[2] << "\t" << dq[3] << "\t" << dq[4] << "\t" << dq[5] << "\t"
+        //                                             << dq_temp2[0] << "\t" << dq_temp2[1] << "\t" << dq_temp2[2] << std::endl;
                 
 	    for (int i = 3; i < 18; ++i){
 		    COM_vel_e[0] -= (Jfr_toe_e[3*i+0]*contact[0]*robotdown + Jfl_toe_e[3*i+0]*contact[1]*robotdown + Jrr_toe_e[3*i+0]*contact[2]*rearweight_est + Jrl_toe_e[3*i+0]*contact[3]*rearweight_est)*dq[i];
@@ -763,7 +763,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
 	
-	    // dq_temp = {dq[3],dq[4],dq[5]};
+	    dq_temp = {dq[3],dq[4],dq[5]};
 	    toBody(&dq[3],dq_temp,R);
         // dq[3] = dq_temp[0];
         // dq[4] = dq_temp[1];
@@ -1184,43 +1184,43 @@ int main(int argc, char *argv[]) {
     
     int simIMU = 0;
 
-    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
     // // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	// loop_sim.start();
-	// sleep(1.0);
-	// loop_mpc.start();
-	// sleep(1.0);
-	// loop_calc.start();
+	loop_sim.start();
+	sleep(1.0);
+	loop_mpc.start();
+	sleep(1.0);
+	loop_calc.start();
 
     // sleep(1.0);
     // loop_imu.start();
     // // loop_flush.start();
 
-    // while(true)// (simIMU < 500000)
-    // {
-    //     sleep(0.1);
-    //     // extComm.getIMUread2();
-    //     // simIMU++;
-    // }
+    while(true)// (simIMU < 500000)
+    {
+        sleep(0.1);
+        // extComm.getIMUread2();
+        // simIMU++;
+    }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    while (true)
-	{
+    // while (true)
+	// {
 			
-        // sleep(0.1);
-        // extComm.getIMUread();
-        extComm.SimExec();//(file_est);
-        // std::cout << "SimExec" << std::endl;
-        extComm.HighLevel();
-        // std::cout << "HighLevel" << std::endl;
-        extComm.Calc();
-        // std::cout << "Calc" << std::endl;
-        // sim_setup = false;
+    //     // sleep(0.1);
+    //     // extComm.getIMUread();
+    //     extComm.SimExec();//(file_est);
+    //     // std::cout << "SimExec" << std::endl;
+    //     extComm.HighLevel();
+    //     // std::cout << "HighLevel" << std::endl;
+    //     extComm.Calc();
+    //     // std::cout << "Calc" << std::endl;
+    //     // sim_setup = false;
 
-	} 
+	// } 
 
     // file_est.close();
 
