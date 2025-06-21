@@ -812,8 +812,8 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		scaled_acc(1) = this->filter_comp_accel.accel[1];
 		scaled_acc(2) = this->filter_comp_accel.accel[2];
 		IMUData.comp_angular_rate[0] = this->filter_comp_angular_rate.gyro[0];
-        IMUData.comp_angular_rate[1] = -this->filter_comp_angular_rate.gyro[1];
-        IMUData.comp_angular_rate[2] = -this->filter_comp_angular_rate.gyro[2]; 
+        IMUData.comp_angular_rate[1] = this->filter_comp_angular_rate.gyro[1];
+        IMUData.comp_angular_rate[2] = this->filter_comp_angular_rate.gyro[2]; 
 		for(size_t i = 0; i < 3; i++){
 			for (size_t j = 0; j < 3; j++)
 			{
@@ -886,7 +886,7 @@ int main(int argc, char *argv[]) {
 
     LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
 	LoopFunc loop_mpc("mpc_loop", 0.010001f,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_imu("imu_loop", 0.0050001f,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+	LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 
     extComm.udpComp.InitCmdData(extComm.cmd);
 	
