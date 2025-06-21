@@ -1005,8 +1005,8 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
         // << "\n";
    
-    memcpy(SimData.q,jpos_est,18*sizeof(double));
-    memcpy(SimData.dq,jvel_est,18*sizeof(double));
+    memcpy(SimData.q,jpos,18*sizeof(double));
+    memcpy(SimData.dq,jvel,18*sizeof(double));
 	memcpy(SimData.rotMatrixDouble,rotMatrixDouble,9*sizeof(double));
     SimData.control_Tick = simcounter;
 
