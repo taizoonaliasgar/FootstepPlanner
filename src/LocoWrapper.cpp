@@ -372,7 +372,7 @@ void LocoWrapper::setfinalCoM2(int settlesteps){
     // if(settlesteps>4){
     //     CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+std::floor((settlesteps-4)/2)*0.0;
     // }else{
-        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;
+        CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2+0.05;
     // }
     // CoM_final(0) = (kin->toePos(0,2)+kin->toePos(0,3))/2;// + 0.05; //(kin->hipPos(0,2) + kin->hipPos(0,3))/2 + 0.183*sin(pitch);//
     CoM_final(2) = 0.5;//rhipz + 0.183*cos(pitch)-0.05;//0.5
@@ -611,7 +611,7 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
                 stepsonwall(maxsteps);
                 x00 = jpos_est[0];
                 z00 = jpos_est[2];
-                setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2-jpos_est[0])/settlingsteps;
+                setdx = ((kin->toePos(0,2)+kin->toePos(0,3))/2+0.05-jpos_est[0])/settlingsteps;
                 setdz = (0.5-jpos_est[2])/settlingsteps;
                 // setfinalCoM();
                 switchKp();
