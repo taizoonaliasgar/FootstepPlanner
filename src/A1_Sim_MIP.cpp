@@ -505,7 +505,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -740,8 +740,8 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
         Eigen::Vector3d fused = velocity_filter.getVelocity();
         
-        std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
-                                            << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
+        // std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
+        //                                     << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
         // COM_vel_e[0] = fused(0);
         // COM_vel_e[1] = fused(1);
         // COM_vel_e[2] = fused(2);
@@ -1191,43 +1191,43 @@ int main(int argc, char *argv[]) {
     
     int simIMU = 0;
 
-    LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
-	LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
-	LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
-    // // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
+    // LoopFunc loop_calc("calc_loop", extComm.LLdt,1, boost::bind(&ExternalComm::Calc, &extComm));
+	// LoopFunc loop_mpc("mpc_loop", extComm.HLdt,2, boost::bind(&ExternalComm::HighLevel, &extComm));
+	// LoopFunc loop_sim("sim_loop", extComm.LLdt,3, boost::bind(&ExternalComm::SimExec, &extComm));
+    // // // LoopFunc loop_imu("imu_loop", extComm.LLdt,4, boost::bind(&ExternalComm::getIMMUdata, &extComm));
 	
-	loop_sim.start();
-	sleep(1.0);
-	loop_mpc.start();
-	sleep(1.0);
-	loop_calc.start();
+	// loop_sim.start();
+	// sleep(1.0);
+	// loop_mpc.start();
+	// sleep(1.0);
+	// loop_calc.start();
 
-    // sleep(1.0);
-    // loop_imu.start();
-    // // loop_flush.start();
+    // // sleep(1.0);
+    // // loop_imu.start();
+    // // // loop_flush.start();
 
-    while(true)// (simIMU < 500000)
-    {
-        sleep(0.1);
-        // extComm.getIMUread2();
-        // simIMU++;
-    }
+    // while(true)// (simIMU < 500000)
+    // {
+    //     sleep(0.1);
+    //     // extComm.getIMUread2();
+    //     // simIMU++;
+    // }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    // while (true)
-	// {
+    while (true)
+	{
 			
-    //     // sleep(0.1);
-    //     // extComm.getIMUread();
-    //     extComm.SimExec();//(file_est);
-    //     // std::cout << "SimExec" << std::endl;
-    //     extComm.HighLevel();
-    //     // std::cout << "HighLevel" << std::endl;
-    //     extComm.Calc();
-    //     // std::cout << "Calc" << std::endl;
-    //     // sim_setup = false;
+        // sleep(0.1);
+        // extComm.getIMUread();
+        extComm.SimExec();//(file_est);
+        // std::cout << "SimExec" << std::endl;
+        extComm.HighLevel();
+        // std::cout << "HighLevel" << std::endl;
+        extComm.Calc();
+        // std::cout << "Calc" << std::endl;
+        // sim_setup = false;
 
-	// } 
+	} 
 
     // file_est.close();
 
