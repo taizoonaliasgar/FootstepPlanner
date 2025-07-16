@@ -226,7 +226,7 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         x_des((i+1)*NFS+2) = stand_height;                                 
         x_des((i+1)*NFS+3) = localvelocity, 
         x_des((i+1)*NFS+4) = desVel(1);
-        x_des((i+1)*NFS+7) = -1.2;//0.35;
+        x_des((i+1)*NFS+7) = -0.8;//0.35;
 
         //if(controlTick+i>0){
             conp1_next = (controlTick+i+1)%40;
@@ -1741,7 +1741,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
         x_des((i+1)*NFS+2) = stand_height;                                 
         x_des((i+1)*NFS+3) = localvelocity, 
         x_des((i+1)*NFS+4) = desVel(1);
-        x_des((i+1)*NFS+7) = 0.35;
+        x_des((i+1)*NFS+7) = -1.2;
 
         //if(controlTick+i>0){
             conp1_next = (controlTick+i+1)%60;
