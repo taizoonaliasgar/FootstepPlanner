@@ -31,6 +31,9 @@ public:
     void updateJacobianDotUp();
     void updateFwdKinematicsUp();
 
+    //Hip correction
+    void updateHip();
+
 private:
     StateInfo state;
     DynamicsInfo dyn;

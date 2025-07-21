@@ -86,4 +86,21 @@ void dJ_FR_hip_u(double *p_output1,const double *var1,const double *var2);
 void dJ_RL_hip_u(double *p_output1,const double *var1,const double *var2);
 void dJ_RR_hip_u(double *p_output1,const double *var1,const double *var2);
 
+// Hip correction
+void FK_RR_hip2(double *p_output1,const double *var1);
+void FK_RL_hip2(double *p_output1,const double *var1);
+void FK_FR_hip2(double *p_output1,const double *var1);
+void FK_FL_hip2(double *p_output1,const double *var1);
+
+void J_RR_hip2(double *p_output1,const double *var1);
+void J_RL_hip2(double *p_output1,const double *var1);
+void J_FR_hip2(double *p_output1,const double *var1);
+void J_FL_hip2(double *p_output1,const double *var1);
+
+void dJ_RR_hip2(double *p_output1,const double *var1,const double *var2);
+void dJ_RL_hip2(double *p_output1,const double *var1,const double *var2);
+void dJ_FR_hip2(double *p_output1,const double *var1,const double *var2);
+void dJ_FL_hip2(double *p_output1,const double *var1,const double *var2);
+
+
 #endif
