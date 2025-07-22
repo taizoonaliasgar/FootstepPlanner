@@ -85,10 +85,10 @@ void RobotModel::updateJacobian(){
     kin.Jtoe.block<3,TOTAL_DOF>(9,0) = J4;
 
     // Hip jacobians
-    J_FR_hip2(J1.data(), state.q.data());
-    J_FL_hip2(J2.data(), state.q.data());
-    J_RR_hip2(J3.data(), state.q.data());
-    J_RL_hip2(J4.data(), state.q.data());
+    J_FR_hip(J1.data(), state.q.data());
+    J_FL_hip(J2.data(), state.q.data());
+    J_RR_hip(J3.data(), state.q.data());
+    J_RL_hip(J4.data(), state.q.data());
     kin.Jhip.block<3,TOTAL_DOF>(0,0) = J1;
     kin.Jhip.block<3,TOTAL_DOF>(3,0) = J2;
     kin.Jhip.block<3,TOTAL_DOF>(6,0) = J3;
@@ -110,10 +110,10 @@ void RobotModel::updateJacobianDot(){
     kin.dJtoe.block<3,1>(9,0) = dJ4;
 
     // Hip jaco dot
-    dJ_FR_hip2(dJ1.data(), state.q.data(), state.dq.data());
-    dJ_FL_hip2(dJ2.data(), state.q.data(), state.dq.data());
-    dJ_RR_hip2(dJ3.data(), state.q.data(), state.dq.data());
-    dJ_RL_hip2(dJ4.data(), state.q.data(), state.dq.data());
+    dJ_FR_hip(dJ1.data(), state.q.data(), state.dq.data());
+    dJ_FL_hip(dJ2.data(), state.q.data(), state.dq.data());
+    dJ_RR_hip(dJ3.data(), state.q.data(), state.dq.data());
+    dJ_RL_hip(dJ4.data(), state.q.data(), state.dq.data());
     kin.dJhip.block<3,1>(0,0) = dJ1;
     kin.dJhip.block<3,1>(3,0) = dJ2;
     kin.dJhip.block<3,1>(6,0) = dJ3;
@@ -134,10 +134,10 @@ void RobotModel::updateFwdKinematics(){
     kin.toePos.block<3,1>(0,RL_LEG) = p4;
 
     // Hip forward kinematics
-    FK_FR_hip2(p1.data(), state.q.data());
-    FK_FL_hip2(p2.data(), state.q.data());
-    FK_RR_hip2(p3.data(), state.q.data());
-    FK_RL_hip2(p4.data(), state.q.data());
+    FK_FR_hip(p1.data(), state.q.data());
+    FK_FL_hip(p2.data(), state.q.data());
+    FK_RR_hip(p3.data(), state.q.data());
+    FK_RL_hip(p4.data(), state.q.data());
     kin.hipPos.block<3,1>(0,FR_LEG) = p1;
     kin.hipPos.block<3,1>(0,FL_LEG) = p2;
     kin.hipPos.block<3,1>(0,RR_LEG) = p3;
