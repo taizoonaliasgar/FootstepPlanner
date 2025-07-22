@@ -736,14 +736,14 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         // dq_temp = {dq[3],dq[4],dq[5]};
 	    // toBody(&dq[3],dq_temp,R);
 
-        velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
-        Eigen::Vector3d fused = velocity_filter.getVelocity();
+        // velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
+        // Eigen::Vector3d fused = velocity_filter.getVelocity();
         
-        std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
-                                            << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
-        COM_vel_e[0] = fused(0);
-        COM_vel_e[1] = fused(1);
-        COM_vel_e[2] = fused(2);
+        // std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
+        //                                     << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
+        // COM_vel_e[0] = fused(0);
+        // COM_vel_e[1] = fused(1);
+        // COM_vel_e[2] = fused(2);
 
     }else{
         numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
