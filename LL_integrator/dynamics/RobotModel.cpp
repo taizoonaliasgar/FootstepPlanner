@@ -39,19 +39,19 @@ void RobotModel::updateState(const double q_in[18], const double dq_in[18], cons
     histInd = (++histInd) % HIST_LEN;
     state.comFiltered = comHist.rowwise().mean();
 
-    // if(upright){
-    //     updateDynamicsUp();
-    //     updateJacobianUp();
-    //     updateJacobianDotUp();
-    //     updateFwdKinematicsUp();
+    if(upright){
+        updateDynamicsUp();
+        updateJacobianUp();
+        updateJacobianDotUp();
+        updateFwdKinematicsUp();
 
-    // }else{
+    }else{
         // Update the dynamics, jacobians, and forward kinematics
         updateDynamics();
         updateJacobian();
         updateJacobianDot();
         updateFwdKinematics();
-    // }
+    }
     // if(upright){
     //     updateHip();
     // }

@@ -61,7 +61,7 @@ public:
     Eigen::Matrix<double, 12, 1> getStateEstimate(double jointPos[18], Eigen::VectorXd jointVelTotal, Eigen::Matrix<double, 3, 1> imu_eul, Eigen::Matrix<double, 3, 1> imu_omega);
 
     //Stitching together
-    void readytowalk(){LL->fullyupright();quad->fullyupright();};
+    void readytowalk(){quad->fullyupright();LL->fullyupright();};
     void setfinalCoM2(int settlesteps);
     void startwalking(){readytowalkf = true;LL->fullyupright();LL->enablehipposcntrl();};
     Eigen::Matrix<double, 12, 1> getpreviousQPforce(){return ll->QP_force;};

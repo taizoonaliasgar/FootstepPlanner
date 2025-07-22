@@ -708,10 +708,9 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
     int robotdown2=0;
 	
 	
-    // if(!robotdown){
-    if(ctrlTick>switchtime*1000-1){
+    if(!robotdown){
+    // if(ctrlTick>switchtime*1000-1){
             
-
         numContact = (contact[0]+contact[1])*robotdown2 + rearweight_est*(contact[2]+contact[3]);
         // Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
         // getthetadot(q,dq);
@@ -737,14 +736,14 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         // dq_temp = {dq[3],dq[4],dq[5]};
 	    // toBody(&dq[3],dq_temp,R);
 
-        // velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
-        // Eigen::Vector3d fused = velocity_filter.getVelocity();
+        velocity_filter.step(simcounter,acc_bFrame, R, COM_vel_e);
+        Eigen::Vector3d fused = velocity_filter.getVelocity();
         
-        // std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
-        //                                     << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
-        // COM_vel_e[0] = fused(0);
-        // COM_vel_e[1] = fused(1);
-        // COM_vel_e[2] = fused(2);
+        std::cout << simcounter << "\t" << dq[0] << "\t" << dq[1] << "\t" << dq[2] << "\t" << fused(0) << "\t" << fused(1) << "\t" << fused(2) << "\t"
+                                            << COM_vel_e[0] << "\t" << COM_vel_e[1] << "\t" << COM_vel_e[2] << std::endl;
+        COM_vel_e[0] = fused(0);
+        COM_vel_e[1] = fused(1);
+        COM_vel_e[2] = fused(2);
 
     }else{
         numContact = (contact[0]+contact[1])*robotdown + rearweight_est*(contact[2]+contact[3]);
@@ -863,7 +862,6 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     A1.back()->getBaseOrientation(rotMat);
 
     int robotdown = simcounter < switchtime*ctrlHz ? 1 : 0;
-    robotdown=1;
     
     if(!robotdown){
         Eigen::Matrix<double,3,3> rotIMU = Eigen::MatrixXd::Zero(3,3);
@@ -1202,9 +1200,9 @@ int main(int argc, char *argv[]) {
 	sleep(1.0);
 	loop_calc.start();
 
-    // // sleep(1.0);
-    // // loop_imu.start();
-    // // // loop_flush.start();
+    // sleep(1.0);
+    // loop_imu.start();
+    // // loop_flush.start();
 
     while(true)// (simIMU < 500000)
     {
