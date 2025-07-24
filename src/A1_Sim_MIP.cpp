@@ -298,7 +298,7 @@ void ExternalComm::setupRaisim(){
 
     auto& list = vis->getVisualObjectList();
     // std::vector<raisim::ArticulatedSystem*> A1;
-    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/A1_modified_new.urdf")));   // with NMPC and LL 
+    A1.push_back(world.addArticulatedSystem(raisim::loadResource("A1/Go2_modified_1.urdf")));   // with NMPC and LL 
     vis->createGraphicalObject(A1.back(), "A1");
     A1.back()->setName("A1_Robot");
     A1.back()->setGeneralizedCoordinate({0, 0, 0.12, 1 , 0, 0, 0,-0.2, Pi/3, -2.6, 0.2, Pi/3, -2.6, -0, Pi/3, -2.6, 0, Pi/3, -2.6});

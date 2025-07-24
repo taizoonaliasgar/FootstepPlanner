@@ -93,14 +93,24 @@ target_include_directories(dyn_lib_o PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/util_include
     ${CMAKE_CURRENT_SOURCE_DIR}/global_include)
 
+# set(dyn_srcs_full 
+#     "${LL_DIR}/dynamics/A1/A1_Dynamics_z_full.cpp"
+#     "${LL_DIR}/dynamics/RobotModel.cpp")
 set(dyn_srcs_full 
-    "${LL_DIR}/dynamics/A1/A1_Dynamics_z_full.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2_DBG.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2_FK.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2_J.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2_dJ.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2Upright_DBG.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2Upright_FK.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2Upright_J.cpp"
+    "${LL_DIR}/dynamics/Go2/Go2Upright_dJ.cpp"
     "${LL_DIR}/dynamics/RobotModel.cpp")
     
 add_library(dyn_lib_full ${dyn_srcs_full})
 target_include_directories(dyn_lib_full PUBLIC
     ${LL_DIR}/dynamics
-    ${LL_DIR}/dynamics/A1
+    ${LL_DIR}/dynamics/Go2
     #${LL_DIR}/dynamics/${ROBOT_DIR}
     #${LL_DIR}/util_include
     #${LL_DIR}/global_include

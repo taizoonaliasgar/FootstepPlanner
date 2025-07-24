@@ -27,7 +27,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="dae/trunk.dae" />
+          filename="dae/base.dae" />
       </geometry>
       <material
         name="">
@@ -118,6 +118,14 @@ Stephen Brawner (brawner@gmail.com)
     <axis
       xyz="0 0 0" />
   </joint> -->
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="trunk"/>
+    <child link="imu_parent"/>
+    <origin xyz="0 0 0.1" rpy="0 1.57079632679 0"/>
+  </joint>
+  
+  <link name="imu_parent" sensor="realsense435.xml" serial_number="12345678"/>
   
   <link
     name="FR_hip">
