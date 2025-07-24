@@ -1,4 +1,4 @@
-#include "Go2_fulldynamics.h"
+#include "A1_Dynamics_full.h"
 
 void FK_FL_toe_u(double *p_output1,const double *var1){
 

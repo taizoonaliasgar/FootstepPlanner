@@ -1,4 +1,4 @@
-#include "Go2_fulldynamics.h"
+#include "A1_Dynamics_full.h"
 
 void J_FR_hip(double *p_output1,const double *var1){
  

@@ -1,3 +1,5 @@
+#include "A1_Dynamics_full.h"
+
 void D_mat_u(double *p_output1,const double *var1){
 
   double t111;
