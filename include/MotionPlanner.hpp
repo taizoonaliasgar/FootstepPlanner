@@ -58,6 +58,8 @@ public:
     //Correcting knee
     void shiftCoMk(ContactEst *con_obj, int wallstep, double phase, size_t shifttime, bool maxsteps);
     void movefootk(size_t movetime, size_t wallsteps, bool maxsteps);
+    //Set x pose
+    void setfixedx(double x_fixed_){x_fixed = x_fixed_;};
 
 protected:
     inline void setStepLen(double x, double y, double z){
@@ -93,6 +95,7 @@ private:
     double p0 = 0;
     double minpitch = -1.2;
     double rearfoot_x = 0;
+    double x_fixed = 0.0;
     
 };
 
