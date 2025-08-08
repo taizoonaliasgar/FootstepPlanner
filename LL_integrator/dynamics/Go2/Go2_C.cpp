@@ -1,4 +1,4 @@
-#include "Go2_Dynamics.h"
+#include "Go2_fulldynamics.h"
 
 void C_vec(double *p_output1,const double *var1,const double *var2)
 {

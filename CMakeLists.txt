@@ -105,11 +105,11 @@ set(dyn_srcs_full
     "${LL_DIR}/dynamics/Go2/Go2Upright_FK.cpp"
     "${LL_DIR}/dynamics/Go2/Go2Upright_J.cpp"
     "${LL_DIR}/dynamics/Go2/Go2Upright_dJ.cpp"
-    "${LL_DIR}/dynamics/RobotModel.cpp")
+    "${LL_DIR}/dynamics/Go2/RobotModel.cpp")
     
 add_library(dyn_lib_full ${dyn_srcs_full})
 target_include_directories(dyn_lib_full PUBLIC
-    ${LL_DIR}/dynamics
+    # ${LL_DIR}/dynamics
     ${LL_DIR}/dynamics/Go2
     #${LL_DIR}/dynamics/${ROBOT_DIR}
     #${LL_DIR}/util_include

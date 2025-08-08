@@ -1,5 +1,4 @@
-#include "Go2_Dynamics.h"
-
+#include "Go2_fulldynamics.h"
 
 //Dynamics
 void D_mat(double *p_output1,const double *var1)

@@ -23,7 +23,8 @@
 //HDSRL header
 #include "LocoWrapper.hpp"
 #include "SRBNMPC.hpp"
-#include "A1_Dynamics_full.h"
+// #include "A1_Dynamics_full.h"
+#include "Go2_fulldynamics.h"
 
 #include "shared_structs_ex2.hpp"
 #include "Transforms.hpp"
