@@ -229,11 +229,14 @@ public:
     // ChannelPublisherPtr<unitree_go::msg::dds_::LowCmd_> lowcmd_publisher;
     // ChannelSubscriberPtr<unitree_go::msg::dds_::LowState_> lowstate_subscriber;
     /*LowCmd write thread*/
-    ThreadPtr lowCmdWriteThreadPtr;
+    // ThreadPtr lowCmdWriteThreadPtr;
+    ThreadPtr simThreadPtr;
+    ThreadPtr mpcThreadPtr;
+    ThreadPtr calcThreadPtr;
 	// MotionSwitcherClient msc;
 
-    float LLdt = 1.0f;
-    float HLdt = 10.0f;
+    float LLdt = 0.001f;
+    float HLdt = 0.01f;
     long simcounter = 0;
     size_t settling = 0.2*ctrlHz;                   // Settling down
     size_t duration = 1.8*ctrlHz;                   // Stand up 
@@ -323,7 +326,7 @@ void ExternalComm::setupRaisim(){
 	
     raisim::World::setActivationKey(raisim::loadResource("activation.raisim"));
     world.setTimeStep(simfreq_raisim);
-    std::cout << "Raisim world time step: " << std::endl;
+    // std::cout << "Raisim world time step: " << std::endl;
 
     /// these method must be called before initApp
     vis->setWorld(&world);
@@ -373,7 +376,7 @@ void ExternalComm::setupRaisim(){
 
     box_right->setPosition(0,-0.32,0.4);
     box_left->setPosition(0,0.32,0.4);
-    std::cout << "Box right position: " << box_right->getPosition() << std::endl;
+    // std::cout << "Box right position: " << box_right->getPosition() << std::endl;
 
     // vis->createGraphicalObject(box_right, "right_wall", "checkerboard_blue");
     vis->createGraphicalObject(box_left, "left_wall", "checkerboard_blue");
@@ -428,7 +431,7 @@ void ExternalComm::setupRaisim(){
     calfIdx[2] = A1.back()->getBodyIdx("RR_thigh");
     calfIdx[3] = A1.back()->getBodyIdx("RL_thigh");
     // jointFR = A1.back()->getJoint("FR_calf_joint");
-    std::cout << "Exit setupRaisim" << std::endl;
+    // std::cout << "Exit setupRaisim" << std::endl;
 }
 
 void ExternalComm::setupCallback() {
@@ -568,10 +571,10 @@ void ExternalComm::plotGRFs(std::map<std::string, raisim::VisualObject>* list, E
 
 void ExternalComm::HighLevel(){
 
-    std::cout << "Inhighlevel" << std::endl;
+    // std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -589,7 +592,7 @@ void ExternalComm::HighLevel(){
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         // std::cout << duration.count() << "\t" << "Full high level time" << std::endl;
     }
-    std::cout << "Exitinghighlevel" << std::endl;
+    // std::cout << "Exitinghighlevel" << std::endl;
     
     
         
@@ -597,7 +600,7 @@ void ExternalComm::HighLevel(){
 
 void ExternalComm::Calc(){
 
-    std::cout << "Inlowlevel" << std::endl;
+    // std::cout << "Inlowlevel" << std::endl;
 
     updateData(GET_DATA, LL_DATA, &LLData);
 
@@ -627,7 +630,7 @@ void ExternalComm::Calc(){
 
     updateData(SET_DATA, LL_DATA, &LLData);
     loco_obj->settoe_prev();
-    std::cout << "Exitinglowlevel" << std::endl;
+    // std::cout << "Exitinglowlevel" << std::endl;
     
 }
 
@@ -859,7 +862,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 
 void ExternalComm::SimExec(){//(std::ofstream &file_est){
  
-    std::cout << "InSimExec" << std::endl;
+    // std::cout << "InSimExec" << std::endl;
     if (setup_raisim){
         setupRaisim();
         setup_raisim = false; 
@@ -1078,7 +1081,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
 
 	// Set Updated data for MPC/LL
 	updateData(SET_DATA, SIM_DATA, &SimData);  
-    std::cout << "SimExec done" << std::endl;
+    // std::cout << "SimExec done" << std::endl;
     
 }
 
@@ -1365,38 +1368,38 @@ int main(int argc, char *argv[]) {
 	// loop_calc.start();
     // extComm.Init();
 
-    // extComm.looper(extComm.lowCmdWriteThreadPtr,  "sim_loop",  extComm.LLdt, 3, std::bind(&ExternalComm::SimExec, &extComm));
-    // // sleep(1.0);
-    // extComm.looper(extComm.lowCmdWriteThreadPtr,  "mpc_loop",  0.010001f,    1, std::bind(&ExternalComm::HighLevel, &extComm));
-    // // sleep(1.0);
-    // extComm.looper(extComm.lowCmdWriteThreadPtr, "calc_loop", extComm.LLdt, 2, std::bind(&ExternalComm::Calc, &extComm));
-    
-    // sleep(1.0);
+    extComm.looper(extComm.simThreadPtr,  "sim_loop",  1.00f, 3, std::bind(&ExternalComm::SimExec, &extComm));
+    sleep(1.0);
+    extComm.looper(extComm.mpcThreadPtr,  "mpc_loop",  10.00f, 1, std::bind(&ExternalComm::HighLevel, &extComm));
+    sleep(1.0);
+    extComm.looper(extComm.calcThreadPtr, "calc_loop", 1.00f, 2, std::bind(&ExternalComm::Calc, &extComm));
+    sleep(1.0);
+
     // loop_imu.start();
     // // loop_flush.start();
 
-    // while(true)// (simIMU < 500000)
-    // {
-    //     sleep(0.1);
-    //     // extComm.getIMUread2();
-    //     // simIMU++;
-    // }
+    while(true)// (simIMU < 500000)
+    {
+        sleep(0.1);
+        // extComm.getIMUread2();
+        // simIMU++;
+    }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    while (true)
-	{
+    // while (true)
+	// {
 			
-        // sleep(0.1);
-        // extComm.getIMUread();
-        extComm.SimExec();//(file_est);
-        // std::cout << "SimExec" << std::endl;
-        extComm.HighLevel();
-        // std::cout << "HighLevel" << std::endl;
-        extComm.Calc();
-        // std::cout << "Calc" << std::endl;
-        // sim_setup = false;
+    //     // sleep(0.1);
+    //     // extComm.getIMUread();
+    //     extComm.SimExec();//(file_est);
+    //     // std::cout << "SimExec" << std::endl;
+    //     extComm.HighLevel();
+    //     // std::cout << "HighLevel" << std::endl;
+    //     extComm.Calc();
+    //     // std::cout << "Calc" << std::endl;
+    //     // sim_setup = false;
 
-	} 
+	// } 
 
     // file_est.close();
 
