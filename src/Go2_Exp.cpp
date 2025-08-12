@@ -23,7 +23,8 @@
 //Planner
 #include "LocoWrapper.hpp"
 #include "SRBNMPC.hpp"
-#include "A1_Dynamics_full.h"
+// #include "A1_Dynamics_full.h"
+#include "Go2_fulldynamics.h"
 #include "shared_structs_ex2.hpp"
 //IMU Sensor
 #include "mip/mip_all.hpp"
@@ -32,7 +33,7 @@
 #include "fusedVelocityEstimate.hpp"
 
 #include <chrono>
-#include <thread>
+// #include <thread>
 #include <memory>
 
 #include <unitree/robot/channel/channel_publisher.hpp>
@@ -41,6 +42,8 @@
 #include <unitree/idl/go2/LowCmd_.hpp>
 #include <unitree/common/time/time_tool.hpp>
 #include <unitree/common/thread/thread.hpp>
+
+#include <unitree/idl/ros2/String_.hpp>
 
 #include <unitree/robot/b2/motion_switcher/motion_switcher_client.hpp>
 #include "gamepad.hpp"
@@ -52,6 +55,7 @@ using namespace unitree::robot::b2;
 
 #define TOPIC_LOWCMD "rt/lowcmd"
 #define TOPIC_LOWSTATE "rt/lowstate"
+#define TOPIC_LIDAR "rt/utlidar/switch"
 
 // using namespace UNITREE_LEGGED_SDK;
 constexpr double PosStopF = (2.146E+9f);
@@ -107,7 +111,7 @@ private:
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
-		ExternalComm() : velocity_filter(0.005, 0.01, 0.1){//udpComp(LOWLEVEL), 
+		ExternalComm() : velocity_filter(0.005, 0.0001, 0.01){//udpComp(LOWLEVEL), 
 
             fid = fopen("/home/taizoon/raisimEnv/Workspace/FootstepPlanner/stateData_1.csv", "w");
             
@@ -181,9 +185,7 @@ public:
     void LowStateMessageHandler(const void* messages);
     void LowCmdWrite();
 	int queryMotionStatus();
-	void loop_calc(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func);
-    void loop_mpc(ThreadPtr& thread, std::string name, float HLdt, int cpu_id, std::function<void()> func);
-    void loop_imu(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func);
+	void looper(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func);
 	std::string queryServiceName(std::string form,std::string name);
 
 	void connectIMU();
@@ -205,6 +207,7 @@ public:
 	double q[18] = {0.0};
 	double dq[18] = {0.0};
 	double tauEst[12] = {0.0};
+    double motorTemp[12] = {0.0};
 
 	FiltStruct_d* jointfilter  = (FilterStructure_d*)malloc(sizeof(FilterStructure_d));
 	FiltStruct_f* angfilter    = (FilterStructure_f*)malloc(sizeof(FilterStructure_f));
@@ -217,11 +220,15 @@ public:
 
     unitree_go::msg::dds_::LowCmd_ low_cmd{};      // default init
     unitree_go::msg::dds_::LowState_ low_state{};  // default init
+    std_msgs::msg::dds_::String_ lidar_switch_msg;
     /*publisher subscriber*/
     ChannelPublisherPtr<unitree_go::msg::dds_::LowCmd_> lowcmd_publisher;
     ChannelSubscriberPtr<unitree_go::msg::dds_::LowState_> lowstate_subscriber;
+    ChannelPublisherPtr<std_msgs::msg::dds_::String_> lidar_switch_pub;
     /*LowCmd write thread*/
-    ThreadPtr lowCmdWriteThreadPtr;
+    ThreadPtr imuThreadPtr;
+    ThreadPtr mpcThreadPtr;
+    ThreadPtr calcThreadPtr;
 	MotionSwitcherClient msc;
 
 	int stop = 0;
@@ -254,8 +261,8 @@ public:
     int rearweight_est = 4;
     double yzdot_thresh = 0.3;
     double xdot_thresh = 0.3;
-    double yzdot_thresh2 = 0.8;
-    double xdot_thresh2 = 0.5;
+    double yzdot_thresh2 = 0.35;
+    double xdot_thresh2 = 0.4;
 
 	// Eigen::Matrix<double,3,1> eigen_eul = Eigen::MatrixXd::Zero(3,1);
 	
@@ -322,6 +329,12 @@ void ExternalComm::Init(){
     /*create subscriber*/
     lowstate_subscriber.reset(new ChannelSubscriber<unitree_go::msg::dds_::LowState_>(TOPIC_LOWSTATE));
     lowstate_subscriber->InitChannel(std::bind(&ExternalComm::LowStateMessageHandler, this, std::placeholders::_1), 1);
+
+    /*LIDAR publisher*/
+    lidar_switch_pub.reset(new ChannelPublisher<std_msgs::msg::dds_::String_>(TOPIC_LIDAR));
+    lidar_switch_pub->InitChannel();
+    lidar_switch_msg.data() = "OFF";  // turn OFF LIDAR
+    lidar_switch_pub->Write(lidar_switch_msg);
 
 	/*init MotionSwitcherClient*/
     msc.SetTimeout(10.0f); 
@@ -402,23 +415,12 @@ std::string ExternalComm::queryServiceName(std::string form,std::string name){
     return "";
 }
 
-void ExternalComm::loop_calc(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func){
+void ExternalComm::looper(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func){
 	/*loop publishing thread*/
     thread = CreateRecurrentThreadEx(name, cpu_id, 1000*LLdt, func);
 	
 }
 
-void ExternalComm::loop_mpc(ThreadPtr& thread, std::string name, float HLdt, int cpu_id, std::function<void()> func){
-	/*loop publishing thread*/
-    thread = CreateRecurrentThreadEx(name, cpu_id, 1000*HLdt, func);
-	
-}
-
-void ExternalComm::loop_imu(ThreadPtr& thread, std::string name, float LLdt, int cpu_id, std::function<void()> func){
-	/*loop publishing thread*/
-    thread = CreateRecurrentThreadEx(name, cpu_id, 1000*LLdt, func);
-	
-}
 
                                        
 void ExternalComm::kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R){
@@ -571,9 +573,9 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
-		// if(ctrlTick > 33999){
+		if(ctrlTick > 29999){
 			velocity_filter.stepExp(acc_wFrame, COM_vel_e,ctrlTick);
-		// }
+		}
 
     }else{
         Eigen::Matrix<double,3,1> dq_temp = {dq[3],dq[4],dq[5]};
@@ -610,7 +612,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 void ExternalComm::HighLevel(){
 
     updateDataExp(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+1999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -642,14 +644,18 @@ void ExternalComm::Calc(){
 	// ============== Wireless Remote Stuff  =============== //
 	// ===================================================== //
     memcpy(&remote, low_state.wireless_remote().data(), 40);
-	if((int)remote.btn.components.L2!=0){
-        if((int)remote.btn.components.B!=0){stop = 1;}
-
-        if((int)remote.btn.components.A!=0){softFall = true;}
+	if((int)remote.btn.components.B!=0 && (int)remote.btn.components.L2!=0){
+		stop = 1;
+		low_cmd.reserve() = 0;
+	}
+	if((int)remote.btn.components.A!=0 && (int)remote.btn.components.L2!=0){
+		softFall = true;
+		// soft_fall_both = true;
 	}
 	if( ((int)remote.btn.components.A!=0) && ((int)remote.btn.components.L2 == 0) ){
-		// std::cout << "A is pressed!" <<std::endl;
-		beginCommand = 1;	
+		beginCommand = 1;
+		low_cmd.reserve() = 1;
+		// start_both = true;
 	}
 	// std::cout << "Setting up first command \n";
 	vel[0] = 0.75f*remote.ly; // x vel
@@ -669,7 +675,8 @@ void ExternalComm::Calc(){
 	for (int i=0; i<12; ++i){
 		q[i+6] = low_state.motor_state()[i].q();
 		dq[i+6] = low_state.motor_state()[i].dq();
-		// tauEst[i] = low_state.motor_state()[i].tauEst;
+        tauEst[i] = low_state.motor_state()[i].tau_est();
+		motorTemp[i] = low_state.motor_state()[i].temperature();
 	}
 	discrete_butter_d(jointfilter,&dq[6]);
 
@@ -686,10 +693,14 @@ void ExternalComm::Calc(){
 
 	// csvFile << motiontime << "," << state.imu.rpy[0] << "," << state.imu.rpy[1] << "," << state.imu.rpy[2] << ","
 	// 		  	<< LLData.att_euler[0] << "," << LLData.att_euler[1] << "," << LLData.att_euler[2] << "\n";
-	// csvFile << motiontime << "," << tauEst[0] << "," << tauEst[1] << "," << tauEst[2] << ","
-	// 								<< tauEst[3] << "," << tauEst[4] << "," << tauEst[5] << ","
-	// 									<< tauEst[6] << "," << tauEst[7] << "," << tauEst[8] << ","
-	// 										<< tauEst[9] << "," << tauEst[10] << "," << tauEst[11] << "\n";
+	csvFile << motiontime << "," << tauEst[0] << "," << tauEst[1] << "," << tauEst[2] << ","
+									<< tauEst[3] << "," << tauEst[4] << "," << tauEst[5] << ","
+										<< tauEst[6] << "," << tauEst[7] << "," << tauEst[8] << ","
+											<< tauEst[9] << "," << tauEst[10] << "," << tauEst[11] << ","
+                                            << motorTemp[0] << "," << motorTemp[1] << "," << motorTemp[2] << ","
+											<< motorTemp[3] << "," << motorTemp[4] << "," << motorTemp[5] << ","
+											<< motorTemp[6] << "," << motorTemp[7] << "," << motorTemp[8] << ","
+											<< motorTemp[9] << "," << motorTemp[10] << "," << motorTemp[11] << "\n";
 
 	// quat_to_XYZ(state.imu.quaternion[0],state.imu.quaternion[1],state.imu.quaternion[2],state.imu.quaternion[3],
 	//             q[3],q[4],q[5]);
@@ -721,7 +732,10 @@ void ExternalComm::Calc(){
         kinestimatorrr(q,dq,LLData.ind_LL,rotE);
     }
 
-
+    if(motiontime>=35000){
+		q[2]=0.5;
+		// dq[2]=0.0;
+	}
 	// std::cout << "[LL] Motiontime: " << motiontime << std::endl;
 	// ===================================================== //
 	// ============= Quad Initialization Time ============== //
@@ -745,7 +759,7 @@ void ExternalComm::Calc(){
     // Update the desired torques
     if(motiontime >= settling){ // Settle down
         // LLData.runMPC = 1;
-		if (beginCommand & !softFall){
+		if (beginCommand && !softFall){
 			if (setup){
 				loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
 				setup = false;
@@ -783,18 +797,19 @@ void ExternalComm::Calc(){
 				low_cmd.motor_cmd()[i].dq() = loco_obj->ll->dq(i + 6);
 
 				low_cmd.motor_cmd()[i].kp() = 10;
-				low_cmd.motor_cmd()[i].kd() = 8;
+				low_cmd.motor_cmd()[i].kd() = 4;
 				if(beginPose==true){
 					for(int i=0; i<4; ++i){
-						if(contactIndex[i]==0){
+						if(LLData.ind_LL[i]==0){
 			//							cmd.motorCmd[i].tau = 0;
-							low_cmd.motor_cmd()[3*i].kp() = 20;
-							low_cmd.motor_cmd()[3*i+1].kp() = 20;
-							low_cmd.motor_cmd()[3*i+2].kp() = 20;
+							low_cmd.motor_cmd()[3*i].kp() = 12;
+							low_cmd.motor_cmd()[3*i+1].kp() = 12;
+							low_cmd.motor_cmd()[3*i+2].kp() = 12;
 
 							low_cmd.motor_cmd()[3*i].kd() = 1;
 							low_cmd.motor_cmd()[3*i+1].kd() = 1;
 							low_cmd.motor_cmd()[3*i+2].kd() = 1;
+                            if(i>1){low_cmd.motor_cmd()[3*i].kp() = 20;}
 						}
 					}	
 				}
@@ -810,7 +825,7 @@ void ExternalComm::Calc(){
 			// }
 
             // Saturate the command
-			float hr_max = 20.0f, hr_min = -20.0f;
+			float hr_max = 30.0f, hr_min = -30.0f;
 			float hp_max = 30.0f, hp_min = -30.0f;
 			float kn_max = 33.0f, kn_min = -33.0f;
 			for (int i = 0; i < 4; i++){
@@ -1055,7 +1070,7 @@ int main(int argc, char *argv[]) {
         exit(-1); 
     }
 
-	ChannelFactory::Instance()->Init(0, argv[1]);
+	ChannelFactory::Instance()->Init(0, argv[3]);
     ExternalComm extComm;
     
 	extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
@@ -1068,10 +1083,12 @@ int main(int argc, char *argv[]) {
 
     extComm.Init();
 
-    extComm.loop_calc(extComm.lowCmdWriteThreadPtr, "calc_loop", extComm.LLdt, 0, std::bind(&ExternalComm::Calc, &extComm));
-    extComm.loop_mpc(extComm.lowCmdWriteThreadPtr,  "mpc_loop",  0.010001f,    2, std::bind(&ExternalComm::HighLevel, &extComm));
-    extComm.loop_imu(extComm.lowCmdWriteThreadPtr,  "imu_loop",  extComm.LLdt, 4, std::bind(&ExternalComm::getIMMUdata, &extComm));
-    // extComm.udpComp.InitCmdData(extComm.cmd);
+    extComm.imuThreadPtr = CreateRecurrentThreadEx("imu_loop",   4, 1000,  &ExternalComm::getIMMUdata, &extComm);
+    // sleep(1.0);
+    extComm.mpcThreadPtr = CreateRecurrentThreadEx("mpc_loop",   2, 10000, &ExternalComm::HighLevel,   &extComm);
+    // sleep(1.0);
+    extComm.calcThreadPtr = CreateRecurrentThreadEx("calc_loop", 1, 1000,  &ExternalComm::Calc,        &extComm);
+    // sleep(1.0);
 	
 
     while ( (extComm.stop==0) ){
