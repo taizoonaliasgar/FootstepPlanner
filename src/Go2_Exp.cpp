@@ -802,13 +802,24 @@ void ExternalComm::Calc(){
 					for(int i=0; i<4; ++i){
 						if(LLData.ind_LL[i]==0){
 			//							cmd.motorCmd[i].tau = 0;
-							low_cmd.motor_cmd()[3*i].kp() = 7;
-							low_cmd.motor_cmd()[3*i+1].kp() = 7;
-							low_cmd.motor_cmd()[3*i+2].kp() = 7;
+                            if(i<2){
+							    low_cmd.motor_cmd()[3*i].kp() = 2;
+							    low_cmd.motor_cmd()[3*i+1].kp() = 2;
+							    low_cmd.motor_cmd()[3*i+2].kp() = 2;
 
-							low_cmd.motor_cmd()[3*i].kd() = 0.05;
-							low_cmd.motor_cmd()[3*i+1].kd() = 0.05;
-							low_cmd.motor_cmd()[3*i+2].kd() = 0.05;
+							    low_cmd.motor_cmd()[3*i].kd() = 0.05;
+							    low_cmd.motor_cmd()[3*i+1].kd() = 0.05;
+							    low_cmd.motor_cmd()[3*i+2].kd() = 0.05;
+                            }else{
+                                low_cmd.motor_cmd()[3*i].kp() = 2;
+							    low_cmd.motor_cmd()[3*i+1].kp() = 2;
+							    low_cmd.motor_cmd()[3*i+2].kp() = 2;
+
+							    low_cmd.motor_cmd()[3*i].kd() = 0.05;
+							    low_cmd.motor_cmd()[3*i+1].kd() = 0.05;
+							    low_cmd.motor_cmd()[3*i+2].kd() = 0.05;
+
+                            }
                             // if(i>1){low_cmd.motor_cmd()[3*i].kp() = 20;}
 						}
 					}	
