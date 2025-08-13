@@ -1398,7 +1398,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     // if(controlTick == 32000){letsgo();}
-    controlMPC_MT = std::floor(controlTick/10); 
+    controlMPC_MT = std::floor((controlTick-21989)/10); 
     if(controlMPC_MT == 3500){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
@@ -1485,7 +1485,7 @@ int* SRBNMPC::returnConInd(size_t controlTick){
 }
 
 int* SRBNMPC::returnConInd30(size_t controlTick){
-    int controlMPC = std::floor(controlTick/10);
+    int controlMPC = std::floor((controlTick-21989)/10);
     static int conInd[5] = {0,0,0,0,0};
     
     int conmark = controlMPC%60;

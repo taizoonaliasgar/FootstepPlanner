@@ -62,7 +62,7 @@ public:
         //                 << a_world2(0) << "\t" << a_world2(1) << "\t" << a_world2(2) << std::endl;
     }
 
-     void stepExp(const Eigen::Vector3d& accel_scaled, double raw_velocity[3], size_t ctrlTick) {
+     void stepExp(Eigen::Vector3d& accel_scaled, double raw_velocity[3], size_t ctrlTick) {
         
         Eigen::Vector3d raw_velocity_estimate = Eigen::Vector3d::Zero(); // Placeholder for raw velocity estimate
         raw_velocity_estimate(0) = raw_velocity[0]; // Replace with actual raw velocity estimate
@@ -76,9 +76,9 @@ public:
         // Remove gravity (assuming Z-up)
         // Eigen::Vector3d a_corrected = accel_scaled;
 
-        // a_corrected(0) = a_corrected(0) > xddot_thresh ? xddot_thresh : (a_corrected(0) < -xddot_thresh ? -xddot_thresh : a_corrected(0)); 
-        // a_corrected(1) = a_corrected(1) > yddot_thresh ? yddot_thresh : (a_corrected(1) < -yddot_thresh ? -yddot_thresh : a_corrected(1));
-        // a_corrected(2) = a_corrected(2) > zddot_thresh ? zddot_thresh : (a_corrected(2) < -zddot_thresh ? -zddot_thresh : a_corrected(2)); 
+        accel_scaled(0) = accel_scaled(0) > xddot_thresh ? xddot_thresh : (accel_scaled(0) < -xddot_thresh ? -xddot_thresh : accel_scaled(0)); 
+        accel_scaled(1) = accel_scaled(1) > yddot_thresh ? yddot_thresh : (accel_scaled(1) < -yddot_thresh ? -yddot_thresh : accel_scaled(1));
+        accel_scaled(2) = accel_scaled(2) > zddot_thresh ? zddot_thresh : (accel_scaled(2) < -zddot_thresh ? -zddot_thresh : accel_scaled(2)); 
 
         // Prediction
         x = A * x + B * accel_scaled;
