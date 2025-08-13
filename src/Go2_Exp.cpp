@@ -809,7 +809,7 @@ void ExternalComm::Calc(){
 							low_cmd.motor_cmd()[3*i].kd() = 0.05;
 							low_cmd.motor_cmd()[3*i+1].kd() = 0.05;
 							low_cmd.motor_cmd()[3*i+2].kd() = 0.05;
-                            if(i>1){low_cmd.motor_cmd()[3*i].kp() = 20;}
+                            // if(i>1){low_cmd.motor_cmd()[3*i].kp() = 20;}
 						}
 					}	
 				}
