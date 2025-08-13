@@ -323,7 +323,7 @@ void LocoWrapper::getshiftedCoM(Eigen::Matrix<double, 4, 1> footweight){
     // y_new = newCoM(1);
     // z_new = newCoM(2);
     CoMnew.block(0,0,2,1) = CoMnew.block(0,0,2,1)/footweight.sum();
-    CoMnew(2)=0.25;//CoMnew(2);
+    CoMnew(2)=0.28;//CoMnew(2);
     if(wallstep<1){
         CoMnew(3)= -(std::floor(wallstep/2)+1)*0.15;
     }else{
