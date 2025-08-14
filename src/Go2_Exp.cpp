@@ -644,7 +644,8 @@ void ExternalComm::Calc(){
 	// ============== Wireless Remote Stuff  =============== //
 	// ===================================================== //
     memcpy(&remote, low_state.wireless_remote().data(), 40);
-	if((int)remote.btn.components.B!=0 && (int)remote.btn.components.L2!=0){
+	// if((int)remote.btn.components.B!=0 && (int)remote.btn.components.L2!=0){
+    if((int)remote.btn.components.R2!=0){
 		stop = 1;
 		low_cmd.reserve() = 0;
 	}
