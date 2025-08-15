@@ -531,11 +531,11 @@ void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,5,1> NLstep, double vdes, 
     // traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
     // traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
     if(phase<0.3){
-        traj.FRstepLen(0) =  NLstep(0);  
-        traj.FLstepLen(0) =  NLstep(1); 
+        traj.FRstepLen(0) =  NLstep(4);  
+        traj.FLstepLen(0) =  NLstep(4); 
     }else{
-        traj.RLstepLen(0) =  NLstep(3); 
-        traj.RRstepLen(0) =  NLstep(2);  
+        traj.RLstepLen(0) =  NLstep(4); 
+        traj.RRstepLen(0) =  NLstep(4);  
     }                                
                                     
 }
