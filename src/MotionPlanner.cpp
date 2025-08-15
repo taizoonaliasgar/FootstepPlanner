@@ -416,11 +416,11 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // traj.comDes(0) = xnew;
         // traj.comDes(1) = 0;
         traj.comDes(2) = 0.5;//params->standHeight;
-        if(ctrlTick>=100000){
+        if(ctrlTick>=40000){
             traj.comDes.block(0,0,2,1) << state->q.block(0,0,2,1) + opt_HLstate.block(3,0,2,1)*dt;
             traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
             traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
-            traj.comDes.block(9,0,3,1) = opt_HLstate.block(9,0,3,1);
+            traj.comDes.block(9,0,3,1) = 0*opt_HLstate.block(9,0,3,1);
         }else{
             traj.comDes.block(0,0,2,1) = state->q.block(0,0,2,1);//state->q(0);// + opt_HLstate.block(3,0,3,1)*dt;
             // traj.comDes(1) = 0; //state->q.block(0,0,2,1);// + opt_HLstate.block(3,0,3,1)*dt;
@@ -428,8 +428,8 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
             traj.comDes.block(6,0,3,1) = Eigen::MatrixXd::Zero(3,1);//opt_HLstate.block(6,0,3,1);
             traj.comDes.block(9,0,3,1) = Eigen::MatrixXd::Zero(3,1);//opt_HLstate.block(9,0,3,1);
             traj.comDes(7) = 0.35;
-        }
-        if(ctrlTick>=34000){ 
+        // }
+        // if(ctrlTick>=34000){ 
             traj.comDes(0)=x_fixed;
             traj.comDes(1)=0.0;
         }
@@ -531,11 +531,11 @@ void MotionPlanner::setStep_NMPC(Eigen::Matrix<double,5,1> NLstep, double vdes, 
     // traj.FLstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0); 
     // traj.RRstepLen = 4*vdes*0.2/2 + 2*stepLenTemp;//(0);
     if(phase<0.3){
-        traj.FRstepLen(0) =  NLstep(4);  
-        traj.FLstepLen(0) =  NLstep(4); 
+        traj.FRstepLen(0) =  NLstep(0);  
+        traj.FLstepLen(0) =  NLstep(1); 
     }else{
-        traj.RLstepLen(0) =  NLstep(4); 
-        traj.RRstepLen(0) =  NLstep(4);  
+        traj.RLstepLen(0) =  NLstep(3); 
+        traj.RRstepLen(0) =  NLstep(2);  
     }                                
                                     
 }
