@@ -574,7 +574,7 @@ void ExternalComm::HighLevel(){
     // std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+2999 && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -1368,38 +1368,38 @@ int main(int argc, char *argv[]) {
 	// loop_calc.start();
     // extComm.Init();
 
-    extComm.looper(extComm.simThreadPtr,  "sim_loop",  1.00f, 3, std::bind(&ExternalComm::SimExec, &extComm));
-    sleep(1.0);
-    extComm.looper(extComm.mpcThreadPtr,  "mpc_loop",  10.00f, 1, std::bind(&ExternalComm::HighLevel, &extComm));
-    sleep(1.0);
-    extComm.looper(extComm.calcThreadPtr, "calc_loop", 1.00f, 2, std::bind(&ExternalComm::Calc, &extComm));
-    sleep(1.0);
+    // extComm.looper(extComm.simThreadPtr,  "sim_loop",  1.00f, 3, std::bind(&ExternalComm::SimExec, &extComm));
+    // sleep(1.0);
+    // extComm.looper(extComm.mpcThreadPtr,  "mpc_loop",  10.00f, 1, std::bind(&ExternalComm::HighLevel, &extComm));
+    // sleep(1.0);
+    // extComm.looper(extComm.calcThreadPtr, "calc_loop", 1.00f, 2, std::bind(&ExternalComm::Calc, &extComm));
+    // sleep(1.0);
 
     // loop_imu.start();
     // // loop_flush.start();
 
-    while(true)// (simIMU < 500000)
-    {
-        sleep(0.1);
-        // extComm.getIMUread2();
-        // simIMU++;
-    }
+    // while(true)// (simIMU < 500000)
+    // {
+    //     sleep(0.1);
+    //     // extComm.getIMUread2();
+    //     // simIMU++;
+    // }
     
     // std::ofstream file_est("../data25/estimatorMT13.csv");
-    // while (true)
-	// {
+    while (true)
+	{
 			
-    //     // sleep(0.1);
-    //     // extComm.getIMUread();
-    //     extComm.SimExec();//(file_est);
-    //     // std::cout << "SimExec" << std::endl;
-    //     extComm.HighLevel();
-    //     // std::cout << "HighLevel" << std::endl;
-    //     extComm.Calc();
-    //     // std::cout << "Calc" << std::endl;
-    //     // sim_setup = false;
+        // sleep(0.1);
+        // extComm.getIMUread();
+        extComm.SimExec();//(file_est);
+        // std::cout << "SimExec" << std::endl;
+        extComm.HighLevel();
+        // std::cout << "HighLevel" << std::endl;
+        extComm.Calc();
+        // std::cout << "Calc" << std::endl;
+        // sim_setup = false;
 
-	// } 
+	} 
 
     // file_est.close();
 
