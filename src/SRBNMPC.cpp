@@ -1751,7 +1751,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
         
         conp1 = (controlTick+i)%60;
         
-        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
+        x_des((i+1)*NFS) = x_des(0);// + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
         x_des((i+1)*NFS+3) = localvelocity; 
