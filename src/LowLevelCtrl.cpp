@@ -594,7 +594,7 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
         kpGain = 400;
         // kdGain = 10;
         kpGainx = 400;
-        kpGainy = 400;
+        kpGainy = 100;
         kdGainx = 10;
         kdGainy = 10;
     }
