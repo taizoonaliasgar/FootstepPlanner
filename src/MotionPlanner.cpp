@@ -433,7 +433,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // }
         // if(ctrlTick>=34000){ 
             // traj.comDes(0)=x_fixed;
-            // traj.comDes(1)=0.0;
+            traj.comDes(1)=0.0;
         }
     
     }else if(gait == STANDUP){
