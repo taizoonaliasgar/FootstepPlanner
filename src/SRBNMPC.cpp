@@ -30,9 +30,12 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     J << 0.016840,0.000084,0.000598,0.000084,0.056579,0.000025,0.000598,0.000025,0.064714;
     Jinv << 59.402578,-0.087845,-0.548594,-0.087845,17.674526,-0.006053,-0.548594,-0.006053,15.457771;
     
-    Rstand << 0,0,-1,  0,1,0,  1,0,0;
-    Jstand = Rstand*J*Rstand.transpose();
-    Jinvstand = Rstand*Jinv*Rstand.transpose();
+    // Rstand << 0,0,-1,  0,1,0,  1,0,0;
+    // Jstand = Rstand*J*Rstand.transpose();
+    // Jinvstand = Rstand*Jinv*Rstand.transpose();
+    Rstand << 0.342,0,-0.94,  0,1,0,  0.94,0,0.342;
+    Jstand = J;
+    Jinvstand = Jinv;
 
     std::copy(Jstand.data(), Jstand.data() + Jstand.size(), Jstandcasadi.ptr());
     std::copy(Jinvstand.data(), Jinvstand.data() + Jinvstand.size(), Jinvcasadi.ptr());
@@ -221,10 +224,10 @@ casadi::DM SRBNMPC::motionPlannerN(Eigen::Matrix<double,16,1> q0, size_t control
         
         conp1 = (controlTick+i)%40;
         
-        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
-        x_des((i+1)*NFS+3) = localvelocity, 
+        x_des((i+1)*NFS+3) = localvelocity; 
         x_des((i+1)*NFS+4) = desVel(1);
         x_des((i+1)*NFS+7) = 0.35;
 
@@ -414,7 +417,6 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
     A(2,0) = -cos(psi)*tan(theta);
     A(2,1) = sin(psi)*tan(theta);
     A(2,2) = 1;
-
 
     // A(0,0)=1;A(1,1)=1;A(2,2)=1;
 
@@ -1212,10 +1214,10 @@ casadi::DM SRBNMPC::motionPlannerN2(Eigen::Matrix<double,16,1> q0, size_t contro
         
         conp1 = 0;//(controlTick+i)%40;
         
-        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
-        x_des((i+1)*NFS+3) = localvelocity, 
+        x_des((i+1)*NFS+3) = localvelocity; 
         x_des((i+1)*NFS+4) = desVel(1);
         x_des((i+1)*NFS+7) = 0;
 
@@ -1516,6 +1518,7 @@ void SRBNMPC::statebounds_MT(casadi::DM p){
 
         contact_index = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+2)));
 
+        lbx_MT(NFS*(k+1)+1) = -0.07;
         lbx_MT(NFS*(k+1)+12) = p(0)-2*abs(Raibstep);
         lbx_MT(NFS*(k+1)+13) = p(0)-2*abs(Raibstep);
         lbx_MT(NFS*(k+1)+14) = p(0)-2*abs(Raibstep)+rear_off;
@@ -1528,7 +1531,7 @@ void SRBNMPC::statebounds_MT(casadi::DM p){
         lbx_MT(NFS*(HORIZ+1)+NFI*k+14) = (1-contact_index(2))*(-RaibMult*abs(vRaibstep));
         lbx_MT(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
 
-
+        ubx_MT(NFS*(k+1)+1) = 0.07;
         ubx_MT(NFS*(k+1)+12) = p(0)+2*abs(Raibstep)+front_off;
         ubx_MT(NFS*(k+1)+13) = p(0)+2*abs(Raibstep)+front_off;
         ubx_MT(NFS*(k+1)+14) = p(0)+2*abs(Raibstep);
@@ -1630,10 +1633,10 @@ casadi::DM SRBNMPC::motionPlannerN_MT(casadi::DM q0, size_t controlTick){
         
         conp1 = (controlTick+i)%40;
         
-        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
-        x_des((i+1)*NFS+3) = localvelocity, 
+        x_des((i+1)*NFS+3) = localvelocity; 
         x_des((i+1)*NFS+4) = desVel(1);
         x_des((i+1)*NFS+7) = 0.35;
 
@@ -1746,10 +1749,10 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
         
         conp1 = (controlTick+i)%60;
         
-        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt, 
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
-        x_des((i+1)*NFS+3) = localvelocity, 
+        x_des((i+1)*NFS+3) = localvelocity; 
         x_des((i+1)*NFS+4) = desVel(1);
         x_des((i+1)*NFS+7) = 0.35;
 

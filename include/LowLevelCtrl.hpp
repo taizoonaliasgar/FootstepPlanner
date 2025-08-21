@@ -38,6 +38,7 @@ public:
     void aftersecondstep(){bothsteptaken=true;};
     //Kp cheating
     void switchKp(){upKp = true;};
+    void MPCWalking(){MPCgains=true;};
 private:
 
     #if(USE_QPSWIFT)
@@ -102,6 +103,7 @@ private:
     double dFnew = 1;
     bool bothsteptaken = false;
     bool upKp = false;
+    bool MPCgains = false;
 
 };
 

@@ -23,7 +23,7 @@
 // #define MASS 13.75
 #define GRAV 9.81
 
-#define Tstance 0.2
+#define Tstance 0.3
 #define simdt 0.001
 #define dt 0.005
 #define DOMAINSTEPS 20
