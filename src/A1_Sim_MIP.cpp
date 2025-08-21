@@ -217,7 +217,7 @@ public:
     std::string name = directory+filename+"_"+".mp4";
     
     double startTime = 0*ctrlHz;    // Recording start time
-    double simlength = 100*ctrlHz;
+    double simlength = 200*ctrlHz;
 
     //Estimator
     int rearweight_est = 4;
@@ -506,7 +506,7 @@ void ExternalComm::HighLevel(){
     //std::cout << "Inhighlevel" << std::endl;
     
     updateData(GET_DATA, HL_DATA, &HLData);
-    if(HLData.control_Tick > switchtime*1000+2999){//} && HLData.control_Tick%10==0){ // Settle down
+    if(HLData.control_Tick > switchtime*1000+1999){//} && HLData.control_Tick%10==0){ // Settle down
         auto start = std::chrono::high_resolution_clock::now();
         nmpc_obj->planner_MT(HLData.control_Tick, HLData.q, HLData.dq, HLData.toePos, HLData.QPforce);
         HLData.comDes= nmpc_obj->returncomDes();
@@ -993,10 +993,10 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         kinestimatorrr(jpos_est,jvel_est,SimData.ind_LL,rotE);
     }
 
-    std::cout << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
-         << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
-         << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
-         << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << std::endl;
+    // std::cout << simcounter << "," << jpos[0] << "," << jpos[1] << "," << jpos[2] << "," << jvel[0] << "," << jvel[1] << "," << jvel[2] << ","
+    //      << jpos[3] << "," << jpos[4] << "," << jpos[5] << "," << jvel[3] << "," << jvel[4] << "," << jvel[5] << ","
+    //      << jpos_est[0] << "," << jpos_est[1] << "," << jpos_est[2] << "," << jvel_est[0] << "," << jvel_est[1] << "," << jvel_est[2] << ","
+    //      << jpos_est[3] << "," << jpos_est[4] << "," << jpos_est[5] << "," << jvel_est[3] << "," << jvel_est[4] << "," << jvel_est[5] << std::endl;
         // << imu_eul(0) << "," << imu_eul(1) << "," << imu_eul(2) << "," << imu_omega(0) << "," << imu_omega(1) << "," << imu_omega(2) << ","
         //  << rotE(0,0) << "," << rotE(0,1) << "," << rotE(0,2) << "," 
         //  << rotE(1,0) << "," << rotE(1,1) << "," << rotE(1,2) << ","
@@ -1004,8 +1004,8 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         //  << vel_temp[0] << "," << vel_temp[1] << "," << vel_temp[2] 
         // << "\n";
    
-    memcpy(SimData.q,jpos_est,18*sizeof(double));
-    memcpy(SimData.dq,jvel_est,18*sizeof(double));
+    memcpy(SimData.q,jpos,18*sizeof(double));
+    memcpy(SimData.dq,jvel,18*sizeof(double));
 	memcpy(SimData.rotMatrixDouble,rotMatrixDouble,9*sizeof(double));
     SimData.control_Tick = simcounter;
 
