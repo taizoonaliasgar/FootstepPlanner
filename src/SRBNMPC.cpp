@@ -396,15 +396,25 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
     casadi::SX f4 = con(casadi::Slice(9,12));
     
     casadi::SX A = casadi::SX::zeros(3,3);
-    A(0,0) = 1;
-    A(0,1) = sin(phi)*tan(theta);
-    A(0,2) = cos(phi)*tan(theta);
-    A(1,0) = 0;
-    A(1,1) = cos(phi);
-    A(1,2) = -sin(phi);
-    A(2,0) = 0;
-    A(2,1) = sin(phi)/cos(theta);
-    A(2,2) = cos(phi)/cos(theta);
+    // A(0,0) = 1;
+    // A(0,1) = sin(phi)*tan(theta);
+    // A(0,2) = cos(phi)*tan(theta);
+    // A(1,0) = 0;
+    // A(1,1) = cos(phi);
+    // A(1,2) = -sin(phi);
+    // A(2,0) = 0;
+    // A(2,1) = sin(phi)/cos(theta);
+    // A(2,2) = cos(phi)/cos(theta);
+    A(0,0) = cos(psi)/cos(theta);
+    A(0,1) = -sin(psi)/cos(theta);
+    A(0,2) = 0;
+    A(1,0) = sin(psi);
+    A(1,1) = cos(psi);
+    A(1,2) = 0;
+    A(2,0) = -cos(psi)*tan(theta);
+    A(2,1) = sin(psi)*tan(theta);
+    A(2,2) = 1;
+
 
     // A(0,0)=1;A(1,1)=1;A(2,2)=1;
 
@@ -480,9 +490,9 @@ casadi::SX SRBNMPC::GetTorque(casadi::SX st,casadi::SX con){
     casadi::SX Rtheta = casadi::SX::zeros(3,3);
     casadi::SX Rpsi = casadi::SX::zeros(3,3);
 
-    Rphi(0,0) = 1; Rphi(1,1) = cos(st(6)); Rphi(1,2) = -sin(st(6));Rphi(2,1) = sin(st(6));Rphi(2,2) = cos(st(6));
-    Rtheta(0,0) = cos(st(7)); Rtheta(0,2) = sin(st(7)); Rtheta(1,1) = 1; Rtheta(2,0) = -sin(st(7)); Rtheta(2,2) = cos(st(7));
-    Rpsi(0,0) = cos(st(8)); Rpsi(0,1) = -sin(st(8)); Rpsi(1,0) = sin(st(8)); Rpsi(1,1) = cos(st(8)); Rpsi(2,2) = 1;
+    Rphi(0,0) = 1; Rphi(1,1) = cos(st(6)); Rphi(1,2) = sin(st(6));Rphi(2,1) = -sin(st(6));Rphi(2,2) = cos(st(6));
+    Rtheta(0,0) = cos(st(7)); Rtheta(0,2) = -sin(st(7)); Rtheta(1,1) = 1; Rtheta(2,0) = sin(st(7)); Rtheta(2,2) = cos(st(7));
+    Rpsi(0,0) = cos(st(8)); Rpsi(0,1) = sin(st(8)); Rpsi(1,0) = -sin(st(8)); Rpsi(1,1) = cos(st(8)); Rpsi(2,2) = 1;
     
     casadi::SX Ri = mtimes(Rpsi,Rtheta);
     casadi::SX R = mtimes(Ri,Rphi);

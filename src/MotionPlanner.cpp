@@ -416,11 +416,13 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // traj.comDes(0) = xnew;
         // traj.comDes(1) = 0;
         traj.comDes(2) = 0.5;//params->standHeight;
+        Eigen::Matrix<double, 3, 1> desOmegaWorld = getthetadot(opt_HLstate.block(6,0,6,1));
         if(ctrlTick>=40000){
             traj.comDes.block(0,0,2,1) << state->q.block(0,0,2,1) + opt_HLstate.block(3,0,2,1)*dt;
             traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
             traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
-            traj.comDes.block(9,0,3,1) = 0*opt_HLstate.block(9,0,3,1);
+            traj.comDes.block(9,0,3,1) = desOmegaWorld;
+            traj.comDes(2) = opt_HLstate(2);
         }else{
             traj.comDes.block(0,0,2,1) = state->q.block(0,0,2,1);//state->q(0);// + opt_HLstate.block(3,0,3,1)*dt;
             // traj.comDes(1) = 0; //state->q.block(0,0,2,1);// + opt_HLstate.block(3,0,3,1)*dt;
@@ -890,4 +892,23 @@ void MotionPlanner::movefootk(size_t movetime, size_t wallsteps, bool maxsteps){
     traj.FLstepLen = {frontstep,0,upstep2};//-0.15};
     traj.RLstepLen = {0,0,0};
     traj.RRstepLen = {0,0,0};
+}
+
+Eigen::Matrix<double,3,1> MotionPlanner::getthetadot(Eigen::Matrix<double,6,1> q_opt){
+    double psi = q_opt(0);
+    double theta = q_opt(1);
+    double phi = q_opt(2);
+    Eigen::Matrix3d A;
+    A(0,0) = cos(psi)/cos(theta);
+    A(0,1) = -sin(psi)/cos(theta);
+    A(0,2) = 0;
+    A(1,0) = sin(psi);
+    A(1,1) = cos(psi);
+    A(1,2) = 0;
+    A(2,0) = -cos(psi)*tan(theta);
+    A(2,1) = sin(psi)*tan(theta);
+    A(2,2) = 1;
+
+    Eigen::Matrix<double,3,1> thetadot = A * q_opt.block(3,0,3,1);
+    return thetadot;
 }
