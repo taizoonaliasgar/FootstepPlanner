@@ -417,7 +417,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // traj.comDes(1) = 0;
         traj.comDes(2) = 0.5;//params->standHeight;
         Eigen::Matrix<double, 3, 1> desOmegaWorld = getthetadot(opt_HLstate.block(6,0,6,1));
-        if(ctrlTick>=100000){
+        if(ctrlTick>=37000){
             traj.comDes.block(0,0,2,1) << state->q.block(0,0,2,1) + opt_HLstate.block(3,0,2,1)*dt;
             traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
             traj.comDes.block(6,0,3,1) = opt_HLstate.block(6,0,3,1);
@@ -433,7 +433,7 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // }
         // if(ctrlTick>=34000){ 
             // traj.comDes(0)=x_fixed;
-            traj.comDes(1)=0.0;
+            // traj.comDes(1)=0.0;
         }
     
     }else if(gait == STANDUP){

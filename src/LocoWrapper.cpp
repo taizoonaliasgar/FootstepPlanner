@@ -642,9 +642,9 @@ void LocoWrapper::ExpWrapper(const double jpos_est[18], const double jvel_est[18
         if(control_Tick == switchtime*ctrlHz){readytowalk();}//break;}
         if(control_Tick == switchtime*ctrlHz + stepind2_e*(shifttime2+movetime3)){setfinalCoM2(stepind2_e);}//break;}
         if(control_Tick == switchtime*ctrlHz+10*(shifttime2+movetime3)+shifttime2){startwalking();PP->setfixedx(jpos_est[0]);}//break;}
-        // if(control_Tick == 2*switchtime*ctrlHz){LL->MPCWalking();}
-        // if(control_Tick == (2*switchtime+6)*ctrlHz){readytoreallywalk();}//break;}
-        // if(control_Tick == (2*switchtime+7)*ctrlHz){readytoreallywalk();}//break;}
+        if(control_Tick == (switchtime+17)*ctrlHz){LL->MPCWalking();}
+        if(control_Tick == (switchtime+17)*ctrlHz){readytoreallywalk();}//break;}
+        if(control_Tick == (switchtime+18)*ctrlHz){readytoreallywalk();}//break;}
 
         //updatestate(jpos_est,jvel_est,rotMatrixDouble);
         if(readytowalkf){setcontactconfigExp(HLContactIndex);}
