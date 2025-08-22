@@ -609,7 +609,7 @@ void ExternalComm::Calc(){
         //tau = temp;
         loco_obj->initStandVars(jointPosTotal.block(0,0,3,1),jointPosTotal(5),(int)duration);
         
-    }else if(LLData.control_Tick >= settling & LLData.control_Tick < loco_start){ // Start standing
+    }else if(LLData.control_Tick >= settling && LLData.control_Tick < loco_start){ // Start standing
         
         loco_obj->calcTau2(LLData.q,LLData.dq,LLData.rotMatrixDouble,STAND,LLData.control_Tick,LLData.solvetime);  
     }else{
@@ -881,7 +881,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
         if (simcounter%60 == 0)
             vis->renderOneFrame();
         
-        if (!vis->isRecording() & record & simcounter>=startTime)
+        if (!vis->isRecording() && record && simcounter>=startTime)
             vis->startRecordingVideo(name);
         
         auto currentPos = vis->getCameraMan()->getCamera()->getPosition();
@@ -917,7 +917,6 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
     //////////////////////////////////
     //      STATE ESTIMATION        //
     //////////////////////////////////
-    std::cout << "Simcounter: " << simcounter << std::endl;
 
     double jpos[18],jpos_est[18], jvel[18],jvel_est[18];
     double rotMatrixDouble[9] = {1,0,0,0,1,0,0,0,1};
@@ -1082,7 +1081,7 @@ void ExternalComm::SimExec(){//(std::ofstream &file_est){
 	// Set Updated data for MPC/LL
 	updateData(SET_DATA, SIM_DATA, &SimData);  
     // std::cout << "SimExec done" << std::endl;
-    
+    std::cout << "Simcounter: " << simcounter << std::endl;
 }
 
 void ExternalComm::connectIMU(){//(mip::Interface& device){
@@ -1368,15 +1367,15 @@ int main(int argc, char *argv[]) {
 	// loop_calc.start();
     // extComm.Init();
 
-    extComm.looper(extComm.simThreadPtr,  "sim_loop",  1.00f, 3, std::bind(&ExternalComm::SimExec, &extComm));
+    extComm.looper(extComm.simThreadPtr,  "sim_loop",  1.00f, 4, std::bind(&ExternalComm::SimExec, &extComm));
     sleep(1.0);
     extComm.looper(extComm.mpcThreadPtr,  "mpc_loop",  10.00f, 1, std::bind(&ExternalComm::HighLevel, &extComm));
     sleep(1.0);
     extComm.looper(extComm.calcThreadPtr, "calc_loop", 1.00f, 2, std::bind(&ExternalComm::Calc, &extComm));
-    sleep(1.0);
+    // sleep(1.0);
 
-    // // loop_imu.start();
-    // // // loop_flush.start();
+    // // // loop_imu.start();
+    // // // // loop_flush.start();
 
     while(true)// (simIMU < 500000)
     {

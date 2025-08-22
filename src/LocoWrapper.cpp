@@ -270,7 +270,11 @@ void LocoWrapper::calcTau2(const double q[18], const double dq[18], const double
                 //PP->movefoot2(movetime,phaseVar);
                 //}
                 quad->updateSwingMatrices(con->ind,con->cnt);
-                VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                if(wallstep<1){
+                    VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,false);
+                }else{
+                    VC->updateVirtualConstraintssetfoot(state, kin, traj, con, gait, phaseVar, &motion_params, ll, flphase,rlphase,true);
+                }
                 LL->calcTorquewalk(state, dyn, kin, vcon, con, &ll_params, Hr, z, Ki);
         
             }else{
