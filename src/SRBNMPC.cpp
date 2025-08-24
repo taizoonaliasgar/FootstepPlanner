@@ -134,7 +134,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_2";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_2N30";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -1751,7 +1751,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
         
         conp1 = (controlTick+i)%60;
         
-        x_des((i+1)*NFS) = x_des(0);// + (i+1)*localvelocity*MPC_dt; 
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
         x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
         x_des((i+1)*NFS+2) = stand_height;                                 
         x_des((i+1)*NFS+3) = localvelocity; 
