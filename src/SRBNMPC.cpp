@@ -1708,7 +1708,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
     // }
 
     if(starttrotting){
-        if(controlTick%60 == 0){
+        if(controlTick%600 == 0){
 
             if(controlTick>39){
                 if(localvelocity < desVel(0)){
