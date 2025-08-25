@@ -288,7 +288,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     
     Q.setZero();
-    Q.block(0,0,3,3).diagonal() <<  6e6,1e5,8e5;//5e4//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
+    Q.block(0,0,3,3).diagonal() <<  10e6,1e5,8e5;//5e4//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
     Q.block(3,3,3,3).diagonal() <<  1e5,1e4,1e4;//4e5//5e4//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
     Q.block(6,6,3,3).diagonal() <<  8e5,8e5,8e6;//3e4//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
