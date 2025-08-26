@@ -37,6 +37,7 @@ LowLevelCtrl::LowLevelCtrl(){
 
     c_int exitflag = osqp_setup(&work, data, settings);
     #endif
+    dFMultiplier(0,0)=100;dFMultiplier(1,1)=100;dFMultiplier(2,2)=300;
 }
 
 LowLevelCtrl::~LowLevelCtrl(){
@@ -541,9 +542,9 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
     // ====================================================================== //
 
     double dFGain = params->dfPen;
-    if(uprighty){
-       dFGain = dFnew;  
-    }
+    // if(uprighty){
+    //    dFGain = dFnew;  
+    // }
 
     P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);
     P_QP.block(conDim,conDim,TOTAL_IN,TOTAL_IN) = params->tauPen*Eigen::MatrixXd::Identity(TOTAL_IN,TOTAL_IN);
@@ -567,7 +568,17 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
     	}
     }	
     //std::cout << Fd.transpose() << std::endl;
-    c_QP.block(0,0,conDim,1) = -Fd*dFGain;
+    if(MPCgains){
+        Eigen::MatrixXd dFGainMPC = Eigen::MatrixXd::Zero(conDim,conDim);
+        for (size_t j = 0; j < con->cnt; j++)
+        {
+            dFGainMPC.block(3*j,3*j,3,3) = dFGainNew*Eigen::MatrixXd::Identity(3,3);
+        }
+        
+        c_QP.block(0,0,conDim,1) = -dFGainMPC*Fd;
+    }else{
+        c_QP.block(0,0,conDim,1) = -Fd*dFGain;
+    }
 }
 
 void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf *kin, const VCInfo *vc, const ConInf *con, size_t &outDim, size_t &conDim, size_t &numDec, size_t &useCLF,  
@@ -586,7 +597,7 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
         kpGain = 400; 
         kpGainx = 400;
         kpGainy = 400;
-        kpGainz = 600;
+        kpGainz = 400;
 
         kdGain = 20;
         kdGainx = 20;
