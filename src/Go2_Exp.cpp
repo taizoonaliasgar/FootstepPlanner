@@ -1033,16 +1033,15 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 		// std::cout << motiontime << "\t" << IMUData.IMUacc(0) << "\t" << IMUData.IMUacc(1) << "\t" << IMUData.IMUacc(2) << "\t" 
 		// 				<< scaled_acc(0) << "\t" << scaled_acc(1) << "\t" << scaled_acc(2) << std::endl; 
 
-		IMURotation = IMUframeoffset*IMUR*IMUframeoffset;
+		IMURotation = IMUframeoffset*IMUR.transpose()*IMUframeoffset;
 		// IMURotation = IMUR;//.transpose();
 		// Eigen::Vector3d acc_world3 = IMURotation*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
 		// Eigen::Vector3d acc_world4 = IMURotation.transpose()*Eigen::Vector3d(IMUData.scaled_acc[0], IMUData.scaled_acc[1], IMUData.scaled_acc[2]);
 
-		IMUData.att_euler[0] = atan2(IMURotation(1,2),IMURotation(2,2));
-		IMUData.att_euler[1] = -asin(IMURotation(0,2));
-		IMUData.att_euler[2] = atan2(IMURotation(0,1),IMURotation(0,0));
+		IMUData.att_euler[0] = -atan2(IMURotation(1,2),IMURotation(2,2));
+		IMUData.att_euler[1] = asin(IMURotation(0,2));
+		IMUData.att_euler[2] = -atan2(IMURotation(0,1),IMURotation(0,0));
 
-		// double omegabody[3] = {0};
 		// omegabody[0] = IMUData.comp_angular_rate[0];
 		// omegabody[1] = IMUData.comp_angular_rate[1];
 		// omegabody[2] = IMUData.comp_angular_rate[2];
@@ -1074,6 +1073,7 @@ void ExternalComm::getIMMUdata(){//(mip::Interface& device){
 }
 
 
+
 int main(int argc, char *argv[]) {
 
     // InitEnvironment();
@@ -1084,7 +1084,7 @@ int main(int argc, char *argv[]) {
 
 	ChannelFactory::Instance()->Init(0, argv[3]);
     ExternalComm extComm;
-    
+	
 	extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
     extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     // extComm.moving_avg_filter = std::unique_ptr<MovingAverageFilter>(new MovingAverageFilter(1000,3));

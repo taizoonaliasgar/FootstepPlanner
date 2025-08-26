@@ -252,7 +252,7 @@ private:
     public:
     casadi::DM previousp = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2),1);
     casadi::DM optstephll = casadi::DM::zeros(4,1);
-    casadi::DM front_off = 0.25;
+    casadi::DM front_off = 0.15;
     casadi::DM rear_off = -0.05; 
     casadi::DM pitch_ref = 0;
     int Raibflag = 0;
@@ -265,7 +265,7 @@ private:
     Eigen::MatrixXd CoMhistory = Eigen::MatrixXd::Zero(3,deltaT*fitsample+1);
     Eigen::Matrix<double,3,1> v_estimate = Eigen::MatrixXd::Zero(3,1);
 
-    double wall_y =0.2;
+    double wall_y =0.22;
 
     bool first_time_here = true;
 

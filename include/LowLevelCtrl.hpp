@@ -33,7 +33,7 @@ public:
     void setFlightTorque();
     void afterfirststep(){firststeptaken=true;};
     void fullyupright(){uprighty = true;};
-    void keepwalking(){dFnew = dFnew*300;};
+    void keepwalking(){dFnew = dFnew*100;};
     void enablehipposcntrl(){uprighty2=true;};
     void aftersecondstep(){bothsteptaken=true;};
     //Kp cheating

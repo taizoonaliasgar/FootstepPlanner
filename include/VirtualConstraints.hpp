@@ -34,7 +34,7 @@ private:
     VCInfo VC; // Needed by the low-level controller
     double h_sw = 0.08;
     Eigen::MatrixXd h0, dh0;
-    double wall_y = 0.2;
+    double wall_y = 0.22;
     double two_contact = 20;
 };
 

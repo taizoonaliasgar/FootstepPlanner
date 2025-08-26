@@ -729,35 +729,35 @@ void VirtCon::updateVirtualConstraintssetfoot(const StateInfo *state, const KinI
                         calcVaryingBezierAll(n,dt,ax,dax,ddax,phase,tx);
                 
                 
-                        //double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
-                        //                kin->hipPos(1,i)+traj->stepLen[1]+tune, kin->hipPos(1,i)+traj->stepLen[1]+tune};
                         // double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
-                        //         traj->toeInit(1,i)+step[1], traj->toeInit(1,i)+step[1]};
-                        // double day[4] = {0, 0, hipVel(1), hipVel(1)};
-                        // double dday[4] = {0, 0, hipAcc(1), hipAcc(1)};
-                        // calcVaryingBezierAll(n,dt,ay,day,dday,phase,ty);
+                        //                kin->hipPos(1,i)+traj->stepLen[1]+tune, kin->hipPos(1,i)+traj->stepLen[1]+tune};
+                        double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
+                                traj->toeInit(1,i)+step[1], traj->toeInit(1,i)+step[1]};
+                        double day[4] = {0, 0, hipVel(1), hipVel(1)};
+                        double dday[4] = {0, 0, hipAcc(1), hipAcc(1)};
+                        calcVaryingBezierAll(n,dt,ay,day,dday,phase,ty);
 
-                        // n = 8;
-                        //double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
-                        //               2*params->swingHeight, to+0.005, to+0.005, to};
+                        n = 8;
+                        double az[8]= {traj->toeInit(2,i), traj->toeInit(2,i), 2*params->swingHeight, 3*params->swingHeight, 
+                                      2*params->swingHeight, to+0.005, to+0.005, to};
                         // double az[8]= {traj->toeInit(2,i), 1*params->swingHeight+step[2], 1.5*params->swingHeight+step[2], 
                         //        1.5*params->swingHeight+step[2], 1.5*params->swingHeight+step[2], 1.5*params->swingHeight+step[2],1.5*params->swingHeight+step[2], traj->toeInit(2,i)+step[2]};
                         // double az[8]= {traj->toeInit(2,i),0.02,0.02,0.03,0.03,0.03,0.03,0.03};
                         // double az[8]= {traj->toeInit(2,i),0.03,0.05,0.08,0.1,0.12,0.12,0.1};
-                        // calcBezierAll(n, az, phaseVar, tz);
+                        calcBezierAll(n, az, phaseVar, tz);
 
-                        double az[4] = {traj->toeInit(2,i), traj->toeInit(2,i), 
-                                                    0.1, 0.1};
-                        double daz[4] = {0, 0, hipVel(2), hipVel(2)};
-                        double ddaz[4] = {0, 0, hipAcc(2), hipAcc(2)};
-                        calcVaryingBezierAll(n,dt,az,daz,ddaz,phase,tz);
+                        // double az[4] = {traj->toeInit(2,i), traj->toeInit(2,i), 
+                        //                             0.1, 0.1};
+                        // double daz[4] = {0, 0, hipVel(2), hipVel(2)};
+                        // double ddaz[4] = {0, 0, hipAcc(2), hipAcc(2)};
+                        // calcVaryingBezierAll(n,dt,az,daz,ddaz,phase,tz);
 
-                        n = 8;
+                        // n = 8;
 
-                        double ay[8]= {traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, 
-                                pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.03, pow(-1,i+1)*(wall_y+0.02)};
+                        // double ay[8]= {traj->toeInit(1,i), pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.1, pow(-1,i+1)*wall_y+pow(-1,i)*0.05, 
+                        //         pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.04, pow(-1,i+1)*wall_y+pow(-1,i)*0.03, pow(-1,i+1)*(wall_y+0.02)};
 
-                        calcBezierAll(n, ay, phase, ty);
+                        // calcBezierAll(n, ay, phase, ty);
                     }
                 }
 
