@@ -582,9 +582,9 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
     double kdGainy = params->kd; 
 
      if(MPCgains){
-        kpGain = 600; 
-        kpGainx = 600;
-        kpGainy = 600;
+        kpGain = 300; 
+        kpGainx = 300;
+        kpGainy = 300;
 
         kdGain = 20;
         kdGainx = 20;
