@@ -733,10 +733,10 @@ void ExternalComm::Calc(){
         kinestimatorrr(q,dq,LLData.ind_LL,rotE);
     }
 
-    // if(motiontime>=35000){
-	// 	q[2]=0.5;
-	// 	// dq[2]=0.0;
-	// }
+    if(motiontime>=37000){
+		q[2]=0.5;
+		// dq[2]=0.0;
+	}
 	// std::cout << "[LL] Motiontime: " << motiontime << std::endl;
 	// ===================================================== //
 	// ============= Quad Initialization Time ============== //
@@ -1084,7 +1084,7 @@ int main(int argc, char *argv[]) {
 
 	ChannelFactory::Instance()->Init(0, argv[3]);
     ExternalComm extComm;
-	
+
 	extComm.loco_obj = std::unique_ptr<LocoWrapper>(new LocoWrapper(argc, argv));
     extComm.nmpc_obj  = std::unique_ptr<SRBNMPC>(new SRBNMPC(argc,argv,1,0));
     // extComm.moving_avg_filter = std::unique_ptr<MovingAverageFilter>(new MovingAverageFilter(1000,3));
