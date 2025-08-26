@@ -733,10 +733,10 @@ void ExternalComm::Calc(){
         kinestimatorrr(q,dq,LLData.ind_LL,rotE);
     }
 
-    if(motiontime>=37000){
-		q[2]=0.5;
-		// dq[2]=0.0;
-	}
+    // if(motiontime>=37000){
+	// 	q[2]=0.5;
+	// 	// dq[2]=0.0;
+	// }
 	// std::cout << "[LL] Motiontime: " << motiontime << std::endl;
 	// ===================================================== //
 	// ============= Quad Initialization Time ============== //
