@@ -19,7 +19,7 @@
 #define MPC_dt ( (double)1.0 / MPC_Hz )
 #define RAND 8
 
-#define MASS 16.085
+#define MASS 18.5
 // #define MASS 13.75
 #define GRAV 9.81
 
