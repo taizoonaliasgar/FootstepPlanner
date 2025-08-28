@@ -1416,10 +1416,11 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     if(controlMPC_MT == 2100){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
-        q0_MT(i+3) = 0*dq[i];
+        q0_MT(i+3) = dq[i];
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
+    // q0_MT(5)=-0.1;
     //auto end01 = std::chrono::high_resolution_clock::now();
     
     getprevioussol_fullsimMT(q0_MT,foot_position,lastQPforce,controlMPC_MT);
@@ -1561,12 +1562,27 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
     x0_MT(14) = foothold(0,2);
     x0_MT(15) = foothold(0,3);
 
+    for (int i = 0; i < 12; ++i) {
+        forceQP_dm(i) = forceQP(i);
+    }
+
+    
+
     x0_MT(casadi::Slice(NFS,NFS*(HORIZ))) = previous_sol(casadi::Slice(NFS*2,NFS*(HORIZ+1)));
     x0_MT(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1))) = previous_sol(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1)));
 
     x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+NFI*(HORIZ-1))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI,NFS*(HORIZ+1)+NFI*(HORIZ)));
     x0_MT(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
 
+    // Convert Eigen::Matrix<double,12,1> forceQP to casadi::DM
+    if(firsttime){
+        for (int i = 0; i < HORIZ; i++) {
+            x0_MT(casadi::Slice(NFS*(HORIZ+1)+i*NFI,NFS*(HORIZ+1)+i*NFI+12)) = forceQP_dm;
+        }
+        firsttime=false;
+    }
+    
+    x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
 }
 
 
@@ -1778,6 +1794,10 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
                                 (1-contact_sequence_dm30(3,conp1)*contact_sequence_dm30(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
 
 
+        
+        x_des((HORIZ+1)*NFS+i*NFI+8) = contact_sequence_dm30(2,conp1)*MASS*9.81/(contact_sequence_dm30(2,conp1)+contact_sequence_dm30(3,conp1));
+        x_des((HORIZ+1)*NFS+i*NFI+11) = contact_sequence_dm30(3,conp1)*MASS*9.81/(contact_sequence_dm30(2,conp1)+contact_sequence_dm30(3,conp1));
+        
         x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm30(0,conp1))*vRaibstep;//0.4
         x_des((HORIZ+1)*NFS+i*NFI+13) = (1-contact_sequence_dm30(1,conp1))*vRaibstep;//0.4
         x_des((HORIZ+1)*NFS+i*NFI+14) = (1-contact_sequence_dm30(2,conp1))*vRaibstep;//0.4

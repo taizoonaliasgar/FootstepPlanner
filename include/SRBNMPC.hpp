@@ -296,6 +296,8 @@ private:
     casadi::DM x0_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
 
     casadi::DM contact_sequence_dm30 = casadi::DM::ones(4,60);//,{0});
+    casadi::DM forceQP_dm = casadi::DM::zeros(12, 1);
+    bool firsttime = true;
     
 };
 
