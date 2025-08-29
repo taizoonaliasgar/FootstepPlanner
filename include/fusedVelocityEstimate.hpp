@@ -106,8 +106,8 @@ private:
     double dtK;
     Eigen::Vector3d x;
     Eigen::Matrix3d A, B, H, Q, R, P;
-    double xddot_thresh = 10.0;
-    double yddot_thresh = 10.0;
-    double zddot_thresh = 10.0;
+    double xddot_thresh = 3.0;
+    double yddot_thresh = 3.0;
+    double zddot_thresh = 3.0;
 };
 
