@@ -37,7 +37,7 @@ LowLevelCtrl::LowLevelCtrl(){
 
     c_int exitflag = osqp_setup(&work, data, settings);
     #endif
-    dFMultiplier(0,0)=1;dFMultiplier(1,1)=1;dFMultiplier(2,2)=1;
+    dFMultiplier(0,0)=100;dFMultiplier(1,1)=100;dFMultiplier(2,2)=100;
 }
 
 LowLevelCtrl::~LowLevelCtrl(){
