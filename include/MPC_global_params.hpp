@@ -15,8 +15,8 @@
 #define HORIZ 20
 #define TINI 10
 
-#define MPC_Hz 100
-#define MPC_dt ( (double)1.0 / MPC_Hz )
+#define MPC_Hz 50
+#define MPC_dt ( (double)1.0 / 50 )
 #define RAND 8
 
 #define MASS 18.5

@@ -142,6 +142,8 @@ public:
     //300ms Domain
     casadi::DM motionPlannerN_MT30(casadi::DM q0, size_t controlTick);
     int* returnConInd30(size_t controlTick);
+    casadi::DM motionPlannerN_MT15(casadi::DM q0, size_t controlTick);
+    int* returnConInd15(size_t controlTick);
 
 private: 
     std::string filename;
@@ -274,8 +276,8 @@ private:
     bool starttrotting = false;
 
     //Hardware
-    std::string lib_name_exp = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/Go2_w0p2_ro_0p05_19.so";
-    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 5},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
+    std::string lib_name_exp = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/Go2_w0p2_ro_0p05_19b.so";
+    casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
 
     std::map<std::string, casadi::DM> argHW, resHW;
@@ -296,6 +298,7 @@ private:
     casadi::DM x0_MT = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ);
 
     casadi::DM contact_sequence_dm30 = casadi::DM::ones(4,60);//,{0});
+    casadi::DM contact_sequence_dm15 = casadi::DM::ones(4,30);//,{0});
     casadi::DM forceQP_dm = casadi::DM::zeros(12, 1);
     bool firsttime = true;
     

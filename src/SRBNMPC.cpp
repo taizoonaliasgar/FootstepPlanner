@@ -61,6 +61,11 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
     contact_sequence_dm30(0,casadi::Slice(8,30)) = casadi::DM::zeros(1,22);
     contact_sequence_dm30(3,casadi::Slice(12,30)) = casadi::DM::zeros(1,18);
 
+    contact_sequence_dm15(1,casadi::Slice(19,30)) = casadi::DM::zeros(1,11);
+    contact_sequence_dm15(2,casadi::Slice(21,30)) = casadi::DM::zeros(1,9);
+    contact_sequence_dm15(0,casadi::Slice(4,15)) = casadi::DM::zeros(1,11);
+    contact_sequence_dm15(3,casadi::Slice(6,15)) = casadi::DM::zeros(1,9);
+
     for (size_t i = 0; i < HORIZ; i++)
     {
         forcefitx(i) = i*10;
@@ -134,7 +139,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_19";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_19b";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -1412,7 +1417,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     // if(controlTick == 32000){letsgo();}
-    controlMPC_MT = std::floor((controlTick-21989)/10); 
+    controlMPC_MT = std::floor((controlTick-21989)/20); 
     if(controlMPC_MT == 2100){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
@@ -1434,7 +1439,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(15) = double(x0_MT(15));
     //}
     //auto end03 = std::chrono::high_resolution_clock::now();
-    p_MT = motionPlannerN_MT30(q0_MT,controlMPC_MT);
+    p_MT = motionPlannerN_MT15(q0_MT,controlMPC_MT);
     //auto end04 = std::chrono::high_resolution_clock::now();
     //setpreviousp(p);
     statebounds_MT(p_MT);
@@ -1819,4 +1824,123 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
     
     return x_des;
     
+}
+
+
+casadi::DM SRBNMPC::motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
+    
+    casadi::DM x_des = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2)); 
+    x_des(casadi::Slice(0,NFS)) = q0;
+    
+    casadi::DM conm1=0;
+    casadi::DM conp1=0;
+    casadi::DM conp1_next=0;
+    // if(controlTick<1){
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = 1;//contact_sequence_dm(0,conp1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = 1;//contact_sequence_dm(1,conp1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = 1;//contact_sequence_dm(2,conp1);
+    //     x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = 1;//contact_sequence_dm(3,conp1);
+    // }else{
+        conm1 = (controlTick-1)%30;
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)) = contact_sequence_dm15(0,conm1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+1) = contact_sequence_dm15(1,conm1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+2) = contact_sequence_dm15(2,conm1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+3) = contact_sequence_dm15(3,conm1);
+    // }
+
+    if(starttrotting){
+        if(controlTick%300 == 0){
+
+            if(localvelocity < desVel(0)){
+                    localvelocity = localvelocity + 0.05;
+            }else{
+                    localvelocity = desVel(0);
+            }
+        }
+    }
+
+     
+    if((controlTick)%15 == 0){
+        x_dom_init = q0(0);
+        Raibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
+        //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
+    }
+
+    if(controlTick%15<7){
+        vRaibstep = Raibstep;
+
+    }else{
+        vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(q0(3)-localvelocity));
+    }
+    casadi::DM x0 = x_dom_init;
+
+    for(size_t i= 0; i< HORIZ; i++){
+        
+        conp1 = (controlTick+i)%30;
+        
+        x_des((i+1)*NFS) = x_des(0) + (i+1)*localvelocity*MPC_dt; 
+        x_des((i+1)*NFS+1) = 0;//x_des(1) + (i+1)*desVel(1)*MPC_dt; 
+        x_des((i+1)*NFS+2) = stand_height;                                 
+        x_des((i+1)*NFS+3) = localvelocity; 
+        x_des((i+1)*NFS+4) = desVel(1);
+        x_des((i+1)*NFS+7) = 0.35;
+
+        //if(controlTick+i>0){
+            conp1_next = (controlTick+i+1)%30;
+        //}
+        if((controlTick+i)%15 == 0){
+            x0 = x_des(i*NFS);
+        }
+
+        x_des((i+1)*NFS+12) = contact_sequence_dm15(0,conp1_next)*contact_sequence_dm15(0,conp1)*x_des(i*NFS+12)+
+                                (1-contact_sequence_dm15(0,conp1)*contact_sequence_dm15(0,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+                                   
+        x_des((i+1)*NFS+13) = contact_sequence_dm15(1,conp1_next)*contact_sequence_dm15(1,conp1)*x_des(i*NFS+13)+
+                                (1-contact_sequence_dm15(1,conp1)*contact_sequence_dm15(1,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+        
+        x_des((i+1)*NFS+14) = contact_sequence_dm15(2,conp1_next)*contact_sequence_dm15(2,conp1)*x_des(i*NFS+14)+
+                                (1-contact_sequence_dm15(2,conp1)*contact_sequence_dm15(2,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+        
+        x_des((i+1)*NFS+15) = contact_sequence_dm15(3,conp1_next)*contact_sequence_dm15(3,conp1)*x_des(i*NFS+15)+
+                                (1-contact_sequence_dm15(3,conp1)*contact_sequence_dm15(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+
+
+        
+        x_des((HORIZ+1)*NFS+i*NFI+8) = contact_sequence_dm15(2,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
+        x_des((HORIZ+1)*NFS+i*NFI+11) = contact_sequence_dm15(3,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
+        
+        x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm15(0,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+13) = (1-contact_sequence_dm15(1,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+14) = (1-contact_sequence_dm15(2,conp1))*vRaibstep;//0.4
+        x_des((HORIZ+1)*NFS+i*NFI+15) = (1-contact_sequence_dm15(3,conp1))*vRaibstep;//0.4
+
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+4) = contact_sequence_dm15(0,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+5) = contact_sequence_dm15(1,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+6) = contact_sequence_dm15(2,conp1);
+        x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*i+7) = contact_sequence_dm15(3,conp1);
+    }
+
+    conp1 = (controlTick+HORIZ)%30;
+
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)) = contact_sequence_dm15(0,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+1) = contact_sequence_dm15(1,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+2) = contact_sequence_dm15(2,conp1);
+    x_des(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+1)+3) = contact_sequence_dm15(3,conp1);
+    
+    
+    return x_des;
+    
+}
+
+int* SRBNMPC::returnConInd15(size_t controlTick){
+    int controlMPC = std::floor((controlTick-21989)/20);
+    static int conInd[5] = {0,0,0,0,0};
+    
+    int conmark = controlMPC%30;
+    conInd[0] = static_cast<double>(contact_sequence_dm15(0,conmark));
+    conInd[1] = static_cast<double>(contact_sequence_dm15(1,conmark));
+    conInd[2] = static_cast<double>(contact_sequence_dm15(2,conmark));
+    conInd[3] = static_cast<double>(contact_sequence_dm15(3,conmark));
+    conInd[4] = conmark;
+    return conInd;
 }

@@ -618,7 +618,7 @@ void ExternalComm::HighLevel(){
         HLData.comDes= nmpc_obj->returncomDes();
         HLData.fDes= nmpc_obj->returnfDes();
         HLData.solvetime = nmpc_obj->returnSolveTime();
-        int* indcon = nmpc_obj->returnConInd30(HLData.control_Tick);
+        int* indcon = nmpc_obj->returnConInd15(HLData.control_Tick);
         HLData.ind[0] = indcon[0];
         HLData.ind[1] = indcon[1];
         HLData.ind[2] = indcon[2];
@@ -1097,7 +1097,7 @@ int main(int argc, char *argv[]) {
 
     extComm.imuThreadPtr = CreateRecurrentThreadEx("imu_loop",   4, 1000,  &ExternalComm::getIMMUdata, &extComm);
     // sleep(1.0);
-    extComm.mpcThreadPtr = CreateRecurrentThreadEx("mpc_loop",   2, 10000, &ExternalComm::HighLevel,   &extComm);
+    extComm.mpcThreadPtr = CreateRecurrentThreadEx("mpc_loop",   2, 20000, &ExternalComm::HighLevel,   &extComm);
     // sleep(1.0);
     extComm.calcThreadPtr = CreateRecurrentThreadEx("calc_loop", 1, 1000,  &ExternalComm::Calc,        &extComm);
     // sleep(1.0);
