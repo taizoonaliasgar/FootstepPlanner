@@ -111,7 +111,7 @@ private:
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
-		ExternalComm() : velocity_filter(0.005, 0.0001, 0.01){//udpComp(LOWLEVEL), 
+		ExternalComm() : velocity_filter(0.005, 0.00000001, 0.01){//udpComp(LOWLEVEL), 
 
             fid = fopen("/home/taizoon/raisimEnv/Workspace/FootstepPlanner/stateData_1.csv", "w");
             
