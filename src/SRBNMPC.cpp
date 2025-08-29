@@ -1582,7 +1582,7 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
         firsttime=false;
     }
     
-    x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
+    // x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
 }
 
 

@@ -573,7 +573,7 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
-		if(ctrlTick > 29999){
+		if(ctrlTick > 19999){
 			velocity_filter.stepExp(acc_wFrame, COM_vel_e,ctrlTick);
 		}
 
