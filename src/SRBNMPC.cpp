@@ -134,7 +134,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_19";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_20";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -297,7 +297,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     //repdiag(Q,Q_rep,HORIZ+1);
     
     R_force.setZero();
-    R_force.diagonal() << 1e3,1e3,1e3;//0.01//mpc_params.rx, mpc_params.ry, mpc_params.rz;
+    R_force.diagonal() << 1e2,1e2,1e2;//0.01//mpc_params.rx, mpc_params.ry, mpc_params.rz;
     for(int i=0;i<4;i++){
         if(i<2){
             R.block(3*i,3*i,3,3) = 1*R_force;
