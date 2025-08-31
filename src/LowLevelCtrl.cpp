@@ -548,8 +548,8 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
 
     P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);
     P_QP.block(conDim,conDim,TOTAL_IN,TOTAL_IN) = params->tauPen*Eigen::MatrixXd::Identity(TOTAL_IN,TOTAL_IN);
-    P_QP(conDim+6,conDim+6) = params->tauPen;
-    P_QP(conDim+9,conDim+9) = params->tauPen;
+    P_QP(conDim+6,conDim+6) = 0.00000000000001*params->tauPen;
+    P_QP(conDim+9,conDim+9) = 0.00000000000001*params->tauPen;
     P_QP.block(conDim+TOTAL_IN,conDim+TOTAL_IN,outDim,outDim) = params->auxPen*Eigen::MatrixXd::Identity(outDim,outDim);
     if (useCLF){
         P_QP(numDec-1, numDec-1) = params->clfPen;
@@ -592,6 +592,7 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
     double kpGainz = params->kp; 
     double kdGainx = params->kd; 
     double kdGainy = params->kd; 
+    double kdGainz = params->kd; 
     double kpGainleg = params->kp; 
 
      if(MPCgains){
@@ -604,6 +605,7 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
         kdGain = 20;
         kdGainx = 20;
         kdGainy = 20;
+        kdGainz = 20;
     }
     else if(uprighty){
         kpGain = 400;
@@ -642,7 +644,8 @@ void LowLevelCtrl::constraintswalk(LLP *params, const DynInf *dyn, const KinInf 
     KP(2,2) = kpGainz;
     KD(0,0) = kdGainx;
     KD(1,1) = kdGainy;
-    
+    // KD(2,2) = kdGainz;
+
     if(con->cnt<4){
         KP.block(6,6,3*(4-con->cnt),3*(4-con->cnt)) = kpGainleg*Eigen::MatrixXd::Identity(3*(4-con->cnt),3*(4-con->cnt));
         KD.block(6,6,3*(4-con->cnt),3*(4-con->cnt)) = kdGain*Eigen::MatrixXd::Identity(3*(4-con->cnt),3*(4-con->cnt));

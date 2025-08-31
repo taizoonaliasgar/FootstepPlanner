@@ -1416,11 +1416,13 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     if(controlMPC_MT == 2100){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
-        q0_MT(i+3) = 0*dq[i];
+        q0_MT(i+3) = dq[i];
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
-    // q0_MT(5)=0.1*q0_MT(5);
+    q0_MT(3)=0;//q0_MT(5);
+    q0_MT(4)=0;//0.1*q0_MT(5);
+
     //auto end01 = std::chrono::high_resolution_clock::now();
     
     getprevioussol_fullsimMT(q0_MT,foot_position,lastQPforce,controlMPC_MT);
