@@ -37,7 +37,7 @@ LowLevelCtrl::LowLevelCtrl(){
 
     c_int exitflag = osqp_setup(&work, data, settings);
     #endif
-    dFMultiplier(0,0)=1000;dFMultiplier(1,1)=1000;dFMultiplier(2,2)=3000;
+    dFMultiplier(0,0)=100;dFMultiplier(1,1)=100;dFMultiplier(2,2)=300;
 }
 
 LowLevelCtrl::~LowLevelCtrl(){
@@ -548,8 +548,8 @@ void LowLevelCtrl::costwalk(LLP *params, const VCInfo *vc, const ConInf *con, si
 
     P_QP.block(0,0,conDim,conDim) = dFGain*Eigen::MatrixXd::Identity(conDim, conDim);
     P_QP.block(conDim,conDim,TOTAL_IN,TOTAL_IN) = params->tauPen*Eigen::MatrixXd::Identity(TOTAL_IN,TOTAL_IN);
-    P_QP(conDim+6,conDim+6) = 0.00000000000001*params->tauPen;
-    P_QP(conDim+9,conDim+9) = 0.00000000000001*params->tauPen;
+    P_QP(conDim+6,conDim+6) = params->tauPen;
+    P_QP(conDim+9,conDim+9) = params->tauPen;
     P_QP.block(conDim+TOTAL_IN,conDim+TOTAL_IN,outDim,outDim) = params->auxPen*Eigen::MatrixXd::Identity(outDim,outDim);
     if (useCLF){
         P_QP(numDec-1, numDec-1) = params->clfPen;
