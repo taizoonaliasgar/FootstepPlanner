@@ -1416,7 +1416,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     if(controlMPC_MT == 2100){letsgo();}
     for(int i = 0; i<3; i++){
         q0_MT(i) = q[i];
-        q0_MT(i+3) = dq[i];
+        q0_MT(i+3) = 0*dq[i];
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
