@@ -306,7 +306,7 @@ void VirtCon::updateVirtualConstraintswalk(const StateInfo *state, const KinInf 
 
                     //double ty[3] = {0};
                     double ay[4] = {traj->toeInit(1,i), traj->toeInit(1,i), 
-                                    kin->hipPos(1,i)+step[1]+tune+pow(-1,i+1)*0.0838, kin->hipPos(1,i)+step[1]+tune+pow(-1,i+1)*0.0838};
+                                    kin->hipPos(1,i)+step[1]+tune+pow(-1,i+1)*0.1, kin->hipPos(1,i)+step[1]+tune+pow(-1,i+1)*0.1};
                     double day[4] = {0, 0, hipVel(1), hipVel(1)};
                     double dday[4] = {0, 0, hipAcc(1), hipAcc(1)};
                     calcVaryingBezierAll(n,dt,ay,day,dday,phase,ty);
