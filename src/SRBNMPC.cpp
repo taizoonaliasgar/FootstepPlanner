@@ -302,7 +302,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     //repdiag(Q,Q_rep,HORIZ+1);
     
     R_force.setZero();
-    R_force.diagonal() << 1e3,1e3,1e3;//0.01//mpc_params.rx, mpc_params.ry, mpc_params.rz;
+    R_force.diagonal() << 1e2,1e2,1e2;//0.01//mpc_params.rx, mpc_params.ry, mpc_params.rz;
     for(int i=0;i<4;i++){
         if(i<2){
             R.block(3*i,3*i,3,3) = 1*R_force;
@@ -1425,7 +1425,8 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(i+6) = q[i+3];
         q0_MT(i+9) = dq[i+3];
     }
-    // q0_MT(5)=0.1*q0_MT(5);
+    q0_MT(3)=0;//q0_MT(5);
+    // q0_MT(4)=0;// q0_MT(5)=0.1*q0_MT(5);
     //auto end01 = std::chrono::high_resolution_clock::now();
     
     getprevioussol_fullsimMT(q0_MT,foot_position,lastQPforce,controlMPC_MT);
@@ -1571,7 +1572,7 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
         forceQP_dm(i) = forceQP(i);
     }
 
-    
+     casadi::DM conp1 = (controlTick)%30;
 
     x0_MT(casadi::Slice(NFS,NFS*(HORIZ))) = previous_sol(casadi::Slice(NFS*2,NFS*(HORIZ+1)));
     x0_MT(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1))) = previous_sol(casadi::Slice(NFS*HORIZ,NFS*(HORIZ+1)));
@@ -1580,11 +1581,15 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
     x0_MT(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
 
     // Convert Eigen::Matrix<double,12,1> forceQP to casadi::DM
-    if(firsttime){
+     if(firsttime){
         for (int i = 0; i < HORIZ; i++) {
+            x0_MT(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0_MT(casadi::Slice(0,NFS));
             x0_MT(casadi::Slice(NFS*(HORIZ+1)+i*NFI,NFS*(HORIZ+1)+i*NFI+12)) = forceQP_dm;
         }
         firsttime=false;
+    }else{
+        x0_MT(NFS*(HORIZ+1)+8) = contact_sequence_dm15(2,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
+        x0_MT(NFS*(HORIZ+1)+11) = contact_sequence_dm15(3,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
     }
     
     x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
