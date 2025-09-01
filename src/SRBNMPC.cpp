@@ -1421,7 +1421,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
         q0_MT(i+9) = dq[i+3];
     }
     q0_MT(3)=0;//q0_MT(5);
-    q0_MT(4)=0;//0.1*q0_MT(5);
+    // q0_MT(4)=0;//0.1*q0_MT(5);
 
     //auto end01 = std::chrono::high_resolution_clock::now();
     
@@ -1584,7 +1584,7 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
         firsttime=false;
     }
     
-    // x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
+    x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+12)) = forceQP_dm;
 }
 
 
