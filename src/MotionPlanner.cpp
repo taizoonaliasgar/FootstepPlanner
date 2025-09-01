@@ -427,8 +427,8 @@ void MotionPlanner::planTraj(const StateInfo *state, const KinematicsInfo *kin, 
         // }
         // else 
         if(ctrlTick>=37000){
-            traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + opt_HLstate.block(3,0,3,1)*dt;
-            traj.comDes.block(3,0,3,1) = opt_HLstate.block(3,0,3,1);
+            traj.comDes.block(0,0,3,1) << state->q.block(0,0,3,1) + 0*opt_HLstate.block(3,0,3,1)*dt;
+            traj.comDes.block(3,0,3,1) = 0*opt_HLstate.block(3,0,3,1);
             traj.comDes.block(6,0,3,1) = 0*opt_HLstate.block(6,0,3,1);
             traj.comDes.block(9,0,3,1) = 0*desOmegaWorld;
             traj.comDes(2) = 0.5;//opt_HLstate(2);
