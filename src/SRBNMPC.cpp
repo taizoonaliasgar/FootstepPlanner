@@ -1867,7 +1867,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
      
     if((controlTick)%15 == 0){
         x_dom_init = q0(0);
-        Raibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(0.1*q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
+        Raibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(0.5*q0(3)-localvelocity));//0.5*Tstance*(q0(3));//+ sqrt(9.81/stand_height)*(q0(3)-localvelocity);
         //absRaibstep = abs(Raibstep);//0.5*Tstance*abs(q0(3));
     }
 
@@ -1875,7 +1875,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
         vRaibstep = Raibstep;
 
     }else{
-        vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(0.1*q0(3)-localvelocity));
+        vRaibstep = 2*(Tstance*localvelocity+sqrt(stand_height/9.81)*(0.5*q0(3)-localvelocity));
     }
     casadi::DM x0 = x_dom_init;
 
