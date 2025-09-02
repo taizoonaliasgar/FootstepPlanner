@@ -237,7 +237,7 @@ private:
     casadi::DM Jstandcasadi = casadi::DM::zeros(3,3);
     casadi::DM Jinvcasadi = casadi::DM::zeros(3,3);
     casadi::DM Raibheur = 0;//0.5*Tstance*desVel(0);
-    int RaibMult = 2;//8;//8;
+    int RaibMult = 1.2;//8;//8;
     casadi::DM previous_sol = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*HORIZ,1);
     double localvelocity = 0;
     casadi::DM x_dom_init = 0;
@@ -276,7 +276,7 @@ private:
     bool starttrotting = false;
 
     //Hardware
-    std::string lib_name_exp = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/Go2_w0p2_ro_0p05_33b.so";
+    std::string lib_name_exp = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/Go2_w0p2_ro_0p05_32b.so";
     casadi::Dict opts = {{"ipopt.print_level", 1}, {"print_time", 0},{"ipopt.max_iter", 10},{"ipopt.acceptable_tol", 1e-2},{"ipopt.acceptable_obj_change_tol", 1e-2}};
     casadi::Function solver_exp = casadi::nlpsol("solver", "ipopt", lib_name_exp, opts);
 

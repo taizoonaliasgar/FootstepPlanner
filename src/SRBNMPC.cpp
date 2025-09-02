@@ -1528,10 +1528,10 @@ void SRBNMPC::statebounds_MT(casadi::DM p){
         contact_index = p(casadi::Slice(NFS*(HORIZ+1)+HORIZ*NFI+4*(k+1),NFS*(HORIZ+1)+HORIZ*NFI+4*(k+2)));
 
         lbx_MT(NFS*(k+1)+1) = -0.07;
-        lbx_MT(NFS*(k+1)+12) = p(0)-2*abs(Raibstep);
-        lbx_MT(NFS*(k+1)+13) = p(0)-2*abs(Raibstep);
-        lbx_MT(NFS*(k+1)+14) = p(0)-2*abs(Raibstep)+rear_off;
-        lbx_MT(NFS*(k+1)+15) = p(0)-2*abs(Raibstep)+rear_off;
+        lbx_MT(NFS*(k+1)+12) = p(0)-abs(Raibstep)+front_off;
+        lbx_MT(NFS*(k+1)+13) = p(0)-abs(Raibstep)+front_off;
+        lbx_MT(NFS*(k+1)+14) = p(0)-abs(Raibstep)+rear_off;
+        lbx_MT(NFS*(k+1)+15) = p(0)-abs(Raibstep)+rear_off;
         
         lbx_MT(NFS*(HORIZ+1)+NFI*(k)+4) = -contact_index(1)*fzmaxf;
         
@@ -1541,10 +1541,10 @@ void SRBNMPC::statebounds_MT(casadi::DM p){
         lbx_MT(NFS*(HORIZ+1)+NFI*k+15) = (1-contact_index(3))*(-RaibMult*abs(vRaibstep));
 
         ubx_MT(NFS*(k+1)+1) = 0.07;
-        ubx_MT(NFS*(k+1)+12) = p(0)+2*abs(Raibstep)+front_off;
-        ubx_MT(NFS*(k+1)+13) = p(0)+2*abs(Raibstep)+front_off;
-        ubx_MT(NFS*(k+1)+14) = p(0)+2*abs(Raibstep);
-        ubx_MT(NFS*(k+1)+15) = p(0)+2*abs(Raibstep);
+        ubx_MT(NFS*(k+1)+12) = p(0)+abs(Raibstep)+front_off;
+        ubx_MT(NFS*(k+1)+13) = p(0)+abs(Raibstep)+front_off;
+        ubx_MT(NFS*(k+1)+14) = p(0)+abs(Raibstep)+rear_off;
+        ubx_MT(NFS*(k+1)+15) = p(0)+abs(Raibstep)+rear_off;
         
         ubx_MT(NFS*(HORIZ+1)+NFI*(k)+1) = contact_index(0)*fzmaxf;
         ubx_MT(NFS*(HORIZ+1)+NFI*(k)+4) = 0;
@@ -1832,7 +1832,7 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
 }
 
 
-casadi::DM SRBNMPC::motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
+casadi::DM SRBNMPC::  motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
     
     casadi::DM x_des = casadi::DM::zeros(NFS*(HORIZ+1)+NFI*(HORIZ)+4*(HORIZ+2)); 
     x_des(casadi::Slice(0,NFS)) = q0;
