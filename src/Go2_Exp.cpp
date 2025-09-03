@@ -645,9 +645,9 @@ void ExternalComm::stepVelocityKF(const Eigen::Vector3d& a_world,   // gravity-c
 							<< v_meas(1) << "\t" << v_meas(2) << "\t" << vhat_.x() << "\t" << vhat_.y() << "\t" << vhat_.z() << std::endl;
 
     // expose where you need them
-    // COM_vel_e[0] = vhat_.x();
-    // COM_vel_e[1] = vhat_.y();
-    // COM_vel_e[2] = vhat_.z();
+    COM_vel_e[0] = vhat_.x();
+    COM_vel_e[1] = vhat_.y();
+    COM_vel_e[2] = vhat_.z();
 	prev_acc_world_ = a_world;
 }
 
