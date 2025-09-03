@@ -30,7 +30,8 @@
 #include "mip/mip_all.hpp"
 #include "microstrain/connections/serial/serial_connection.hpp"
 #include "example_utils.hpp"
-#include "fusedVelocityEstimate.hpp"
+// #include "fusedVelocityEstimate.hpp"
+#include "kalmanfilter.hpp"
 
 #include <chrono>
 // #include <thread>
@@ -106,12 +107,17 @@ private:
 	std::mutex update_mutex;
 	std::ofstream csvFile;
 
-	VelocityKalman3D velocity_filter;
-	
+	// VelocityKalman3D velocity_filter;
+	using KF = VelBiasKF<3>;
+	KF kf;
+	Eigen::Vector3d vhat_{Eigen::Vector3d::Zero()};
+    Eigen::Vector3d bhat_{Eigen::Vector3d::Zero()};
+    Eigen::Vector3d prev_acc_world_{Eigen::Vector3d::Zero()};
+    // bool have_prev_acc_{false};
 
 public:
 		// ExternalComm() : udpComp0(8082, "192.168.123.10", 8007, sizeof(LowCmd), sizeof(LowState)){
-		ExternalComm() : velocity_filter(0.005, 0.00000001, 0.01){//udpComp(LOWLEVEL), 
+		ExternalComm(){// : velocity_filter(0.005, 0.00000001, 0.01){//udpComp(LOWLEVEL), 
 
             fid = fopen("/home/taizoon/raisimEnv/Workspace/FootstepPlanner/stateData_1.csv", "w");
             
@@ -158,6 +164,16 @@ public:
             populate_filter_d(linearvelfilter, av, bv, 5, 3);
 
 			csvFile.open("../data25/torqueEstimates.csv");
+
+			
+			// Kalman Filter
+			Eigen::Matrix<double,3,3> R_meas = 0.02*Eigen::Matrix3d::Identity();
+			R_meas(1,1) = 0.07;
+			kf.settimestep(0.001);
+			kf.setInitial(Eigen::Vector3d::Zero());          // start near zero velocity
+			kf.setAccelVariance(6);                       // avg accel var (m/s^2)^2
+			kf.setMeasurementCovariance(R_meas); // velocity meas var
+			kf.setProcessScales(1.0, 1e-4);
 			
 		}
 	
@@ -283,7 +299,8 @@ public:
 	void getthetadot(double q[3],double dq[3]);
     void kinestimatorrr(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R);
     void getStateEstimatefullll(double q[18], double dq[18], int contact[4], Eigen::Matrix<double,3,3> R, Eigen::Matrix<double,3,4> toes, int robotdown, size_t ctrlTick, Eigen::Vector3d acc_wFrame);
-  
+	void stepVelocityKF(const Eigen::Vector3d& a_world, double COM_vel_e[3], size_t ctrlTick);
+
 };
 
 
@@ -573,8 +590,11 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
 	    COM_vel_e[0] /= numContact;
 	    COM_vel_e[1] /= numContact;
 	    COM_vel_e[2] /= numContact;
-		if(ctrlTick > 19999){
-			velocity_filter.stepExp(acc_wFrame, COM_vel_e,ctrlTick);
+		// if(ctrlTick > 19999){
+		// 	velocity_filter.stepExp(acc_wFrame, COM_vel_e,ctrlTick);
+		// }
+		if(ctrlTick>19999){
+			stepVelocityKF(acc_wFrame, COM_vel_e, ctrlTick);
 		}
 
     }else{
@@ -605,6 +625,30 @@ void ExternalComm::getStateEstimatefullll(double q[18], double dq[18], int conta
         dq[1] = COM_vel_e[1] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel_e[1] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel_e[1]);
         dq[2] = COM_vel_e[2] > yzdot_thresh2 ? yzdot_thresh2 : (COM_vel_e[2] < -yzdot_thresh2 ? -yzdot_thresh2 : COM_vel_e[2]); 
     }
+}
+
+void ExternalComm::stepVelocityKF(const Eigen::Vector3d& a_world,   // gravity-compensated, world frame    // measured velocity (same frame)
+                           double COM_vel_e[3],size_t ctrlTick) {
+    // std::lock_guard<std::mutex> lock(update_mutex);  // if called from another thread
+
+    // if (!have_prev_acc_) { have_prev_acc_ = true; }
+
+	Eigen::Vector3d v_meas;
+    // Use a(k-1) with v(k) to mirror MATLAB timing
+	v_meas(0)=COM_vel_e[0];
+	v_meas(1)=COM_vel_e[1];
+	v_meas(2)=COM_vel_e[2];
+    kf.step(prev_acc_world_, v_meas, &vhat_, &bhat_);
+    
+
+	std::cout << ctrlTick << "\t" << prev_acc_world_(0) << "\t" << prev_acc_world_(1) << "\t" << prev_acc_world_(2) << "\t" << v_meas(0) << "\t" 
+							<< v_meas(1) << "\t" << v_meas(2) << "\t" << vhat_.x() << "\t" << vhat_.y() << "\t" << vhat_.z() << std::endl;
+
+    // expose where you need them
+    // COM_vel_e[0] = vhat_.x();
+    // COM_vel_e[1] = vhat_.y();
+    // COM_vel_e[2] = vhat_.z();
+	prev_acc_world_ = a_world;
 }
 
 
@@ -786,10 +830,10 @@ void ExternalComm::Calc(){
 			LLData.ind_LL[2] = ind_LL[2];
 			LLData.ind_LL[3] = ind_LL[3];
 	
-			updateDataExp(SET_DATA, LL_DATA, &LLData);
-		
-			// discrete_butter_d(linearvelfilter,&LLData0.dq[0]);
+			// discrete_butter_d(linearvelfilter,&LLData.dq[0]);
 			// moving_avg_filter->filter(&LLData.dq[0]);
+			updateDataExp(SET_DATA, LL_DATA, &LLData);
+			
 
 			// Set the command
 			for(int i = 0; i < 12; ++i){
