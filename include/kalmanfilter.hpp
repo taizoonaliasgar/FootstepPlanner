@@ -42,9 +42,13 @@ public:
     // a_meas: gravity-compensated accel in world frame [m/s^2]
     // v_meas: velocity measurement (same frame) [m/s]
     // dt    : seconds (must be > 0)
-    void step(const VecD& a_meas, const VecD& v_meas, VecD* v_hat_out = nullptr, VecD* b_hat_out = nullptr) {
+    void step(VecD& a_meas, const VecD& v_meas, VecD* v_hat_out = nullptr, VecD* b_hat_out = nullptr) {
         // const double dt_k = (dtKF > 0.0 && std::isfinite(dtKF)) ? dtKF : std::numeric_limits<double>::epsilon();
 
+
+        a_meas(0) = a_meas(0) > xddot_thresh ? xddot_thresh : (a_meas(0) < -xddot_thresh ? -xddot_thresh : a_meas(0));
+        a_meas(1) = a_meas(1) > yddot_thresh ? yddot_thresh : (a_meas(1) < -yddot_thresh ? -yddot_thresh : a_meas(1));
+        a_meas(2) = a_meas(2) > zddot_thresh ? zddot_thresh : (a_meas(2) < -zddot_thresh ? -zddot_thresh : a_meas(2));
         // Build F, G
         Mat2D F = Mat2D::Identity();
         F.template block<D,D>(0,D) = -MatD::Identity() * dt_k; // dv = ... - b*dt
@@ -128,4 +132,7 @@ private:
     double sigma_a2_{1e-4};
     static constexpr double QV_FLOOR = 1e-12;
     static constexpr double QB_FLOOR = 1e-12;
+    double xddot_thresh = 4.0;
+    double yddot_thresh = 6.0;
+    double zddot_thresh = 7.0;
 };
