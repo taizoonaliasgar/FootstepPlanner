@@ -139,7 +139,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_36b";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_37b";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -298,7 +298,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     Q.block(6,6,3,3).diagonal() <<  8e5,8e5,8e5;//3e4//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
     Q.block(9,9,3,3).diagonal() <<  5e3,5e3,5e3;//1//1e2//mpc_params.qwr, mpc_params.qwp, mpc_params.qwy;
-    Q.block(12,12,4,4).diagonal() <<  1e5,1e5,1e5,1e5;//1e-2//1e3//1e5,1e5,1e5,1e5;
+    Q.block(12,12,4,4).diagonal() <<  1e7,1e7,1e7,1e7;//1e-2//1e3//1e5,1e5,1e5,1e5;
     //repdiag(Q,Q_rep,HORIZ+1);
     
     R_force.setZero();
@@ -1898,16 +1898,16 @@ casadi::DM SRBNMPC::  motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
         }
 
         x_des((i+1)*NFS+12) = contact_sequence_dm15(0,conp1_next)*contact_sequence_dm15(0,conp1)*x_des(i*NFS+12)+
-                                (1-contact_sequence_dm15(0,conp1)*contact_sequence_dm15(0,conp1_next))*(x0+front_off+3/4*vRaibstep);
+                                (1-contact_sequence_dm15(0,conp1)*contact_sequence_dm15(0,conp1_next))*(x0+front_off+3/4*Raibstep);
                                    
         x_des((i+1)*NFS+13) = contact_sequence_dm15(1,conp1_next)*contact_sequence_dm15(1,conp1)*x_des(i*NFS+13)+
-                                (1-contact_sequence_dm15(1,conp1)*contact_sequence_dm15(1,conp1_next))*(x0+front_off+3/4*vRaibstep);
+                                (1-contact_sequence_dm15(1,conp1)*contact_sequence_dm15(1,conp1_next))*(x0+front_off+3/4*Raibstep);
         
         x_des((i+1)*NFS+14) = contact_sequence_dm15(2,conp1_next)*contact_sequence_dm15(2,conp1)*x_des(i*NFS+14)+
-                                (1-contact_sequence_dm15(2,conp1)*contact_sequence_dm15(2,conp1_next))*(x0+rear_off+3/4*vRaibstep);
+                                (1-contact_sequence_dm15(2,conp1)*contact_sequence_dm15(2,conp1_next))*(x0+rear_off+3/4*Raibstep);
         
         x_des((i+1)*NFS+15) = contact_sequence_dm15(3,conp1_next)*contact_sequence_dm15(3,conp1)*x_des(i*NFS+15)+
-                                (1-contact_sequence_dm15(3,conp1)*contact_sequence_dm15(3,conp1_next))*(x0+rear_off+3/4*vRaibstep);
+                                (1-contact_sequence_dm15(3,conp1)*contact_sequence_dm15(3,conp1_next))*(x0+rear_off+3/4*Raibstep);
 
 
         
