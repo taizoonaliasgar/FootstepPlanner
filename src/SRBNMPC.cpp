@@ -1898,16 +1898,16 @@ casadi::DM SRBNMPC::  motionPlannerN_MT15(casadi::DM q0, size_t controlTick){
         }
 
         x_des((i+1)*NFS+12) = contact_sequence_dm15(0,conp1_next)*contact_sequence_dm15(0,conp1)*x_des(i*NFS+12)+
-                                (1-contact_sequence_dm15(0,conp1)*contact_sequence_dm15(0,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm15(0,conp1)*contact_sequence_dm15(0,conp1_next))*(x0+front_off+3/4*vRaibstep);
                                    
         x_des((i+1)*NFS+13) = contact_sequence_dm15(1,conp1_next)*contact_sequence_dm15(1,conp1)*x_des(i*NFS+13)+
-                                (1-contact_sequence_dm15(1,conp1)*contact_sequence_dm15(1,conp1_next))*(x0+front_off+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm15(1,conp1)*contact_sequence_dm15(1,conp1_next))*(x0+front_off+3/4*vRaibstep);
         
         x_des((i+1)*NFS+14) = contact_sequence_dm15(2,conp1_next)*contact_sequence_dm15(2,conp1)*x_des(i*NFS+14)+
-                                (1-contact_sequence_dm15(2,conp1)*contact_sequence_dm15(2,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm15(2,conp1)*contact_sequence_dm15(2,conp1_next))*(x0+rear_off+3/4*vRaibstep);
         
         x_des((i+1)*NFS+15) = contact_sequence_dm15(3,conp1_next)*contact_sequence_dm15(3,conp1)*x_des(i*NFS+15)+
-                                (1-contact_sequence_dm15(3,conp1)*contact_sequence_dm15(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
+                                (1-contact_sequence_dm15(3,conp1)*contact_sequence_dm15(3,conp1_next))*(x0+rear_off+3/4*vRaibstep);
 
 
         
