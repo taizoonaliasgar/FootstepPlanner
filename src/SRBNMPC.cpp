@@ -25,8 +25,6 @@ SRBNMPC::SRBNMPC(int argc, char *argv[], int numRobots, int id) : Parameters(arg
         file[i].open(FILE_NAMES_MIT[i].c_str(), std::ios_base::out);
     }
 
-
-
     // J << 0.016840,0.000084,0.000598,0.000084,0.056579,0.000025,0.000598,0.000025,0.064714;
     // Jinv << 59.402578,-0.087845,-0.548594,-0.087845,17.674526,-0.006053,-0.548594,-0.006053,15.457771;
     J << 0.02448,0.00012166,0.0014849;0.00012166,0.098077,-3.12e-5;0.0014849,-3.12e-5,0.107;
@@ -805,18 +803,21 @@ void SRBNMPC::writeMatrixToFile(const casadi::SX& matrix, const std::string& fil
 
 void SRBNMPC::writeMatrixToFileDM(const casadi::DM& matrix, const std::string& filename) {
     std::ofstream file(filename);
+    
     if (file.is_open()) {
         // Print matrix dimensions
-        file << "Matrix size: " << matrix.size1() << "x" << matrix.size2() << std::endl;
+        file << controlMPC_MT << ",";
+        // file << "Matrix size: " << matrix.size1() << "x" << matrix.size2() << std::endl;
         //Print matrix content preserving original shape
         for (int i = 0; i < matrix.size1(); ++i) {
-            for (int j = 0; j < matrix.size2(); ++j) {
-                file << matrix(i, j);
-                if (j < matrix.size2() - 1) file << ", ";
-            }
-            file << std::endl;
+            //for (int j = 0; j < matrix.size2(); ++j) {
+                file << matrix(i) << ",";
+                //if (j < matrix.size2() - 1) file << ", ";
+            //}
+            
         }
-        file.close();
+        file << std::endl;
+        // file.close();
 
     } else {
         std::cerr << "Unable to open file" << std::endl;
@@ -1417,6 +1418,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     auto start = std::chrono::high_resolution_clock::now();
     //Eigen::Matrix<double,16,1> q0 = Eigen::Matrix<double,16,1>::Zero();
     // if(controlTick == 32000){letsgo();}
+    auto end1 = std::chrono::high_resolution_clock::now();
     controlMPC_MT = std::floor((controlTick-21989)/20); 
     if(controlMPC_MT == 2100){letsgo();}
     for(int i = 0; i<3; i++){
@@ -1452,11 +1454,11 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     argHW["x0"] = x0_MT;
     argHW["p"] = p_MT;
             
-    auto end1 = std::chrono::high_resolution_clock::now();
+    // auto end1 = std::chrono::high_resolution_clock::now();
     resHW = solver_exp(argHW);
-    auto end2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end2 - end1);
-    NMPCsolvetime = static_cast<int>(duration.count());
+    // auto end2 = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end2 - end1);
+    // NMPCsolvetime = static_cast<int>(duration.count());
     
     setprevioussol(resHW.at("x"));
             
@@ -1468,6 +1470,13 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     comDes = Eigen::Map<Eigen::Matrix<double,12,1>>(optstate.data());
     fDes.block(0,0,16,1) = Eigen::Map<Eigen::Matrix<double,16,1>>(optforce.data());
     fDes(16) = static_cast<double>(vRaibstep(0));
+    // writeMatrixToFileDM(previous_sol,FILE_NAMES_MIT[0]);
+    // writeMatrixToFileDM(x0_MT,FILE_NAMES_MIT[1]);
+    MTdatalog();
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end2 - end1);
+    NMPCsolvetime = static_cast<int>(duration.count());
+
     //auto end3 = std::chrono::high_resolution_clock::now();
 
     // auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start);
@@ -1948,4 +1957,26 @@ int* SRBNMPC::returnConInd15(size_t controlTick){
     conInd[3] = static_cast<double>(contact_sequence_dm15(3,conmark));
     conInd[4] = conmark;
     return conInd;
+}
+
+void SRBNMPC::MTdatalog(){
+
+    file[0] << controlMPC_MT << ","; 
+    file[1] << controlMPC_MT << ",";
+    file[2] << controlMPC_MT << ",";
+        // file << "Matrix size: " << matrix.size1() << "x" << matrix.size2() << std::endl;
+        //Print matrix content preserving original shape
+    for (int i = 0; i < 656; i++) {
+        file[0] << x0_MT(i) << ",";
+        file[1] << previous_sol(i) << ",";
+        file[2] << p_MT(i) << ",";
+    }
+
+    for (int i = 656; i < 744; i++) {
+        file[2] << p_MT(i) << ",";
+    }
+    file[0] << std::endl;
+    file[1] << std::endl;
+    file[2] << std::endl;
+
 }
