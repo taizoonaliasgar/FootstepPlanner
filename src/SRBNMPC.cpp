@@ -137,7 +137,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_41b";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_42b";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -291,7 +291,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     
     
     Q.setZero();
-    Q.block(0,0,3,3).diagonal() <<  6e6,1e5,8e8;//5e4//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
+    Q.block(0,0,3,3).diagonal() <<  6e6,1e5,8e6;//5e4//1e4//mpc_params.qpx, mpc_params.qpy, mpc_params.qpz;
     Q.block(3,3,3,3).diagonal() <<  1e4,1e4,1e3;//4e5//5e4//mpc_params.qvx, mpc_params.qvy, mpc_params.qvz;
     Q.block(6,6,3,3).diagonal() <<  8e5,8e5,8e5;//3e4//mpc_params.qrr, mpc_params.qrp, mpc_params.qry;
     //Yaw:3e3
@@ -313,7 +313,7 @@ casadi::SX SRBNMPC::UpdateCostN(casadi::SX x, casadi::SX x_des){
     //R = 1e2*R;
     Rv.setZero();
     Rv.diagonal() << 0.01,0.01,0.01,0.01;//1e2,1e2,1e2,1e2;//0.01,0.01,0.01,0.01;
-    Rv = 5e7*Rv;//1e5
+    Rv = 5e9*Rv;//1e5
 
     casadi::DM Qc = casadi::DM::zeros(Q.rows(),Q.cols());
     std::copy(Q.data(), Q.data() + Q.size(), Qc.ptr());
@@ -1595,8 +1595,8 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
             // x0_MT(casadi::Slice(NFS*(HORIZ+1)+i*NFI,NFS*(HORIZ+1)+i*NFI+12)) = forceQP_dm;
             x0_MT(NFS*(HORIZ+1)+NFI*i+8) = contact_sequence_dm15(2,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
             x0_MT(NFS*(HORIZ+1)+NFI*i+11) = contact_sequence_dm15(3,conp1)*MASS*9.81/(contact_sequence_dm15(2,conp1)+contact_sequence_dm15(3,conp1));
-            x0_MT(NFS*(i+1)+2) = 0.5;
-            x0_MT(NFS*(i+1)+5) = 0.0;
+            x0_MT(NFS*(i+1)+2) = x0_MT(2);
+            x0_MT(NFS*(i+1)+5) = x0_MT(5);
         }
 
         
