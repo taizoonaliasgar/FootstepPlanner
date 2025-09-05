@@ -142,6 +142,7 @@ public:
     //300ms Domain
     casadi::DM motionPlannerN_MT30(casadi::DM q0, size_t controlTick);
     int* returnConInd30(size_t controlTick);
+    void MTdatalog();
 
 private: 
     std::string filename;

@@ -134,7 +134,7 @@ void SRBNMPC::generator(){
     //casadi::Function solver = casadi::nlpsol("solver", "ipopt", {{"x", x}, {"f", f}, {"g", g}, {"p", p}});//, opts);
     casadi::Function solver = casadi::nlpsol("solver", "ipopt", nlp_prob, opts);
     // file name
-    std::string file_name = "Go2_w0p2_ro_0p05_2";//"take2_1";
+    std::string file_name = "Go2_w0p2_ro_0p05_2new";//"take2_1";
     // code predix
     std::string prefix_code = "/home/taizoon/raisimEnv/Workspace/FootstepPlanner/build/";//std::filesystem::current_path().string() + "/";
 
@@ -426,7 +426,7 @@ casadi::SX SRBNMPC::NonlinearDynamics(casadi::SX st,casadi::SX con, casadi::SX c
 
     rhs(casadi::Slice(0,3)) = st(casadi::Slice(3,6)) * MPC_dt;
 
-    rhs(casadi::Slice(3,6)) = (f1+f2+f3+f4)*MPC_dt/MASS - casadi::SX(gravityN) * MPC_dt;
+    rhs(casadi::Slice(3,6)) = (f1+f2+f3+f4)*MPC_dt/MASS + casadi::SX::vertcat({casadi::SX::zeros(2,1), -9.81})*MPC_dt;//casadi::SX(gravityN) * MPC_dt;
 
     rhs(casadi::Slice(6,9)) = mtimes(A,st(casadi::Slice(9,12)))*MPC_dt;
 
@@ -1483,6 +1483,7 @@ void SRBNMPC::planner_MT(size_t controlTick, double q[18], double dq[18], Eigen:
     // std::cout << duration3.count() << std::endl;
             
     //mpcdataLog(q0, fDes.block(0,0,12,1), controlMPC, Eigen::Map<Eigen::Matrix<double, 12, 1>>(foot_position.data()));
+    MTdatalog();
 }
 
 int* SRBNMPC::returnConInd(size_t controlTick){
@@ -1567,6 +1568,19 @@ void SRBNMPC::getprevioussol_fullsimMT(casadi::DM q0, Eigen::Matrix<double,3,4> 
     x0_MT(casadi::Slice(NFS*(HORIZ+1),NFS*(HORIZ+1)+NFI*(HORIZ-1))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI,NFS*(HORIZ+1)+NFI*(HORIZ)));
     x0_MT(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ))) = previous_sol(casadi::Slice(NFS*(HORIZ+1)+NFI*(HORIZ-1),NFS*(HORIZ+1)+NFI*(HORIZ)));
 
+    if(controlTick<1400){
+        for (int i = 0; i < HORIZ; i++) {
+            // x0_MT(casadi::Slice(NFS*(i+1),NFS*(i+2))) = x0_MT(casadi::Slice(0,NFS));
+            // x0_MT(casadi::Slice(NFS*(HORIZ+1)+i*NFI,NFS*(HORIZ+1)+i*NFI+12)) = forceQP_dm;
+            casadi::DM con_curr = (controlTick+i)%60;
+
+            x0_MT(NFS*(i+1)+2) = 0.5;
+            x0_MT(NFS*(i+1)+5) = 0.0;
+
+            x0_MT(NFS*(HORIZ+1)+NFI*i+8) = contact_sequence_dm30(2,con_curr)*MASS*9.81/(contact_sequence_dm30(2,con_curr)+contact_sequence_dm30(3,con_curr));
+            x0_MT(NFS*(HORIZ+1)+NFI*i+11) = contact_sequence_dm30(3,con_curr)*MASS*9.81/(contact_sequence_dm30(2,con_curr)+contact_sequence_dm30(3,con_curr));
+        }
+    }
 }
 
 
@@ -1778,6 +1792,9 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
                                 (1-contact_sequence_dm30(3,conp1)*contact_sequence_dm30(3,conp1_next))*(x0+rear_off+3/2*Tstance*localvelocity);
 
 
+        x_des((HORIZ+1)*NFS+i*NFI+8) = contact_sequence_dm30(2,conp1)*MASS*9.81/(contact_sequence_dm30(2,conp1)+contact_sequence_dm30(3,conp1));
+        x_des((HORIZ+1)*NFS+i*NFI+11) = contact_sequence_dm30(3,conp1)*MASS*9.81/(contact_sequence_dm30(2,conp1)+contact_sequence_dm30(3,conp1));
+
         x_des((HORIZ+1)*NFS+i*NFI+12) = (1-contact_sequence_dm30(0,conp1))*vRaibstep;//0.4
         x_des((HORIZ+1)*NFS+i*NFI+13) = (1-contact_sequence_dm30(1,conp1))*vRaibstep;//0.4
         x_des((HORIZ+1)*NFS+i*NFI+14) = (1-contact_sequence_dm30(2,conp1))*vRaibstep;//0.4
@@ -1799,4 +1816,26 @@ casadi::DM SRBNMPC::motionPlannerN_MT30(casadi::DM q0, size_t controlTick){
     
     return x_des;
     
+}
+
+void SRBNMPC::MTdatalog(){
+
+    file[0] << controlMPC_MT << ","; 
+    file[1] << controlMPC_MT << ",";
+    file[2] << controlMPC_MT << ",";
+        // file << "Matrix size: " << matrix.size1() << "x" << matrix.size2() << std::endl;
+        //Print matrix content preserving original shape
+    for (int i = 0; i < 656; i++) {
+        file[0] << x0_MT(i) << ",";
+        file[1] << previous_sol(i) << ",";
+        file[2] << p_MT(i) << ",";
+    }
+
+    for (int i = 656; i < 744; i++) {
+        file[2] << p_MT(i) << ",";
+    }
+    file[0] << std::endl;
+    file[1] << std::endl;
+    file[2] << std::endl;
+
 }
